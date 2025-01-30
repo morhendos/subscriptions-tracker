@@ -1,11 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Subscription, SubscriptionFormData } from '@/types/subscriptions';
+import { Subscription, SubscriptionFormData, BillingPeriod } from '@/types/subscriptions';
 import { useSession } from 'next-auth/react';
 import { getStorageProvider } from '@/lib/storage';
 import { calculateNextBillingDate } from './utils/dates';
 import { calculateSummary } from './utils/calculations';
 
 const BASE_STORAGE_KEY = 'subscriptions';
+
+// Helper function to migrate old billing period format to new
+function migrateBillingPeriod(period: string): BillingPeriod {
+  switch (period.toLowerCase()) {
+    case 'monthly':
+      return 'MONTHLY';
+    case 'yearly':
+      return 'YEARLY';
+    default:
+      return 'MONTHLY'; // Default fallback
+  }
+}
 
 /**
  * Custom hook for managing subscription data with persistence
@@ -30,7 +42,23 @@ export function useSubscriptionStorage() {
       try {
         const storage = getStorageProvider();
         const stored = await storage.get<Subscription[]>(storageKey);
-        setSubscriptions(stored || []);
+        
+        // Migrate data if needed
+        if (stored) {
+          const migratedData = stored.map(sub => ({
+            ...sub,
+            billingPeriod: migrateBillingPeriod(sub.billingPeriod)
+          }));
+
+          // Save migrated data if it's different
+          if (JSON.stringify(stored) !== JSON.stringify(migratedData)) {
+            await storage.set(storageKey, migratedData);
+          }
+
+          setSubscriptions(migratedData);
+        } else {
+          setSubscriptions([]);
+        }
       } catch (error) {
         console.error('Error loading subscriptions:', error);
         setSubscriptions([]);
