@@ -12,7 +12,7 @@ export function SubscriptionSummary({ summary }: SubscriptionSummaryProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <SummaryCard
           title="Monthly"
           amount={summary.totalMonthly}
@@ -22,16 +22,6 @@ export function SubscriptionSummary({ summary }: SubscriptionSummaryProps) {
           title="Yearly"
           amount={summary.totalYearly}
           period="per year"
-        />
-        <SummaryCard
-          title="Weekly"
-          amount={summary.totalWeekly}
-          period="per week"
-        />
-        <SummaryCard
-          title="Quarterly"
-          amount={summary.totalQuarterly}
-          period="per quarter"
         />
       </div>
 
