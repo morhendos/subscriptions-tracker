@@ -9,6 +9,15 @@ import { CURRENCIES, roundAmount } from '../config/currencies';
  * @returns Summary of costs for different periods
  */
 export function calculateSummary(subscriptions: Subscription[]): SubscriptionSummary {
+  const initialSummary = {
+    totalMonthly: 0,
+    totalYearly: 0,
+    grandTotalMonthly: 0,
+    originalAmounts: Object.fromEntries(
+      Object.keys(CURRENCIES).map(currency => [currency, 0])
+    ) as Record<Currency, number>
+  };
+
   const summary = subscriptions
     .filter(sub => !sub.disabled)
     .reduce(
@@ -23,7 +32,7 @@ export function calculateSummary(subscriptions: Subscription[]): SubscriptionSum
           currency
         );
 
-        // Convert everything to monthly first for consistent calculations
+        // Convert to monthly first for consistent calculations
         const monthlyAmount = convertBetweenPeriods(baseAmount, sub.billingPeriod, 'MONTHLY');
         
         // Update all period totals
@@ -35,14 +44,7 @@ export function calculateSummary(subscriptions: Subscription[]): SubscriptionSum
 
         return acc;
       },
-      {
-        totalMonthly: 0,
-        totalYearly: 0,
-        grandTotalMonthly: 0,
-        originalAmounts: Object.fromEntries(
-          Object.keys(CURRENCIES).map(currency => [currency, 0])
-        ) as Record<Currency, number>
-      }
+      initialSummary
     );
 
   // Round all amounts appropriately
