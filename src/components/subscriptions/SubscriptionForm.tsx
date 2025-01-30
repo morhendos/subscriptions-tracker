@@ -18,7 +18,7 @@ export function SubscriptionForm({
     name: '',
     price: 0,
     currency: 'EUR',
-    billingPeriod: 'monthly',
+    billingPeriod: 'MONTHLY',
     startDate: getLocalISOString(new Date()),
     description: ''
   });
@@ -45,7 +45,7 @@ export function SubscriptionForm({
         name: '',
         price: 0,
         currency: 'EUR',
-        billingPeriod: 'monthly',
+        billingPeriod: 'MONTHLY',
         startDate: getLocalISOString(new Date()),
         description: ''
       });
@@ -111,7 +111,7 @@ export function SubscriptionForm({
           >
             <option value="EUR">EUR</option>
             <option value="USD">USD</option>
-            <option value="PLN">PLN</option>
+            <option value="GBP">GBP</option>
           </select>
         </div>
       </div>
@@ -128,10 +128,8 @@ export function SubscriptionForm({
             onChange={handleChange}
             className={inputClasses}
           >
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="quarterly">Quarterly</option>
-            <option value="yearly">Yearly</option>
+            <option value="MONTHLY">Monthly</option>
+            <option value="YEARLY">Yearly</option>
           </select>
         </div>
 
