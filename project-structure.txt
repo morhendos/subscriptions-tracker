@@ -81,6 +81,9 @@ subscription-tracker/
 │   │   │   ├── localStorage.ts
 │   │   │   └── types.ts
 │   │   ├── subscriptions
+│   │   │   ├── config
+│   │   │   │   ├── currencies.ts
+│   │   │   │   └── periods.ts
 │   │   │   ├── hooks
 │   │   │   │   ├── useSubscriptionCalculations.ts
 │   │   │   │   └── useSubscriptionStorage.ts
@@ -88,6 +91,7 @@ subscription-tracker/
 │   │   │   ├── storage.ts
 │   │   │   └── utils
 │   │   │       ├── calculations.ts
+│   │   │       ├── currency.ts
 │   │   │       ├── dates.ts
 │   │   │       └── periods.ts
 │   │   ├── utils.ts
