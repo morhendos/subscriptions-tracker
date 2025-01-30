@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export type Currency = 'USD' | 'EUR' | 'GBP';
+export type Currency = 'USD' | 'EUR' | 'GBP' | 'PLN';
 export type BillingPeriod = 'MONTHLY' | 'YEARLY';
 export type SubscriptionStatus = 'ACTIVE' | 'CANCELLED';
 
