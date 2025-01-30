@@ -34,9 +34,17 @@ export const CURRENCIES: Record<Currency, CurrencyConfig> = {
     locale: 'en-GB',
     decimalPlaces: 2,
   },
+  PLN: {
+    code: 'PLN',
+    symbol: 'zł',
+    label: 'Polish Złoty',
+    exchangeRate: 0.23, // 1 PLN = 0.23 EUR
+    locale: 'pl-PL',
+    decimalPlaces: 2,
+  },
 } as const;
 
-export const CURRENCY_ORDER: Currency[] = ['EUR', 'USD', 'GBP'];
+export const CURRENCY_ORDER: Currency[] = ['EUR', 'USD', 'GBP', 'PLN'];
 
 // Validation functions
 export function isValidCurrency(currency: string): currency is Currency {
