@@ -15,7 +15,10 @@ export default function SubscriptionsPage() {
     addSubscription,
     updateSubscription,
     deleteSubscription,
-    calculateSummary
+    toggleSubscription,
+    toggleAllSubscriptions,
+    calculateSummary,
+    mounted
   } = useSubscriptionStorage();
 
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
@@ -69,6 +72,9 @@ export default function SubscriptionsPage() {
                 subscriptions={subscriptions || []}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onToggle={toggleSubscription}
+                onToggleAll={toggleAllSubscriptions}
+                mounted={mounted}
               />
             </Section>
 
