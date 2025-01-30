@@ -20,3 +20,12 @@ export type Subscription = SubscriptionFormData & {
   createdAt: string;
   updatedAt: string;
 };
+
+export interface SubscriptionSummary {
+  totalMonthly: number;
+  totalYearly: number;
+  totalWeekly: number;
+  totalQuarterly: number;
+  grandTotalMonthly: number;
+  originalAmounts: Record<Currency, number>;
+}
