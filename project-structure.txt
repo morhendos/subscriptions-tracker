@@ -1,0 +1,106 @@
+subscription-tracker/
+├── README.md
+├── next-env.d.ts
+├── next.config.js
+├── package.json
+├── postcss.config.js
+├── project-structure.txt
+├── scripts
+│   └── tree.js
+├── src
+│   ├── app
+│   │   ├── api
+│   │   │   ├── auth
+│   │   │   │   └── [...nextauth]
+│   │   │   │       └── route.ts
+│   │   │   └── subscriptions
+│   │   │       ├── [id]
+│   │   │       │   └── route.ts
+│   │   │       └── route.ts
+│   │   ├── auth
+│   │   │   ├── error
+│   │   │   │   ├── loading.tsx
+│   │   │   │   └── page.tsx
+│   │   │   └── signout
+│   │   │       └── page.tsx
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   ├── login
+│   │   │   └── page.tsx
+│   │   ├── page.tsx
+│   │   ├── providers.tsx
+│   │   ├── signup
+│   │   │   └── page.tsx
+│   │   └── subscriptions
+│   │       ├── error.tsx
+│   │       ├── layout.tsx
+│   │       ├── loading.tsx
+│   │       └── page.tsx
+│   ├── components
+│   │   ├── ThemeToggle.tsx
+│   │   ├── auth
+│   │   │   ├── AuthLogo.tsx
+│   │   │   ├── AuthProvider.tsx
+│   │   │   └── LogoutButton.tsx
+│   │   ├── common
+│   │   │   └── Section.tsx
+│   │   ├── error-boundary.tsx
+│   │   ├── layout
+│   │   │   └── PageHeader.tsx
+│   │   ├── loading.tsx
+│   │   ├── settings
+│   │   │   └── HeaderControls.tsx
+│   │   ├── subscriptions
+│   │   │   ├── AddSubscriptionButton.tsx
+│   │   │   ├── DeleteSubscriptionDialog.tsx
+│   │   │   ├── SubscriptionForm.tsx
+│   │   │   ├── SubscriptionList.tsx
+│   │   │   └── SubscriptionSummary.tsx
+│   │   └── ui
+│   │       ├── IconButton.tsx
+│   │       ├── card.tsx
+│   │       ├── input.tsx
+│   │       ├── label.tsx
+│   │       ├── toast.tsx
+│   │       ├── toaster.tsx
+│   │       └── use-toast.ts
+│   ├── contexts
+│   │   └── DateContext.tsx
+│   ├── hooks
+│   │   ├── useLocalStorage.ts
+│   │   └── useTheme.ts
+│   ├── lib
+│   │   ├── auth
+│   │   │   ├── auth-options.ts
+│   │   │   ├── auth-service.ts
+│   │   │   ├── config.ts
+│   │   │   ├── index.ts
+│   │   │   └── validation.ts
+│   │   ├── storage
+│   │   │   ├── index.ts
+│   │   │   ├── localStorage.ts
+│   │   │   └── types.ts
+│   │   ├── subscriptions
+│   │   │   ├── hooks
+│   │   │   │   ├── useSubscriptionCalculations.ts
+│   │   │   │   └── useSubscriptionStorage.ts
+│   │   │   ├── index.ts
+│   │   │   ├── storage.ts
+│   │   │   └── utils
+│   │   │       ├── calculations.ts
+│   │   │       ├── dates.ts
+│   │   │       └── periods.ts
+│   │   ├── utils.ts
+│   │   └── validations
+│   │       └── subscription.ts
+│   ├── middleware.ts
+│   ├── types
+│   │   ├── auth.ts
+│   │   ├── next-auth.d.ts
+│   │   ├── subscription.ts
+│   │   └── subscriptions.ts
+│   └── utils
+│       ├── dates.ts
+│       └── format.ts
+├── tailwind.config.js
+└── tsconfig.json
