@@ -24,8 +24,6 @@ export type Subscription = SubscriptionFormData & {
 export interface SubscriptionSummary {
   totalMonthly: number;
   totalYearly: number;
-  totalWeekly: number;
-  totalQuarterly: number;
   grandTotalMonthly: number;
   originalAmounts: Record<Currency, number>;
 }
