@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Save } from 'lucide-react';
 import { Subscription, SubscriptionFormData } from '@/types/subscriptions';
 import { getLocalISOString } from '@/utils/dates';
+import { CURRENCIES, CURRENCY_ORDER } from '@/lib/subscriptions/config/currencies';
 
 export function SubscriptionForm({ 
   onSubmit,
@@ -109,9 +110,11 @@ export function SubscriptionForm({
             onChange={handleChange}
             className={inputClasses}
           >
-            <option value="EUR">EUR</option>
-            <option value="USD">USD</option>
-            <option value="GBP">GBP</option>
+            {CURRENCY_ORDER.map(code => (
+              <option key={code} value={code}>
+                {code} - {CURRENCIES[code].label} ({CURRENCIES[code].symbol})
+              </option>
+            ))}
           </select>
         </div>
       </div>
