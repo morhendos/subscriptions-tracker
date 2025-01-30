@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import prisma from '@/lib/prisma';
+import { serverStorage } from '@/lib/storage/server';
 import { subscriptionSchema } from '@/lib/validations/subscription';
 
 export async function GET(
@@ -10,15 +10,14 @@ export async function GET(
   try {
     const session = await getServerSession();
 
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const subscription = await prisma.subscription.findUnique({
-      where: { id: params.id },
-    });
+    const subscriptions = await serverStorage.getSubscriptions(session.user.id);
+    const subscription = subscriptions.find(s => s.id === params.id);
 
-    if (!subscription || subscription.userId !== session.user.id) {
+    if (!subscription) {
       return new NextResponse('Not Found', { status: 404 });
     }
 
@@ -36,25 +35,22 @@ export async function PUT(
   try {
     const session = await getServerSession();
 
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    const subscription = await prisma.subscription.findUnique({
-      where: { id: params.id },
-    });
-
-    if (!subscription || subscription.userId !== session.user.id) {
-      return new NextResponse('Not Found', { status: 404 });
     }
 
     const json = await req.json();
     const body = subscriptionSchema.parse(json);
 
-    const updatedSubscription = await prisma.subscription.update({
-      where: { id: params.id },
-      data: body,
-    });
+    const updatedSubscription = await serverStorage.updateSubscription(
+      session.user.id,
+      params.id,
+      body
+    );
+
+    if (!updatedSubscription) {
+      return new NextResponse('Not Found', { status: 404 });
+    }
 
     return NextResponse.json(updatedSubscription);
   } catch (error) {
@@ -70,21 +66,15 @@ export async function DELETE(
   try {
     const session = await getServerSession();
 
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const subscription = await prisma.subscription.findUnique({
-      where: { id: params.id },
-    });
+    const success = await serverStorage.deleteSubscription(session.user.id, params.id);
 
-    if (!subscription || subscription.userId !== session.user.id) {
+    if (!success) {
       return new NextResponse('Not Found', { status: 404 });
     }
-
-    await prisma.subscription.delete({
-      where: { id: params.id },
-    });
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
