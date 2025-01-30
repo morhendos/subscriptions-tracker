@@ -9,14 +9,7 @@ const BASE_STORAGE_KEY = 'subscriptions';
 
 // Helper function to migrate old billing period format to new
 function migrateBillingPeriod(period: string): BillingPeriod {
-  switch (period.toLowerCase()) {
-    case 'monthly':
-      return 'MONTHLY';
-    case 'yearly':
-      return 'YEARLY';
-    default:
-      return 'MONTHLY'; // Default fallback
-  }
+  return period.toUpperCase() as BillingPeriod;
 }
 
 /**
