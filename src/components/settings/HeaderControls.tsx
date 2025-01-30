@@ -138,7 +138,7 @@ export function HeaderControls() {
         },
         exportData: () => {
           const storageKey = getStorageKey();
-          if (!storageKey) {
+          if (!storageKey || !session?.user?.email) {
             toast({
               title: "Error",
               description: "You must be logged in to export data",
@@ -153,7 +153,9 @@ export function HeaderControls() {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `subscriptions_${session.user.email.split('@')[0]}.json`;
+            // Use a default name if email is not available (shouldn't happen due to the check above)
+            const filename = session.user.email ? `subscriptions_${session.user.email.split('@')[0]}.json` : 'subscriptions_export.json';
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
