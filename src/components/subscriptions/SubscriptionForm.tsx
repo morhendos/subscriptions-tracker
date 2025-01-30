@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Save } from 'lucide-react';
 import { Subscription, SubscriptionFormData } from '@/types/subscriptions';
 import { getLocalISOString } from '@/utils/dates';
+import { CURRENCIES, CURRENCY_ORDER } from '@/lib/subscriptions/config/currencies';
 
 export function SubscriptionForm({ 
   onSubmit,
@@ -18,7 +19,7 @@ export function SubscriptionForm({
     name: '',
     price: 0,
     currency: 'EUR',
-    billingPeriod: 'monthly',
+    billingPeriod: 'MONTHLY',
     startDate: getLocalISOString(new Date()),
     description: ''
   });
@@ -45,7 +46,7 @@ export function SubscriptionForm({
         name: '',
         price: 0,
         currency: 'EUR',
-        billingPeriod: 'monthly',
+        billingPeriod: 'MONTHLY',
         startDate: getLocalISOString(new Date()),
         description: ''
       });
@@ -109,9 +110,11 @@ export function SubscriptionForm({
             onChange={handleChange}
             className={inputClasses}
           >
-            <option value="EUR">EUR</option>
-            <option value="USD">USD</option>
-            <option value="PLN">PLN</option>
+            {CURRENCY_ORDER.map(code => (
+              <option key={code} value={code}>
+                {code} - {CURRENCIES[code].label} ({CURRENCIES[code].symbol})
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -128,10 +131,8 @@ export function SubscriptionForm({
             onChange={handleChange}
             className={inputClasses}
           >
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="quarterly">Quarterly</option>
-            <option value="yearly">Yearly</option>
+            <option value="MONTHLY">Monthly</option>
+            <option value="YEARLY">Yearly</option>
           </select>
         </div>
 

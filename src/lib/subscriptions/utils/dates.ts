@@ -1,10 +1,12 @@
+import { BillingPeriod } from '@/types/subscriptions';
+
 /**
  * Calculate next billing date based on start date and billing period
  * @param startDate - Initial subscription date
- * @param billingPeriod - Billing frequency (weekly, monthly, etc)
+ * @param billingPeriod - Billing frequency (MONTHLY, YEARLY)
  * @returns Next billing date as ISO string
  */
-export function calculateNextBillingDate(startDate: string, billingPeriod: string): string {
+export function calculateNextBillingDate(startDate: string, billingPeriod: BillingPeriod): string {
   const date = new Date(startDate);
   const today = new Date();
   
@@ -16,16 +18,10 @@ export function calculateNextBillingDate(startDate: string, billingPeriod: strin
   let periodInMs: number;
 
   switch (billingPeriod) {
-    case 'weekly':
-      periodInMs = 7 * 24 * 60 * 60 * 1000;
-      break;
-    case 'monthly':
+    case 'MONTHLY':
       periodInMs = 30 * 24 * 60 * 60 * 1000;
       break;
-    case 'quarterly':
-      periodInMs = 90 * 24 * 60 * 60 * 1000;
-      break;
-    case 'yearly':
+    case 'YEARLY':
       periodInMs = 365 * 24 * 60 * 60 * 1000;
       break;
     default:

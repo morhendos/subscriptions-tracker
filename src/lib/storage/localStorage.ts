@@ -3,11 +3,10 @@ import { IStorageProvider, StorageError } from './types';
 export class LocalStorageProvider implements IStorageProvider {
   private isAvailable(): boolean {
     try {
-      const test = '__storage_test__';
-      localStorage.setItem(test, test);
-      localStorage.removeItem(test);
+      localStorage.setItem('test', 'test');
+      localStorage.removeItem('test');
       return true;
-    } catch (e) {
+    } catch {
       return false;
     }
   }
@@ -17,12 +16,17 @@ export class LocalStorageProvider implements IStorageProvider {
       throw new StorageError('Local storage is not available', 'storage_unavailable');
     }
 
+    const item = localStorage.getItem(key);
+    if (!item) return null;
+
     try {
-      const item = localStorage.getItem(key);
-      if (!item) return null;
       return JSON.parse(item) as T;
     } catch (error) {
-      throw new StorageError(`Failed to read from storage: ${error.message}`, 'read_error');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new StorageError(
+        `Failed to read from storage: ${errorMessage}`,
+        'read_error'
+      );
     }
   }
 
@@ -34,7 +38,11 @@ export class LocalStorageProvider implements IStorageProvider {
     try {
       localStorage.setItem(key, JSON.stringify(value));
     } catch (error) {
-      throw new StorageError(`Failed to write to storage: ${error.message}`, 'write_error');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new StorageError(
+        `Failed to write to storage: ${errorMessage}`,
+        'write_error'
+      );
     }
   }
 
@@ -46,7 +54,11 @@ export class LocalStorageProvider implements IStorageProvider {
     try {
       localStorage.removeItem(key);
     } catch (error) {
-      throw new StorageError(`Failed to remove from storage: ${error.message}`, 'write_error');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new StorageError(
+        `Failed to remove from storage: ${errorMessage}`,
+        'read_error'
+      );
     }
   }
 
@@ -58,7 +70,11 @@ export class LocalStorageProvider implements IStorageProvider {
     try {
       localStorage.clear();
     } catch (error) {
-      throw new StorageError(`Failed to clear storage: ${error.message}`, 'write_error');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new StorageError(
+        `Failed to clear storage: ${errorMessage}`,
+        'write_error'
+      );
     }
   }
 }

@@ -1,7 +1,7 @@
 import { Subscription, SubscriptionSummary, Currency } from '@/types/subscriptions';
 import { convertToBaseCurrency, convertCurrency } from './currency';
 import { convertBetweenPeriods } from './periods';
-import { getCurrencyConfig, roundAmount } from '../config/currencies';
+import { CURRENCIES, roundAmount } from '../config/currencies';
 
 /**
  * Calculate subscription summary with total costs for different periods
@@ -9,6 +9,15 @@ import { getCurrencyConfig, roundAmount } from '../config/currencies';
  * @returns Summary of costs for different periods
  */
 export function calculateSummary(subscriptions: Subscription[]): SubscriptionSummary {
+  const initialSummary = {
+    totalMonthly: 0,
+    totalYearly: 0,
+    grandTotalMonthly: 0,
+    originalAmounts: Object.fromEntries(
+      Object.keys(CURRENCIES).map(currency => [currency, 0])
+    ) as Record<Currency, number>
+  };
+
   const summary = subscriptions
     .filter(sub => !sub.disabled)
     .reduce(
@@ -23,30 +32,19 @@ export function calculateSummary(subscriptions: Subscription[]): SubscriptionSum
           currency
         );
 
-        // Convert everything to monthly first for consistent calculations
-        const monthlyAmount = convertBetweenPeriods(baseAmount, sub.billingPeriod, 'monthly');
+        // Convert to monthly first for consistent calculations
+        const monthlyAmount = convertBetweenPeriods(baseAmount, sub.billingPeriod, 'MONTHLY');
         
         // Update all period totals
         acc.totalMonthly += monthlyAmount;
-        acc.totalWeekly += convertBetweenPeriods(monthlyAmount, 'monthly', 'weekly');
-        acc.totalYearly += convertBetweenPeriods(monthlyAmount, 'monthly', 'yearly');
-        acc.totalQuarterly += convertBetweenPeriods(monthlyAmount, 'monthly', 'quarterly');
-        acc.grandTotalMonthly += monthlyAmount; // This is already in EUR
+        acc.totalYearly += convertBetweenPeriods(monthlyAmount, 'MONTHLY', 'YEARLY');
+
+        // Add to the grand total (already in EUR)
+        acc.grandTotalMonthly += monthlyAmount;
 
         return acc;
       },
-      {
-        totalMonthly: 0,
-        totalYearly: 0,
-        totalWeekly: 0,
-        totalQuarterly: 0,
-        grandTotalMonthly: 0,
-        originalAmounts: {
-          EUR: 0,
-          USD: 0,
-          PLN: 0
-        }
-      }
+      initialSummary
     );
 
   // Round all amounts appropriately
@@ -54,8 +52,6 @@ export function calculateSummary(subscriptions: Subscription[]): SubscriptionSum
     ...summary,
     totalMonthly: roundAmount(summary.totalMonthly, 'EUR'),
     totalYearly: roundAmount(summary.totalYearly, 'EUR'),
-    totalWeekly: roundAmount(summary.totalWeekly, 'EUR'),
-    totalQuarterly: roundAmount(summary.totalQuarterly, 'EUR'),
     grandTotalMonthly: roundAmount(summary.grandTotalMonthly, 'EUR'),
     originalAmounts: Object.fromEntries(
       Object.entries(summary.originalAmounts).map(([key, value]) => [

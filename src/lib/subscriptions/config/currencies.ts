@@ -26,6 +26,14 @@ export const CURRENCIES: Record<Currency, CurrencyConfig> = {
     locale: 'en-US',
     decimalPlaces: 2,
   },
+  GBP: {
+    code: 'GBP',
+    symbol: '£',
+    label: 'British Pound',
+    exchangeRate: 1.17, // 1 GBP = 1.17 EUR
+    locale: 'en-GB',
+    decimalPlaces: 2,
+  },
   PLN: {
     code: 'PLN',
     symbol: 'zł',
@@ -36,7 +44,7 @@ export const CURRENCIES: Record<Currency, CurrencyConfig> = {
   },
 } as const;
 
-export const CURRENCY_ORDER: Currency[] = ['EUR', 'USD', 'PLN'];
+export const CURRENCY_ORDER: Currency[] = ['EUR', 'USD', 'GBP', 'PLN'];
 
 // Validation functions
 export function isValidCurrency(currency: string): currency is Currency {
