@@ -1,7 +1,7 @@
-import { Storage, StorageError } from './types';
+import { IStorageProvider, StorageError } from './types';
 
-export class LocalStorage implements Storage {
-  isAvailable(): boolean {
+export class LocalStorageProvider implements IStorageProvider {
+  private isAvailable(): boolean {
     try {
       localStorage.setItem('test', 'test');
       localStorage.removeItem('test');
@@ -13,7 +13,7 @@ export class LocalStorage implements Storage {
 
   async get<T>(key: string): Promise<T | null> {
     if (!this.isAvailable()) {
-      throw new StorageError('Local storage is not available', 'unavailable');
+      throw new StorageError('Local storage is not available', 'storage_unavailable');
     }
 
     const item = localStorage.getItem(key);
@@ -30,9 +30,9 @@ export class LocalStorage implements Storage {
     }
   }
 
-  async set(key: string, value: unknown): Promise<void> {
+  async set<T>(key: string, value: T): Promise<void> {
     if (!this.isAvailable()) {
-      throw new StorageError('Local storage is not available', 'unavailable');
+      throw new StorageError('Local storage is not available', 'storage_unavailable');
     }
 
     try {
@@ -48,7 +48,7 @@ export class LocalStorage implements Storage {
 
   async remove(key: string): Promise<void> {
     if (!this.isAvailable()) {
-      throw new StorageError('Local storage is not available', 'unavailable');
+      throw new StorageError('Local storage is not available', 'storage_unavailable');
     }
 
     try {
@@ -57,7 +57,23 @@ export class LocalStorage implements Storage {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new StorageError(
         `Failed to remove from storage: ${errorMessage}`,
-        'delete_error'
+        'read_error'
+      );
+    }
+  }
+
+  async clear(): Promise<void> {
+    if (!this.isAvailable()) {
+      throw new StorageError('Local storage is not available', 'storage_unavailable');
+    }
+
+    try {
+      localStorage.clear();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new StorageError(
+        `Failed to clear storage: ${errorMessage}`,
+        'write_error'
       );
     }
   }
