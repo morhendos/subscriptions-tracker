@@ -1,6 +1,5 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { Subscription } from '@/types/subscription';
 
 interface SubscriptionSummaryProps {
@@ -10,7 +9,7 @@ interface SubscriptionSummaryProps {
 
 /**
  * A component that displays a summary of all subscriptions including total cost
- * and a visualization of spending trends
+ * and visualization of spending distribution
  */
 export const SubscriptionSummary: React.FC<SubscriptionSummaryProps> = ({
   subscriptions,
@@ -19,7 +18,6 @@ export const SubscriptionSummary: React.FC<SubscriptionSummaryProps> = ({
   // Calculate total monthly cost
   const totalMonthlyCost = subscriptions.reduce((sum, sub) => sum + (sub.cost || 0), 0);
   
-  // Prepare data for the spending trends chart
   // Group subscriptions by billing cycle
   const spendingByPeriod = new Map<string, number>();
   subscriptions.forEach(sub => {
@@ -27,10 +25,8 @@ export const SubscriptionSummary: React.FC<SubscriptionSummaryProps> = ({
     spendingByPeriod.set(period, (spendingByPeriod.get(period) || 0) + (sub.cost || 0));
   });
 
-  const chartData = Array.from(spendingByPeriod).map(([period, amount]) => ({
-    period: period.charAt(0).toUpperCase() + period.slice(1),
-    amount
-  }));
+  // Find the highest spending for scaling the bars
+  const maxSpending = Math.max(...Array.from(spendingByPeriod.values()), 0);
 
   return (
     <Card className={`w-full ${className}`}>
@@ -38,7 +34,7 @@ export const SubscriptionSummary: React.FC<SubscriptionSummaryProps> = ({
         <CardTitle>Subscription Summary</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
+        <div className="space-y-8">
           <div>
             <h3 className="text-lg font-medium">Total Monthly Cost</h3>
             <p className="text-3xl font-bold">
@@ -46,28 +42,29 @@ export const SubscriptionSummary: React.FC<SubscriptionSummaryProps> = ({
             </p>
           </div>
           
-          <div>
-            <h3 className="text-lg font-medium mb-4">Spending by Billing Cycle</h3>
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="period" />
-                  <YAxis />
-                  <Tooltip 
-                    formatter={(value: number) => [`$${value.toFixed(2)}`, 'Amount']}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="amount" 
-                    stroke="#2563eb"
-                    strokeWidth={2}
-                    dot={{ fill: '#2563eb' }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+          {spendingByPeriod.size > 0 && (
+            <div>
+              <h3 className="text-lg font-medium mb-4">Spending by Billing Cycle</h3>
+              <div className="space-y-3">
+                {Array.from(spendingByPeriod).map(([period, amount]) => (
+                  <div key={period} className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="capitalize">{period}</span>
+                      <span>${amount.toFixed(2)}</span>
+                    </div>
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary rounded-full transition-all duration-500"
+                        style={{ 
+                          width: `${(amount / maxSpending) * 100}%`
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
