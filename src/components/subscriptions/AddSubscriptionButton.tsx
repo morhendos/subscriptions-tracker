@@ -17,7 +17,7 @@ export function AddSubscriptionButton({ onClick, className = '' }: AddSubscripti
         size={18} 
         className="transition-transform group-hover:scale-110 group-hover:rotate-90"
       />
-      <span>Add New Subscription</span>
+      <span>Add New Subscription...</span>
     </button>
   );
 }
