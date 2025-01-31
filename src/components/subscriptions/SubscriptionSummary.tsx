@@ -16,13 +16,16 @@ export const SubscriptionSummary: React.FC<SubscriptionSummaryProps> = ({
   className = '',
 }) => {
   // Calculate total monthly cost
-  const totalMonthlyCost = subscriptions.reduce((sum, sub) => sum + (sub.cost || 0), 0);
+  const totalMonthlyCost = subscriptions.reduce((sum, sub) => {
+    const monthlyPrice = sub.billingCycle === 'YEARLY' ? sub.price / 12 : sub.price;
+    return sum + monthlyPrice;
+  }, 0);
   
   // Group subscriptions by billing cycle
-  const spendingByPeriod = new Map<string, number>();
+  const spendingByPeriod = new Map<Subscription['billingCycle'], number>();
   subscriptions.forEach(sub => {
-    const period = sub.billingCycle || 'monthly';
-    spendingByPeriod.set(period, (spendingByPeriod.get(period) || 0) + (sub.cost || 0));
+    const currentAmount = spendingByPeriod.get(sub.billingCycle) || 0;
+    spendingByPeriod.set(sub.billingCycle, currentAmount + sub.price);
   });
 
   // Find the highest spending for scaling the bars
@@ -49,7 +52,7 @@ export const SubscriptionSummary: React.FC<SubscriptionSummaryProps> = ({
                 {Array.from(spendingByPeriod).map(([period, amount]) => (
                   <div key={period} className="space-y-1">
                     <div className="flex justify-between text-sm">
-                      <span className="capitalize">{period}</span>
+                      <span className="capitalize">{period.toLowerCase()}</span>
                       <span>${amount.toFixed(2)}</span>
                     </div>
                     <div className="h-2 bg-secondary rounded-full overflow-hidden">
@@ -69,10 +72,12 @@ export const SubscriptionSummary: React.FC<SubscriptionSummaryProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <h4 className="font-medium">Active Subscriptions</h4>
-              <p className="text-2xl font-semibold">{subscriptions.length}</p>
+              <p className="text-2xl font-semibold">
+                {subscriptions.filter(sub => sub.status === 'ACTIVE').length}
+              </p>
             </div>
             <div className="space-y-2">
-              <h4 className="font-medium">Average Cost</h4>
+              <h4 className="font-medium">Average Monthly Cost</h4>
               <p className="text-2xl font-semibold">
                 ${subscriptions.length ? (totalMonthlyCost / subscriptions.length).toFixed(2) : '0.00'}
               </p>
