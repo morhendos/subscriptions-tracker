@@ -2,6 +2,7 @@ subscription-tracker/
 ├── README.md
 ├── next-env.d.ts
 ├── next.config.js
+├── package-lock.json
 ├── package.json
 ├── postcss.config.js
 ├── project-structure.txt
@@ -79,6 +80,7 @@ subscription-tracker/
 │   │   ├── storage
 │   │   │   ├── index.ts
 │   │   │   ├── localStorage.ts
+│   │   │   ├── server.ts
 │   │   │   └── types.ts
 │   │   ├── subscriptions
 │   │   │   ├── config
