@@ -23,7 +23,6 @@ export default function SubscriptionsPage() {
   } = useSubscriptionStorage();
 
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
-  // Explicitly set initial state to false
   const [showForm, setShowForm] = useState<boolean>(false);
 
   const handleSubmit = (data: SubscriptionFormData) => {
@@ -33,7 +32,7 @@ export default function SubscriptionsPage() {
     } else {
       addSubscription(data);
     }
-    setShowForm(false);  // Hide form after submission
+    setShowForm(false);
   };
 
   const handleEdit = (subscription: Subscription) => {
