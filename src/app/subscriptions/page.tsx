@@ -23,7 +23,8 @@ export default function SubscriptionsPage() {
   } = useSubscriptionStorage();
 
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
-  const [isFormVisible, setIsFormVisible] = useState(false);
+  // Explicitly set initial state to false
+  const [showForm, setShowForm] = useState<boolean>(false);
 
   const handleSubmit = (data: SubscriptionFormData) => {
     if (editingSubscription) {
@@ -31,13 +32,13 @@ export default function SubscriptionsPage() {
       setEditingSubscription(null);
     } else {
       addSubscription(data);
-      setIsFormVisible(false);
     }
+    setShowForm(false);  // Hide form after submission
   };
 
   const handleEdit = (subscription: Subscription) => {
     setEditingSubscription(subscription);
-    setIsFormVisible(true);
+    setShowForm(true);
   };
 
   const handleDelete = (id: string) => {
@@ -45,19 +46,19 @@ export default function SubscriptionsPage() {
       deleteSubscription(id);
       if (editingSubscription?.id === id) {
         setEditingSubscription(null);
-        setIsFormVisible(false);
+        setShowForm(false);
       }
     }
   };
 
   const handleCancel = () => {
     setEditingSubscription(null);
-    setIsFormVisible(false);
+    setShowForm(false);
   };
 
   const handleAddNew = () => {
     setEditingSubscription(null);
-    setIsFormVisible(true);
+    setShowForm(true);
   };
 
   return (
@@ -66,24 +67,11 @@ export default function SubscriptionsPage() {
         <PageHeader />
         
         <div className="grid gap-8 mt-8 lg:grid-cols-2">
-          {/* Form Section */}
-          <div className={`transition-all duration-300 ease-in-out lg:order-2 ${!isFormVisible && !editingSubscription ? 'hidden' : ''}`}>
-            <Section
-              title={editingSubscription ? 'Edit Subscription' : 'Add New Subscription'}
-            >
-              <SubscriptionForm
-                onSubmit={handleSubmit}
-                onCancel={handleCancel}
-                initialData={editingSubscription || undefined}
-              />
-            </Section>
-          </div>
-
           {/* Main Content */}
           <div className="space-y-8 lg:order-1">
             <Section title="Your Subscriptions">
               <div className="space-y-6">
-                {!isFormVisible && !editingSubscription && (
+                {!showForm && (
                   <AddSubscriptionButton onClick={handleAddNew} />
                 )}
                 <SubscriptionList
@@ -103,6 +91,21 @@ export default function SubscriptionsPage() {
               </Section>
             )}
           </div>
+
+          {/* Form Section */}
+          {showForm && (
+            <div className="lg:order-2">
+              <Section
+                title={editingSubscription ? 'Edit Subscription' : 'Add New Subscription'}
+              >
+                <SubscriptionForm
+                  onSubmit={handleSubmit}
+                  onCancel={handleCancel}
+                  initialData={editingSubscription || undefined}
+                />
+              </Section>
+            </div>
+          )}
         </div>
       </main>
     </div>
