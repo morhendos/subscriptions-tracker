@@ -1,75 +1,90 @@
-'use client';
-
-import { Currency, SubscriptionSummary as Summary } from '@/types/subscriptions';
-import { formatCurrency } from '@/utils/format';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import type { Subscription } from '@/types/subscription';
 
 interface SubscriptionSummaryProps {
-  summary: Summary;
+  subscriptions: Subscription[];
+  className?: string;
 }
 
-export function SubscriptionSummary({ summary }: SubscriptionSummaryProps) {
-  const hasOriginalAmounts = Object.values(summary.originalAmounts).some(amount => amount > 0);
+/**
+ * A component that displays a summary of all subscriptions including total cost
+ * and a visualization of spending trends
+ */
+export const SubscriptionSummary: React.FC<SubscriptionSummaryProps> = ({
+  subscriptions,
+  className = '',
+}) => {
+  // Calculate total monthly cost
+  const totalMonthlyCost = subscriptions.reduce((sum, sub) => sum + (sub.cost || 0), 0);
+  
+  // Prepare data for the spending trends chart
+  // Group subscriptions by billing cycle
+  const spendingByPeriod = new Map<string, number>();
+  subscriptions.forEach(sub => {
+    const period = sub.billingCycle || 'monthly';
+    spendingByPeriod.set(period, (spendingByPeriod.get(period) || 0) + (sub.cost || 0));
+  });
+
+  const chartData = Array.from(spendingByPeriod).map(([period, amount]) => ({
+    period: period.charAt(0).toUpperCase() + period.slice(1),
+    amount
+  }));
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <SummaryCard
-          title="Monthly"
-          amount={summary.totalMonthly}
-          period="per month"
-        />
-        <SummaryCard
-          title="Yearly"
-          amount={summary.totalYearly}
-          period="per year"
-        />
-      </div>
+    <Card className={`w-full ${className}`}>
+      <CardHeader>
+        <CardTitle>Subscription Summary</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-lg font-medium">Total Monthly Cost</h3>
+            <p className="text-3xl font-bold">
+              ${totalMonthlyCost.toFixed(2)}
+            </p>
+          </div>
+          
+          <div>
+            <h3 className="text-lg font-medium mb-4">Spending by Billing Cycle</h3>
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="period" />
+                  <YAxis />
+                  <Tooltip 
+                    formatter={(value: number) => [`$${value.toFixed(2)}`, 'Amount']}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="amount" 
+                    stroke="#2563eb"
+                    strokeWidth={2}
+                    dot={{ fill: '#2563eb' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
 
-      {hasOriginalAmounts && (
-        <div className="bg-paper dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-muted mb-3">Original Currency Amounts</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {Object.entries(summary.originalAmounts)
-              .filter(([_, amount]) => amount > 0)
-              .map(([currency, amount]) => (
-                <div key={currency}>
-                  <p className="text-lg font-semibold journal-text text-foreground">
-                    {formatCurrency(amount, currency as Currency)}
-                  </p>
-                  <p className="text-sm text-muted">Total in {currency}</p>
-                </div>
-              ))}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <h4 className="font-medium">Active Subscriptions</h4>
+              <p className="text-2xl font-semibold">{subscriptions.length}</p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium">Average Cost</h4>
+              <p className="text-2xl font-semibold">
+                ${subscriptions.length ? (totalMonthlyCost / subscriptions.length).toFixed(2) : '0.00'}
+              </p>
+            </div>
           </div>
         </div>
-      )}
-
-      <div className="bg-indigo-50 dark:bg-indigo-900/30 rounded-lg p-6 text-center">
-        <h3 className="text-lg font-medium journal-text mb-2 text-foreground">
-          Total Monthly Spending
-        </h3>
-        <p className="text-2xl font-semibold text-indigo-600 dark:text-indigo-400">
-          {formatCurrency(summary.grandTotalMonthly, 'EUR')}
-        </p>
-        <p className="text-sm text-muted mt-1">
-          All subscriptions converted to EUR monthly rate
-        </p>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
-}
+};
 
-interface SummaryCardProps {
-  title: string;
-  amount: number;
-  period: string;
-}
-
-function SummaryCard({ title, amount, period }: SummaryCardProps) {
-  return (
-    <div className="bg-paper dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-      <h4 className="text-sm font-medium text-muted mb-1">{title}</h4>
-      <p className="text-xl font-semibold journal-text text-foreground">{formatCurrency(amount, 'EUR')}</p>
-      <p className="text-sm text-muted">{period}</p>
-    </div>
-  );
-}
+export default SubscriptionSummary;
