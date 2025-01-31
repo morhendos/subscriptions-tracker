@@ -11,11 +11,13 @@ export function AddSubscriptionButton({ onClick, className = '' }: AddSubscripti
   return (
     <button
       onClick={onClick}
-      className={`w-full bg-accent/10 text-accent hover:bg-accent/15 py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 group ${className}`}
-      title="Add new subscription"
+      className={`group flex items-center justify-center w-full gap-2 px-4 py-3 text-sm font-medium transition-all duration-200 bg-paper hover:bg-accent/5 text-muted hover:text-accent border border-gray-200 dark:border-gray-700 hover:border-accent dark:hover:border-accent rounded-lg ${className}`}
     >
-      <Plus size={20} className="group-hover:scale-110 transition-transform" />
-      <span className="font-medium">Add New Subscription</span>
+      <Plus 
+        size={18} 
+        className="transition-transform group-hover:scale-110 group-hover:rotate-90"
+      />
+      <span>Add New Subscription</span>
     </button>
   );
 }
