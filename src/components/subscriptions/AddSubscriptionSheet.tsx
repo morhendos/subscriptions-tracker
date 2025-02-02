@@ -13,9 +13,15 @@ import { SubscriptionFormData } from "@/types/subscriptions";
 
 interface AddSubscriptionSheetProps {
   onSubmit: (data: SubscriptionFormData) => void;
+  variant?: 'default' | 'primary' | 'outline';
+  className?: string;
 }
 
-export function AddSubscriptionSheet({ onSubmit }: AddSubscriptionSheetProps) {
+export function AddSubscriptionSheet({ 
+  onSubmit, 
+  variant = 'default',
+  className = '' 
+}: AddSubscriptionSheetProps) {
   const [open, setOpen] = React.useState(false);
 
   const handleSubmit = (data: SubscriptionFormData) => {
@@ -27,10 +33,12 @@ export function AddSubscriptionSheet({ onSubmit }: AddSubscriptionSheetProps) {
     <>
       <Button 
         onClick={() => setOpen(true)}
-        className="w-full flex items-center justify-center gap-2"
+        variant={variant}
+        className={className}
+        size="sm"
       >
-        <PlusCircle className="w-5 h-5" />
-        Add New Subscription
+        <PlusCircle className="w-4 h-4 mr-2" />
+        Add New
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
