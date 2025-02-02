@@ -8,6 +8,7 @@ import { SubscriptionList } from './SubscriptionList';
 import { SubscriptionSummary } from './SubscriptionSummary';
 import { Subscription, SubscriptionFormData } from '@/types/subscriptions';
 import { useSubscriptionStorage } from '@/lib/subscriptions/storage';
+import { AddSubscriptionSheet } from './AddSubscriptionSheet';
 
 export interface SubscriptionDashboardProps {
   variant?: 'default' | 'compact';
@@ -81,12 +82,12 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
     default: {
       container: "grid gap-8 mt-8 lg:grid-cols-12",
       list: "lg:col-span-5",
-      form: "lg:col-span-7 space-y-8"
+      content: "lg:col-span-7 space-y-8"
     },
     compact: {
       container: "grid gap-8 mt-8 lg:grid-cols-2",
       list: "space-y-8 lg:order-1",
-      form: "lg:order-2"
+      content: "lg:order-2"
     }
   };
 
@@ -98,7 +99,15 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
         // Default Layout (12-column grid)
         <>
           <div className={layout.list}>
-            <Section title="Your Subscriptions">
+            <Section 
+              title="Your Subscriptions"
+              action={
+                <AddSubscriptionSheet 
+                  onSubmit={handleSubmit} 
+                  variant="outline"
+                />
+              }
+            >
               <SubscriptionList
                 subscriptions={subscriptions}
                 onEdit={handleEdit}
@@ -110,23 +119,21 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
             </Section>
           </div>
 
-          <div className={layout.form}>
-            <Section
-              title={editingSubscription ? 'Edit Subscription' : 'Add New Subscription'}
-            >
-              <SubscriptionForm
-                onSubmit={handleSubmit}
-                onCancel={editingSubscription ? handleCancel : undefined}
-                initialData={editingSubscription || undefined}
-              />
-            </Section>
+          <div className={layout.content}>
+            {editingSubscription && (
+              <Section title="Edit Subscription">
+                <SubscriptionForm
+                  onSubmit={handleSubmit}
+                  onCancel={handleCancel}
+                  initialData={editingSubscription}
+                />
+              </Section>
+            )}
 
             {subscriptions.length > 0 && (
-              <div className="lg:sticky lg:top-4">
-                <Section title="Summary">
-                  <SubscriptionSummary summary={calculateSummary()} />
-                </Section>
-              </div>
+              <Section title="Summary">
+                <SubscriptionSummary summary={calculateSummary()} />
+              </Section>
             )}
           </div>
         </>
@@ -140,7 +147,15 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
               </Section>
             )}
 
-            <Section title="Your Subscriptions">
+            <Section 
+              title="Your Subscriptions"
+              action={
+                <AddSubscriptionSheet 
+                  onSubmit={handleSubmit} 
+                  variant="outline"
+                />
+              }
+            >
               <SubscriptionList
                 subscriptions={subscriptions}
                 onEdit={handleEdit}
@@ -152,16 +167,17 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
             </Section>
           </div>
 
-          <Section
-            title={editingSubscription ? 'Edit Subscription' : 'Add New Subscription'}
-            className={layout.form}
-          >
-            <SubscriptionForm
-              onSubmit={handleSubmit}
-              onCancel={editingSubscription ? handleCancel : undefined}
-              initialData={editingSubscription || undefined}
-            />
-          </Section>
+          <div className={layout.content}>
+            {editingSubscription && (
+              <Section title="Edit Subscription">
+                <SubscriptionForm
+                  onSubmit={handleSubmit}
+                  onCancel={handleCancel}
+                  initialData={editingSubscription}
+                />
+              </Section>
+            )}
+          </div>
         </>
       )}
     </div>
