@@ -1,59 +1,88 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
+ 
 @layer base {
   :root {
-    --background: 40 20% 97%;
-    --paper: 40 30% 99%;
-    --foreground: 40 25% 15%;
-    --muted: 40 15% 45%;
-    --accent: 80 60% 45%;
-    --ink: 215 45% 25%;
-  }
+    /* Light mode */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+ 
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+ 
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+ 
+    /* Adjusted to use a darker version of the gold for better contrast on light bg */
+    --primary: 43 74% 49%; /* Modified version of landing page gold */
+    --primary-foreground: 0 0% 100%;
+ 
+    --secondary: 222.2 84% 4.9%;
+    --secondary-foreground: 210 40% 98%;
+ 
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+ 
+    --accent: 43 84% 85%; /* Lighter gold for subtle accents */
+    --accent-foreground: 222.2 47.4% 11.2%;
+ 
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
 
-  :root[class~="dark"] {
-    --background: 222 28% 10%;    /* Deep navy */
-    --paper: 222 24% 13%;         /* Darker surface */
-    --foreground: 222 20% 95%;    /* Cool white */
-    --muted: 222 15% 60%;         /* Muted blue-gray */
-    --accent: 200 70% 65%;        /* Soft blue accent */
-    --ink: 222 25% 85%;           /* Light text */
+    /* Success colors for rating stars etc */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+ 
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 43 74% 49%; /* Match primary for focus states */
+ 
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    /* Exact match with landing page dark theme */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+ 
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+ 
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+ 
+    /* Using landing page gold */
+    --primary: 43 74% 49%; /* Goldenrod from landing */
+    --primary-foreground: 222.2 47.4% 11.2%;
+ 
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+ 
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+ 
+    --accent: 43 84% 85%; /* Lighter gold for hover states */
+    --accent-foreground: 222.2 47.4% 11.2%;
+ 
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Success colors for rating stars etc */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+ 
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 43 74% 49%; /* Match primary */
   }
 }
-
-@layer components {
-  .input-base {
-    @apply mt-1 block w-full rounded-md px-3 py-2 text-sm
-           bg-white dark:bg-gray-800
-           border border-gray-300 dark:border-gray-700
-           text-gray-900 dark:text-gray-100
-           focus:border-indigo-500 dark:focus:border-indigo-400
-           focus:ring-indigo-500 dark:focus:ring-indigo-400
-           focus:outline-none focus:ring-2 focus:ring-opacity-50;
+ 
+@layer base {
+  * {
+    @apply border-border;
   }
-
-  .button-base {
-    @apply rounded-md px-4 py-2 text-sm font-medium
-           focus:outline-none focus:ring-2 focus:ring-offset-2
-           disabled:opacity-50 disabled:cursor-not-allowed
-           transition-colors duration-200;
-  }
-
-  .button-primary {
-    @apply button-base
-           bg-indigo-600 hover:bg-indigo-700
-           dark:bg-indigo-500 dark:hover:bg-indigo-600
-           text-white
-           focus:ring-indigo-500;
-  }
-
-  .button-secondary {
-    @apply button-base
-           border border-gray-300 dark:border-gray-600
-           bg-white hover:bg-gray-50
-           dark:bg-gray-800 dark:hover:bg-gray-700
-           text-gray-700 dark:text-gray-200
-           focus:ring-indigo-500;
+  body {
+    @apply bg-background text-foreground;
   }
 }
