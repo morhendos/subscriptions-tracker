@@ -40,32 +40,31 @@
   }
  
   .dark {
-    /* Dark mode - exactly matching landing page */
-    --background: 240 23% 9%; /* #0A0A1B base color */
-    --foreground: 0 0% 100%; /* Pure white for better readability */
+    /* Dark mode - matching landing page */
+    --background: 240 23% 9%;
+    --foreground: 0 0% 100%; /* Pure white for main text */
  
-    /* Card with slight transparency to show gradient */
-    --card: 240 23% 9%;
-    --card-foreground: 0 0% 100%;
+    --card: 240 23% 12%;
+    --card-foreground: 0 0% 98%;
  
     --popover: 240 23% 9%;
-    --popover-foreground: 0 0% 100%;
+    --popover-foreground: 0 0% 98%;
  
     /* Exact landing page gold */
     --primary: 43 74% 49%; /* #DAA520 Goldenrod */
     --primary-foreground: 0 0% 100%;
  
-    /* Darker background elements */
+    /* Darker elements */
     --secondary: 240 21% 12%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary-foreground: 0 0% 98%;
  
-    /* Muted elements with slight transparency */
+    /* Muted text now more visible */
     --muted: 240 21% 12%;
-    --muted-foreground: 0 0% 85%;
+    --muted-foreground: 210 40% 80%;
  
-    /* Brighter gold for accents/hover */
-    --accent: 51 100% 50%; /* #FFD700 Gold */
-    --accent-foreground: 240 23% 9%;
+    /* Gold accent for subscription items */
+    --accent: 43 74% 49%; /* Match landing page gold */
+    --accent-foreground: 0 0% 100%;
  
     /* Same destructive as landing */
     --destructive: 0 62.8% 30.6%;
@@ -76,8 +75,8 @@
     --success-foreground: 0 0% 100%;
  
     /* Subtle borders that work with the gradient */
-    --border: 240 21% 12%;
-    --input: 240 21% 12%;
+    --border: 240 21% 15%;
+    --input: 240 21% 15%;
     --ring: 43 74% 49%;
   }
 }
