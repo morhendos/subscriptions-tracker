@@ -1,5 +1,6 @@
 subscription-tracker/
 ├── README.md
+├── install-components.sh
 ├── next-env.d.ts
 ├── next.config.js
 ├── package-lock.json
@@ -55,15 +56,19 @@ subscription-tracker/
 │   │   │   └── HeaderControls.tsx
 │   │   ├── subscriptions
 │   │   │   ├── AddSubscriptionButton.tsx
+│   │   │   ├── AddSubscriptionSheet.tsx
 │   │   │   ├── DeleteSubscriptionDialog.tsx
+│   │   │   ├── SubscriptionDashboard.tsx
 │   │   │   ├── SubscriptionForm.tsx
 │   │   │   ├── SubscriptionList.tsx
 │   │   │   └── SubscriptionSummary.tsx
 │   │   └── ui
 │   │       ├── IconButton.tsx
+│   │       ├── button.tsx
 │   │       ├── card.tsx
 │   │       ├── input.tsx
 │   │       ├── label.tsx
+│   │       ├── sheet.tsx
 │   │       ├── toast.tsx
 │   │       ├── toaster.tsx
 │   │       └── use-toast.ts
