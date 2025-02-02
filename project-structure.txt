@@ -6,6 +6,8 @@ subscription-tracker/
 ├── package.json
 ├── postcss.config.js
 ├── project-structure.txt
+├── public
+│   └── logo.png
 ├── scripts
 │   └── tree.js
 ├── src
