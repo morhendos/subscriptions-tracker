@@ -6,7 +6,6 @@ subscription-tracker/
 ├── package-lock.json
 ├── package.json
 ├── postcss.config.js
-├── project-structure.txt
 ├── public
 │   └── logo.png
 ├── scripts
@@ -116,4 +115,5 @@ subscription-tracker/
 │       ├── dates.ts
 │       └── format.ts
 ├── tailwind.config.js
+├── tree.txt
 └── tsconfig.json
