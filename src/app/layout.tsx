@@ -1,28 +1,37 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
-import Providers from './providers';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
+import GradientBackground from "@/components/GradientBackground";
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Subscription Tracker',
-  description: 'Track your subscriptions and recurring payments',
+  title: "Subscriptions Tracker",
+  description: "Track all your subscriptions in one place",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
-
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen bg-background text-foreground`}>
-        <Providers session={session}>{children}</Providers>
+      <body className={inter.className}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+          storageKey="subscriptions-tracker-theme"
+        >
+          <div className="dark:relative">
+            <div className="dark:block hidden">
+              <GradientBackground />
+            </div>
+            {children}
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   );
