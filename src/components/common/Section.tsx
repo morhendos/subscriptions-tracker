@@ -1,20 +1,20 @@
-export function Section({ 
-  title, 
-  children,
-  className 
-}: { 
-  title: string; 
-  children: React.ReactNode;
+import { ReactNode } from 'react';
+
+interface SectionProps {
+  title: string;
+  children: ReactNode;
   className?: string;
-}) {
+  action?: ReactNode;
+}
+
+export function Section({ title, children, className = '', action }: SectionProps) {
   return (
-    <div className={`paper-texture bg-paper rounded-lg p-4 sm:p-8 journal-shadow transition-colors duration-200 flex flex-col min-h-0 ${className}`}>
-      <h2 className="journal-heading text-xl sm:text-2xl font-semibold text-ink mb-6 text-center transition-colors flex-shrink-0">
-        {title}
-      </h2>
-      <div className="flex-1 min-h-0 overflow-auto">
-        {children}
+    <div className={`rounded-lg border bg-paper p-4 shadow-sm ${className}`}>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold">{title}</h2>
+        {action && <div>{action}</div>}
       </div>
+      {children}
     </div>
   );
 }
