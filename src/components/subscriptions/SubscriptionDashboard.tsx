@@ -104,7 +104,7 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
               action={
                 <AddSubscriptionSheet 
                   onSubmit={handleSubmit} 
-                  variant="outline"
+                  variant="golden"
                 />
               }
             >
@@ -152,7 +152,7 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
               action={
                 <AddSubscriptionSheet 
                   onSubmit={handleSubmit} 
-                  variant="outline"
+                  variant="golden"
                 />
               }
             >

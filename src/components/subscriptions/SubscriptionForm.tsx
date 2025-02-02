@@ -5,6 +5,7 @@ import { Plus, Save } from 'lucide-react';
 import { Subscription, SubscriptionFormData } from '@/types/subscriptions';
 import { getLocalISOString } from '@/utils/dates';
 import { CURRENCIES, CURRENCY_ORDER } from '@/lib/subscriptions/config/currencies';
+import { Button } from '@/components/ui/button';
 
 export function SubscriptionForm({ 
   onSubmit,
@@ -169,17 +170,19 @@ export function SubscriptionForm({
 
       <div className="flex justify-end space-x-4 p-1">
         {onCancel && (
-          <button
+          <Button
             type="button"
             onClick={onCancel}
-            className="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-foreground hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent focus:ring-offset-2"
+            variant="outline"
+            className="border-gray-700 hover:bg-gray-800"
           >
             Cancel
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           type="submit"
-          className="flex-1 bg-accent/10 text-accent hover:bg-accent/15 py-3 px-6 rounded-md transition-all duration-200 flex items-center justify-center gap-2 group journal-text journal-button"
+          variant="golden"
+          className="flex-1 flex items-center justify-center gap-2 group"
         >
           {initialData ? (
             <>
@@ -192,7 +195,7 @@ export function SubscriptionForm({
               <span>Add Subscription</span>
             </>
           )}
-        </button>
+        </Button>
       </div>
     </form>
   );
