@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { PageHeader } from '@/components/layout/PageHeader';
-import { SubscriptionDashboard } from '@/components/subscriptions/SubscriptionDashboard';
+import { PageHeader } from "@/components/layout/PageHeader";
+import { SubscriptionDashboard } from "@/components/subscriptions/SubscriptionDashboard";
 
 export default function SubscriptionsPage() {
   return (
-    <div className="min-h-screen bg-background transition-colors duration-200">
+    <div className="min-h-screen transition-colors duration-200">
       <main className="container mx-auto px-3 py-4 sm:px-4 sm:py-12 max-w-7xl">
         <PageHeader />
         <SubscriptionDashboard variant="default" />
