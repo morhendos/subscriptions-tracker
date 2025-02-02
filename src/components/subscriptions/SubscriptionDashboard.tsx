@@ -86,7 +86,7 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
     compact: {
       container: "grid gap-8 mt-8 lg:grid-cols-2",
       list: "space-y-8 lg:order-1",
-      form: "lg:order-3"
+      form: "lg:order-2"
     }
   };
 
@@ -133,17 +133,6 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
       ) : (
         // Compact Layout (2-column grid)
         <>
-          <Section
-            title={editingSubscription ? 'Edit Subscription' : 'Add New Subscription'}
-            className={layout.form}
-          >
-            <SubscriptionForm
-              onSubmit={handleSubmit}
-              onCancel={editingSubscription ? handleCancel : undefined}
-              initialData={editingSubscription || undefined}
-            />
-          </Section>
-
           <div className={layout.list}>
             {subscriptions.length > 0 && (
               <Section title="Summary">
@@ -162,6 +151,17 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
               />
             </Section>
           </div>
+
+          <Section
+            title={editingSubscription ? 'Edit Subscription' : 'Add New Subscription'}
+            className={layout.form}
+          >
+            <SubscriptionForm
+              onSubmit={handleSubmit}
+              onCancel={editingSubscription ? handleCancel : undefined}
+              initialData={editingSubscription || undefined}
+            />
+          </Section>
         </>
       )}
     </div>
