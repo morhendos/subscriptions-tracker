@@ -99,20 +99,24 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
         // Default Layout (12-column grid)
         <>
           <div className={layout.list}>
-            <div className="space-y-4">
-              <AddSubscriptionSheet onSubmit={handleSubmit} />
-              
-              <Section title="Your Subscriptions">
-                <SubscriptionList
-                  subscriptions={subscriptions}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onToggle={handleToggle}
-                  onToggleAll={handleToggleAll}
-                  mounted={mounted}
+            <Section 
+              title="Your Subscriptions"
+              action={
+                <AddSubscriptionSheet 
+                  onSubmit={handleSubmit} 
+                  variant="outline"
                 />
-              </Section>
-            </div>
+              }
+            >
+              <SubscriptionList
+                subscriptions={subscriptions}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onToggle={handleToggle}
+                onToggleAll={handleToggleAll}
+                mounted={mounted}
+              />
+            </Section>
           </div>
 
           <div className={layout.content}>
@@ -143,7 +147,15 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
               </Section>
             )}
 
-            <Section title="Your Subscriptions">
+            <Section 
+              title="Your Subscriptions"
+              action={
+                <AddSubscriptionSheet 
+                  onSubmit={handleSubmit} 
+                  variant="outline"
+                />
+              }
+            >
               <SubscriptionList
                 subscriptions={subscriptions}
                 onEdit={handleEdit}
@@ -156,10 +168,8 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
           </div>
 
           <div className={layout.content}>
-            <AddSubscriptionSheet onSubmit={handleSubmit} />
-            
             {editingSubscription && (
-              <Section title="Edit Subscription" className="mt-8">
+              <Section title="Edit Subscription">
                 <SubscriptionForm
                   onSubmit={handleSubmit}
                   onCancel={handleCancel}
