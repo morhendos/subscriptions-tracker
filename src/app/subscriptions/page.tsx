@@ -57,7 +57,7 @@ export default function SubscriptionsPage() {
         <div className="grid gap-8 mt-8 lg:grid-cols-2">
           <Section
             title={editingSubscription ? 'Edit Subscription' : 'Add New Subscription'}
-            className="lg:order-2"
+            className="lg:order-3"
           >
             <SubscriptionForm
               onSubmit={handleSubmit}
@@ -67,6 +67,12 @@ export default function SubscriptionsPage() {
           </Section>
 
           <div className="space-y-8 lg:order-1">
+            {subscriptions?.length > 0 && (
+              <Section title="Summary">
+                <SubscriptionSummary summary={calculateSummary()} />
+              </Section>
+            )}
+
             <Section title="Your Subscriptions">
               <SubscriptionList
                 subscriptions={subscriptions || []}
@@ -77,12 +83,6 @@ export default function SubscriptionsPage() {
                 mounted={mounted}
               />
             </Section>
-
-            {subscriptions?.length > 0 && (
-              <Section title="Summary">
-                <SubscriptionSummary summary={calculateSummary()} />
-              </Section>
-            )}
           </div>
         </div>
       </main>
