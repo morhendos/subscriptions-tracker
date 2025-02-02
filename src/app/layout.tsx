@@ -28,7 +28,10 @@ export default async function RootLayout({
             <div className="dark:block hidden">
               <GradientBackground />
             </div>
-            {children}
+            {/* Added z-10 to ensure content stays above background */}
+            <div className="relative z-10">
+              {children}
+            </div>
           </div>
         </Providers>
       </body>
