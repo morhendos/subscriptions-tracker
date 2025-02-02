@@ -4,7 +4,6 @@ import './globals.css';
 import Providers from './providers';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import GradientBackground from '@/components/GradientBackground';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -23,12 +22,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} min-h-screen bg-background text-foreground`}>
-        <Providers session={session}>
-          <GradientBackground />
-          <main className="relative z-1">
-            {children}
-          </main>
-        </Providers>
+        <Providers session={session}>{children}</Providers>
       </body>
     </html>
   );
