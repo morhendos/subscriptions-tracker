@@ -42,7 +42,6 @@
     --background: 240 23% 9%;
     --foreground: 0 0% 100%;
  
-    /* Semi-transparent card background */
     --card: 240 23% 12%;
     --card-foreground: 0 0% 98%;
  
@@ -101,4 +100,21 @@
   background-color: rgba(15, 15, 25, 0.6);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Dark mode input styles */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: rgba(15, 15, 25, 0.6) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: hsl(var(--ring)) !important;
+  outline: none;
+  box-shadow: 0 0 0 1px hsl(var(--ring));
 }
