@@ -23,17 +23,17 @@ export default function GradientBackground() {
   return (
     <>
       {/* Base dark layer */}
-      <div className="fixed inset-0 bg-[#0A0A1B]" />
+      <div className="fixed inset-0 bg-[#0A0A1B] -z-50" />
 
       {/* Main gradient effect */}
-      <div className="fixed inset-0" style={gradientStyles.main} />
+      <div className="fixed inset-0 -z-40" style={gradientStyles.main} />
 
       {/* Strong center glow */}
-      <div className="fixed inset-0" style={gradientStyles.centerGlow} />
+      <div className="fixed inset-0 -z-30" style={gradientStyles.centerGlow} />
 
       {/* Additional subtle glows */}
-      <div className="fixed inset-0" style={gradientStyles.subtleGlow1} />
-      <div className="fixed inset-0" style={gradientStyles.subtleGlow2} />
+      <div className="fixed inset-0 -z-20" style={gradientStyles.subtleGlow1} />
+      <div className="fixed inset-0 -z-10" style={gradientStyles.subtleGlow2} />
     </>
   );
 }
