@@ -13,13 +13,13 @@ import { SubscriptionFormData } from "@/types/subscriptions";
 
 interface AddSubscriptionSheetProps {
   onSubmit: (data: SubscriptionFormData) => void;
-  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | 'golden';
   className?: string;
 }
 
 export function AddSubscriptionSheet({ 
   onSubmit, 
-  variant = 'default',
+  variant = 'golden',
   className = '' 
 }: AddSubscriptionSheetProps) {
   const [open, setOpen] = React.useState(false);
