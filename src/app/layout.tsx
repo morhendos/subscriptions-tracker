@@ -4,6 +4,7 @@ import './globals.css';
 import Providers from './providers';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import GradientBackground from '@/components/GradientBackground';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -21,8 +22,13 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen bg-background text-foreground`}>
-        <Providers session={session}>{children}</Providers>
+      <body className={`${inter.className} min-h-screen bg-background text-foreground relative`}>
+        <Providers session={session}>
+          <div className="dark:block hidden">
+            <GradientBackground />
+          </div>
+          {children}
+        </Providers>
       </body>
     </html>
   );
