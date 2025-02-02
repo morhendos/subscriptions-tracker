@@ -4,7 +4,6 @@
  
 @layer base {
   :root {
-    /* Light mode - we'll adjust this later */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
  
@@ -40,9 +39,8 @@
   }
  
   .dark {
-    /* Dark mode - matching landing page */
     --background: 240 23% 9%;
-    --foreground: 0 0% 100%; /* Pure white for main text */
+    --foreground: 0 0% 100%;
  
     --card: 240 23% 12%;
     --card-foreground: 0 0% 98%;
@@ -50,31 +48,24 @@
     --popover: 240 23% 9%;
     --popover-foreground: 0 0% 98%;
  
-    /* Exact landing page gold */
-    --primary: 43 74% 49%; /* #DAA520 Goldenrod */
+    --primary: 43 74% 49%;
     --primary-foreground: 0 0% 100%;
  
-    /* Darker elements */
     --secondary: 240 21% 12%;
     --secondary-foreground: 0 0% 98%;
  
-    /* Muted text now more visible */
     --muted: 240 21% 12%;
     --muted-foreground: 210 40% 80%;
  
-    /* Gold accent for subscription items */
-    --accent: 43 74% 49%; /* Match landing page gold */
+    --accent: 43 74% 49%;
     --accent-foreground: 0 0% 100%;
  
-    /* Same destructive as landing */
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Green from the landing page stars */
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
  
-    /* Subtle borders that work with the gradient */
     --border: 240 21% 15%;
     --input: 240 21% 15%;
     --ring: 43 74% 49%;
@@ -88,4 +79,9 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Fix: use muted-foreground for text instead of muted */
+.text-muted {
+  color: hsl(var(--muted-foreground));
 }
