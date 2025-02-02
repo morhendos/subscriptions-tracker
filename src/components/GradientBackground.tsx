@@ -1,5 +1,7 @@
 'use client';
 
+import { useTheme } from "next-themes";
+
 const gradientStyles = {
   main: {
     background:
@@ -20,20 +22,24 @@ const gradientStyles = {
 };
 
 export default function GradientBackground() {
+  const { theme } = useTheme();
+
+  if (theme !== 'dark') return null;
+
   return (
     <>
       {/* Base dark layer */}
-      <div className="fixed inset-0 bg-[#0A0A1B] -z-20" />
+      <div className="fixed inset-0 bg-[#0A0A1B] -z-50" />
 
       {/* Main gradient effect */}
-      <div className="fixed inset-0 -z-19" style={gradientStyles.main} />
+      <div className="fixed inset-0 -z-49" style={gradientStyles.main} />
 
       {/* Strong center glow */}
-      <div className="fixed inset-0 -z-18" style={gradientStyles.centerGlow} />
+      <div className="fixed inset-0 -z-48" style={gradientStyles.centerGlow} />
 
       {/* Additional subtle glows */}
-      <div className="fixed inset-0 -z-17" style={gradientStyles.subtleGlow1} />
-      <div className="fixed inset-0 -z-16" style={gradientStyles.subtleGlow2} />
+      <div className="fixed inset-0 -z-47" style={gradientStyles.subtleGlow1} />
+      <div className="fixed inset-0 -z-46" style={gradientStyles.subtleGlow2} />
     </>
   );
 }
