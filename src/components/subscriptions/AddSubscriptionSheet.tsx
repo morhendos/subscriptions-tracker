@@ -13,7 +13,7 @@ import { SubscriptionFormData } from "@/types/subscriptions";
 
 interface AddSubscriptionSheetProps {
   onSubmit: (data: SubscriptionFormData) => void;
-  variant?: 'default' | 'primary' | 'outline';
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
   className?: string;
 }
 
