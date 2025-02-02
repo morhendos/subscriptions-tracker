@@ -8,6 +8,7 @@ import { SubscriptionList } from './SubscriptionList';
 import { SubscriptionSummary } from './SubscriptionSummary';
 import { Subscription, SubscriptionFormData } from '@/types/subscriptions';
 import { useSubscriptionStorage } from '@/lib/subscriptions/storage';
+import { AddSubscriptionSheet } from './AddSubscriptionSheet';
 
 export interface SubscriptionDashboardProps {
   variant?: 'default' | 'compact';
@@ -81,12 +82,12 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
     default: {
       container: "grid gap-8 mt-8 lg:grid-cols-12",
       list: "lg:col-span-5",
-      form: "lg:col-span-7 space-y-8"
+      content: "lg:col-span-7 space-y-8"
     },
     compact: {
       container: "grid gap-8 mt-8 lg:grid-cols-2",
       list: "space-y-8 lg:order-1",
-      form: "lg:order-2"
+      content: "lg:order-2"
     }
   };
 
@@ -98,34 +99,38 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
         // Default Layout (12-column grid)
         <>
           <div className={layout.list}>
-            <Section title="Your Subscriptions">
-              <SubscriptionList
-                subscriptions={subscriptions}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onToggle={handleToggle}
-                onToggleAll={handleToggleAll}
-                mounted={mounted}
-              />
-            </Section>
+            <div className="space-y-4">
+              <AddSubscriptionSheet onSubmit={handleSubmit} />
+              
+              <Section title="Your Subscriptions">
+                <SubscriptionList
+                  subscriptions={subscriptions}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onToggle={handleToggle}
+                  onToggleAll={handleToggleAll}
+                  mounted={mounted}
+                />
+              </Section>
+            </div>
           </div>
 
-          <div className={layout.form}>
+          <div className={layout.content}>
+            {editingSubscription && (
+              <Section title="Edit Subscription">
+                <SubscriptionForm
+                  onSubmit={handleSubmit}
+                  onCancel={handleCancel}
+                  initialData={editingSubscription}
+                />
+              </Section>
+            )}
+
             {subscriptions.length > 0 && (
               <Section title="Summary">
                 <SubscriptionSummary summary={calculateSummary()} />
               </Section>
             )}
-
-            <Section
-              title={editingSubscription ? 'Edit Subscription' : 'Add New Subscription'}
-            >
-              <SubscriptionForm
-                onSubmit={handleSubmit}
-                onCancel={editingSubscription ? handleCancel : undefined}
-                initialData={editingSubscription || undefined}
-              />
-            </Section>
           </div>
         </>
       ) : (
@@ -150,16 +155,19 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
             </Section>
           </div>
 
-          <Section
-            title={editingSubscription ? 'Edit Subscription' : 'Add New Subscription'}
-            className={layout.form}
-          >
-            <SubscriptionForm
-              onSubmit={handleSubmit}
-              onCancel={editingSubscription ? handleCancel : undefined}
-              initialData={editingSubscription || undefined}
-            />
-          </Section>
+          <div className={layout.content}>
+            <AddSubscriptionSheet onSubmit={handleSubmit} />
+            
+            {editingSubscription && (
+              <Section title="Edit Subscription" className="mt-8">
+                <SubscriptionForm
+                  onSubmit={handleSubmit}
+                  onCancel={handleCancel}
+                  initialData={editingSubscription}
+                />
+              </Section>
+            )}
+          </div>
         </>
       )}
     </div>
