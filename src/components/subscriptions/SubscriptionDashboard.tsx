@@ -80,9 +80,8 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
   const layouts = {
     default: {
       container: "grid gap-8 mt-8 lg:grid-cols-12",
-      summary: "lg:col-span-12 lg:row-start-1",
-      list: "lg:col-span-5 lg:row-start-2",
-      form: "lg:col-span-7 lg:row-start-2"
+      list: "lg:col-span-5",
+      form: "lg:col-span-7 space-y-8"
     },
     compact: {
       container: "grid gap-8 mt-8 lg:grid-cols-2",
@@ -98,14 +97,6 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
       {variant === 'default' ? (
         // Default Layout (12-column grid)
         <>
-          {subscriptions.length > 0 && (
-            <div className={layout.summary}>
-              <Section title="Summary">
-                <SubscriptionSummary summary={calculateSummary()} />
-              </Section>
-            </div>
-          )}
-          
           <div className={layout.list}>
             <Section title="Your Subscriptions">
               <SubscriptionList
@@ -120,6 +111,12 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
           </div>
 
           <div className={layout.form}>
+            {subscriptions.length > 0 && (
+              <Section title="Summary">
+                <SubscriptionSummary summary={calculateSummary()} />
+              </Section>
+            )}
+
             <Section
               title={editingSubscription ? 'Edit Subscription' : 'Add New Subscription'}
             >
