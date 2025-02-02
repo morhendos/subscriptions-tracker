@@ -40,6 +40,7 @@ subscription-tracker/
 │   │       ├── loading.tsx
 │   │       └── page.tsx
 │   ├── components
+│   │   ├── GradientBackground.tsx
 │   │   ├── ThemeToggle.tsx
 │   │   ├── auth
 │   │   │   ├── AuthLogo.tsx
