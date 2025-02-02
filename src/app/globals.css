@@ -4,7 +4,7 @@
  
 @layer base {
   :root {
-    /* Light mode */
+    /* Light mode - we'll adjust this later */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
  
@@ -14,8 +14,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
  
-    /* Adjusted to use a darker version of the gold for better contrast on light bg */
-    --primary: 43 74% 49%; /* Modified version of landing page gold */
+    --primary: 43 74% 49%;
     --primary-foreground: 0 0% 100%;
  
     --secondary: 222.2 84% 4.9%;
@@ -24,57 +23,62 @@
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
  
-    --accent: 43 84% 85%; /* Lighter gold for subtle accents */
+    --accent: 43 84% 85%;
     --accent-foreground: 222.2 47.4% 11.2%;
  
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    /* Success colors for rating stars etc */
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
  
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 43 74% 49%; /* Match primary for focus states */
+    --ring: 43 74% 49%;
  
     --radius: 0.5rem;
   }
  
   .dark {
-    /* Exact match with landing page dark theme */
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Dark mode - exactly matching landing page */
+    --background: 240 23% 9%; /* #0A0A1B base color */
+    --foreground: 0 0% 100%; /* Pure white for better readability */
  
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    /* Card with slight transparency to show gradient */
+    --card: 240 23% 9%;
+    --card-foreground: 0 0% 100%;
  
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 240 23% 9%;
+    --popover-foreground: 0 0% 100%;
  
-    /* Using landing page gold */
-    --primary: 43 74% 49%; /* Goldenrod from landing */
-    --primary-foreground: 222.2 47.4% 11.2%;
+    /* Exact landing page gold */
+    --primary: 43 74% 49%; /* #DAA520 Goldenrod */
+    --primary-foreground: 0 0% 100%;
  
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    /* Darker background elements */
+    --secondary: 240 21% 12%;
+    --secondary-foreground: 0 0% 100%;
  
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    /* Muted elements with slight transparency */
+    --muted: 240 21% 12%;
+    --muted-foreground: 0 0% 85%;
  
-    --accent: 43 84% 85%; /* Lighter gold for hover states */
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Brighter gold for accents/hover */
+    --accent: 51 100% 50%; /* #FFD700 Gold */
+    --accent-foreground: 240 23% 9%;
  
+    /* Same destructive as landing */
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    /* Success colors for rating stars etc */
+    /* Green from the landing page stars */
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
  
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 43 74% 49%; /* Match primary */
+    /* Subtle borders that work with the gradient */
+    --border: 240 21% 12%;
+    --input: 240 21% 12%;
+    --ring: 43 74% 49%;
   }
 }
  
