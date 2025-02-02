@@ -1,16 +1,16 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
-import GradientBackground from "@/components/GradientBackground";
-import { SessionProvider } from "next-auth/react";
-import { auth } from "@/auth";
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+import Providers from './providers';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import GradientBackground from '@/components/GradientBackground';
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: "Subscriptions Tracker",
-  description: "Track all your subscriptions in one place",
+  title: 'Subscription Tracker',
+  description: 'Track your subscriptions and recurring payments',
 };
 
 export default async function RootLayout({
@@ -18,26 +18,19 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
-  
+  const session = await getServerSession(authOptions);
+
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <SessionProvider session={session}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem={false}
-            storageKey="subscriptions-tracker-theme"
-          >
-            <div className="dark:relative">
-              <div className="dark:block hidden">
-                <GradientBackground />
-              </div>
-              {children}
+      <body className={`${inter.className} min-h-screen bg-background text-foreground`}>
+        <Providers session={session}>
+          <div className="dark:relative">
+            <div className="dark:block hidden">
+              <GradientBackground />
             </div>
-          </ThemeProvider>
-        </SessionProvider>
+            {children}
+          </div>
+        </Providers>
       </body>
     </html>
   );
