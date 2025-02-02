@@ -11,6 +11,7 @@ A Next.js web application to help users track and manage their recurring subscri
 - Persistent local storage with automatic data migration
 - Import/export functionality
 - Enable/disable individual or all subscriptions
+- Slide-out drawer for adding new subscriptions
 
 ## Tech Stack
 
@@ -19,6 +20,7 @@ A Next.js web application to help users track and manage their recurring subscri
 - Tailwind CSS for styling
 - Lucide React for icons
 - Next-Auth for authentication
+- Radix UI components (via shadcn/ui)
 
 ## Local Development
 
@@ -39,6 +41,7 @@ src/
 │   ├── common/          # Shared components (Section)
 │   ├── layout/          # Layout components (PageHeader)
 │   ├── settings/        # Settings UI (HeaderControls)
+│   ├── ui/              # shadcn/ui components
 │   └── subscriptions/   # Subscription-specific components
 ├── hooks/               # Custom React hooks
 ├── lib/
@@ -48,6 +51,29 @@ src/
 │       └── utils/       # Calculation helpers
 ├── types/               # TypeScript type definitions
 └── utils/               # Helper functions
+```
+
+## UI Components
+
+### Section Component
+Reusable section component with support for header actions:
+```tsx
+<Section 
+  title="Your Subscriptions"
+  action={<Button>Action</Button>}
+>
+  {/* Content */}
+</Section>
+```
+
+### AddSubscriptionSheet
+Slide-out drawer component for adding new subscriptions:
+```tsx
+<AddSubscriptionSheet 
+  onSubmit={handleSubmit}
+  variant="outline"      // default | destructive | outline | secondary | ghost | link
+  className="custom-class"
+/>
 ```
 
 ## Features Implementation
@@ -72,6 +98,7 @@ Supports multiple currencies (EUR, USD, GBP, PLN) with:
 - Enable/disable functionality
 - Batch operations (enable/disable all)
 - Summary calculations in base currency (EUR)
+- Easy subscription addition via slide-out drawer
 
 ### Dark Mode
 Implemented using Tailwind's dark mode with class strategy. Theme preference is persisted in localStorage.
@@ -98,3 +125,5 @@ Note: `main` branch has auto-deployment to production - never push directly to `
    - Email notifications for upcoming billing dates
    - More currency options
    - Subscription categories and tags
+   - Improved subscription management UI with filters and sorting
+   - Bulk actions for subscription management
