@@ -7,11 +7,12 @@ A Next.js web application to help users track and manage their recurring subscri
 - Track subscriptions with different billing periods (monthly and yearly)
 - Support for multiple currencies (EUR, USD, GBP, PLN) with automatic conversion
 - Calculate total monthly spending across all subscriptions
+- Automatic next billing date updates
 - Dark mode support
 - Persistent local storage with automatic data migration
 - Import/export functionality
 - Enable/disable individual or all subscriptions
-- Slide-out drawer for adding new subscriptions
+- Modern UI with slide-out drawers for adding and editing subscriptions
 
 ## Tech Stack
 
@@ -48,7 +49,7 @@ src/
 │   ├── storage/         # Storage implementation with abstraction
 │   └── subscriptions/   # Business logic & utilities
 │       ├── config/      # Currency and period configurations
-│       └── utils/       # Calculation helpers
+│       └── utils/       # Calculation helpers (dates, currency)
 ├── types/               # TypeScript type definitions
 └── utils/               # Helper functions
 ```
@@ -66,13 +67,22 @@ Reusable section component with support for header actions:
 </Section>
 ```
 
-### AddSubscriptionSheet
-Slide-out drawer component for adding new subscriptions:
+### AddSubscriptionSheet & EditSubscriptionSheet
+Modern slide-out drawer components for managing subscriptions:
 ```tsx
+// Adding new subscriptions
 <AddSubscriptionSheet 
   onSubmit={handleSubmit}
   variant="outline"      // default | destructive | outline | secondary | ghost | link
   className="custom-class"
+/>
+
+// Editing existing subscriptions
+<EditSubscriptionSheet
+  subscription={currentSubscription}
+  open={isOpen}
+  onOpenChange={setIsOpen}
+  onSubmit={handleSubmit}
 />
 ```
 
@@ -84,6 +94,15 @@ Subscriptions are stored using a flexible storage provider interface, currently 
 - Type-safe data handling
 - User-specific storage isolation
 - Error handling and fallbacks
+- Automatic updates of next billing dates
+
+### Next Billing Date Management
+The system automatically manages subscription billing dates:
+- Updates stale billing dates on application load
+- Recalculates next billing date when past due
+- Maintains proper chronological order of subscriptions
+- Preserves billing dates unless explicitly changed
+- Handles both monthly and yearly billing cycles
 
 ### Currency Handling
 Supports multiple currencies (EUR, USD, GBP, PLN) with:
@@ -94,11 +113,11 @@ Supports multiple currencies (EUR, USD, GBP, PLN) with:
 
 ### Subscription Management
 - Monthly and yearly billing periods
-- Next billing date calculation
+- Automated next billing date calculation
 - Enable/disable functionality
 - Batch operations (enable/disable all)
 - Summary calculations in base currency (EUR)
-- Easy subscription addition via slide-out drawer
+- Modern UI with slide-out drawers for adding/editing
 
 ### Dark Mode
 Implemented using Tailwind's dark mode with class strategy. Theme preference is persisted in localStorage.
