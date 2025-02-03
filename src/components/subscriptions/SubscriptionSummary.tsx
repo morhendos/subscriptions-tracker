@@ -80,7 +80,7 @@ export function SubscriptionSummary({ summary }: SubscriptionSummaryProps) {
             {Object.entries(summary.originalAmounts)
               .filter(([_, amount]) => amount > 0)
               .map(([currency, amount]) => (
-                <div key={currency} className="p-4 bg-accent/5 dark:bg-accent/10 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div key={currency} className="bg-paper dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                   <div className="text-lg font-bold text-foreground">
                     {amount.toFixed(2)} {currency === 'PLN' ? 'zł' : currency === 'USD' ? '$' : '€'}
                   </div>
