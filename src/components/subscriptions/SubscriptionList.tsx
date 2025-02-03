@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Subscription } from '@/types/subscriptions';
+import { Subscription, SubscriptionFormData } from '@/types/subscriptions';
 import { formatCurrency } from '@/utils/format';
 import { Pencil, Trash, CreditCard, EyeOff, Eye } from 'lucide-react';
 import { EditSubscriptionSheet } from './EditSubscriptionSheet';
@@ -46,11 +46,13 @@ export function SubscriptionList({
     setIsEditSheetOpen(true);
   };
 
-  const handleEditSubmit = (data: any) => {
+  const handleEditSubmit = (formData: SubscriptionFormData) => {
     if (editingSubscription) {
       onEdit({
-        ...editingSubscription,
-        ...data
+        ...formData,
+        id: editingSubscription.id,
+        disabled: editingSubscription.disabled,
+        nextBillingDate: editingSubscription.nextBillingDate
       });
     }
   };
