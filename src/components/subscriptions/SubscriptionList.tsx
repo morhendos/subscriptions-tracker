@@ -70,7 +70,14 @@ export function SubscriptionList({
       {sortedSubscriptions.map((subscription) => (
         <div
           key={subscription.id}
-          className={`bg-paper p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 transition-all duration-200 ${subscription.disabled ? 'opacity-50' : ''} cursor-pointer hover:border-accent dark:hover:border-accent`}
+          className={`bg-paper p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 
+            transition-all duration-200 transform 
+            ${subscription.disabled ? 'opacity-50' : ''} 
+            cursor-pointer 
+            hover:border-accent hover:border-2
+            hover:bg-accent/5 dark:hover:bg-accent/10
+            hover:shadow-md hover:scale-[1.01]
+            dark:hover:border-accent`}
           onClick={() => onToggle(subscription.id)}
           role="button"
           tabIndex={0}
