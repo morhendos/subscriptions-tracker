@@ -109,6 +109,23 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Input styles */
+input,
+select,
+textarea {
+  background-color: rgba(255, 250, 245, 0.7) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: rgba(0, 0, 0, 0.9) !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: hsl(var(--ring)) !important;
+  outline: none;
+  box-shadow: 0 0 0 1px hsl(var(--ring));
+}
+
 /* Dark mode input styles */
 .dark input,
 .dark select,
