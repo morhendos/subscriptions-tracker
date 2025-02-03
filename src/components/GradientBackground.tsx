@@ -51,10 +51,11 @@ export default function GradientBackground() {
   }, []);
 
   if (!mounted) {
-    return null;
+    return (
+      <div className="fixed inset-0 z-[-1] bg-[#FFFAF5] dark:bg-[#0A0A1B]" />
+    );
   }
 
-  // Use resolvedTheme instead of theme to get the actual theme value
   const currentTheme = resolvedTheme === 'dark' ? 'dark' : 'light';
 
   return (
