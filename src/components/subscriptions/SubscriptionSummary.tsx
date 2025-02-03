@@ -82,7 +82,7 @@ export function SubscriptionSummary({ summary }: SubscriptionSummaryProps) {
               .map(([currency, amount]) => (
                 <div 
                   key={currency} 
-                  className="bg-gray-50/50 dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-700 p-4 relative overflow-hidden"
+                  className="bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-700 p-4 relative overflow-hidden shadow-sm"
                 >
                   <div className="relative z-10">
                     <div className="text-lg font-bold text-foreground">
@@ -103,7 +103,7 @@ export function SubscriptionSummary({ summary }: SubscriptionSummaryProps) {
         <h3 className="text-center text-lg font-medium text-foreground">
           Total Monthly Spending
         </h3>
-        <div className="text-center mt-2 text-3xl font-bold text-accent dark:text-accent/90">
+        <div className="text-center mt-2 text-3xl font-bold text-yellow-600/90 dark:text-accent/90">
           {summary.grandTotalMonthly.toFixed(2)} €
         </div>
         <p className="text-center mt-2 text-sm text-muted">
