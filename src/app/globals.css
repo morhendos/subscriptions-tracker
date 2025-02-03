@@ -109,21 +109,6 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Input styles */
-input,
-select,
-textarea {
-  border-color: hsl(var(--ring)) !important;
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: hsl(var(--ring)) !important;
-  outline: none;
-  box-shadow: 0 0 0 1px hsl(var(--ring));
-}
-
 /* Dark mode input styles */
 .dark input,
 .dark select,
@@ -139,4 +124,14 @@ textarea:focus {
   border-color: hsl(var(--ring)) !important;
   outline: none;
   box-shadow: 0 0 0 1px hsl(var(--ring));
+}
+
+/* Sheet Add Subscription button styles */
+.sheet-add-button {
+  @apply bg-[#DAA520] text-[#1A1F2C] shadow-sm transition-all duration-300;
+}
+
+.sheet-add-button:hover {
+  @apply shadow-md bg-[#FFD700];
+  transform: translateY(-1px);
 }
