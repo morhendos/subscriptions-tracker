@@ -1,6 +1,7 @@
 'use client';
 
-const darkGradientStyles = {
+// Original dark gradient styles - DO NOT TOUCH THESE
+const gradientStyles = {
   main: {
     background:
       "linear-gradient(100deg, rgba(89, 35, 46, 0.7) 0%, rgba(10, 10, 27, 0.9) 45%, rgba(27, 35, 65, 0.7) 100%)",
@@ -19,6 +20,7 @@ const darkGradientStyles = {
   },
 };
 
+// Light theme styles
 const lightGradientStyles = {
   main: {
     background:
@@ -41,23 +43,19 @@ const lightGradientStyles = {
 export default function GradientBackground() {
   return (
     <>
-      {/* Base layer */}
-      <div className="fixed inset-0 bg-[#FFFAF5] dark:bg-[#0A0A1B] -z-50" />
+      {/* Light theme layers */}
+      <div className="fixed inset-0 bg-[#FFFAF5] dark:hidden -z-50" />
+      <div className="fixed inset-0 -z-40 dark:hidden" style={lightGradientStyles.main} />
+      <div className="fixed inset-0 -z-30 dark:hidden" style={lightGradientStyles.centerGlow} />
+      <div className="fixed inset-0 -z-20 dark:hidden" style={lightGradientStyles.subtleGlow1} />
+      <div className="fixed inset-0 -z-10 dark:hidden" style={lightGradientStyles.subtleGlow2} />
 
-      {/* Main gradient effect */}
-      <div className="fixed inset-0 -z-40" style={lightGradientStyles.main} />
-      <div className="fixed inset-0 -z-40 hidden dark:block" style={darkGradientStyles.main} />
-
-      {/* Strong center glow */}
-      <div className="fixed inset-0 -z-30" style={lightGradientStyles.centerGlow} />
-      <div className="fixed inset-0 -z-30 hidden dark:block" style={darkGradientStyles.centerGlow} />
-
-      {/* Additional subtle glows */}
-      <div className="fixed inset-0 -z-20" style={lightGradientStyles.subtleGlow1} />
-      <div className="fixed inset-0 -z-20 hidden dark:block" style={darkGradientStyles.subtleGlow1} />
-
-      <div className="fixed inset-0 -z-10" style={lightGradientStyles.subtleGlow2} />
-      <div className="fixed inset-0 -z-10 hidden dark:block" style={darkGradientStyles.subtleGlow2} />
+      {/* Original dark theme layers - untouched */}
+      <div className="fixed inset-0 bg-[#0A0A1B] hidden dark:block -z-50" />
+      <div className="fixed inset-0 -z-40 hidden dark:block" style={gradientStyles.main} />
+      <div className="fixed inset-0 -z-30 hidden dark:block" style={gradientStyles.centerGlow} />
+      <div className="fixed inset-0 -z-20 hidden dark:block" style={gradientStyles.subtleGlow1} />
+      <div className="fixed inset-0 -z-10 hidden dark:block" style={gradientStyles.subtleGlow2} />
     </>
   );
 }
