@@ -45,19 +45,43 @@ export default function GradientBackground() {
       <div className="fixed inset-0 bg-[#FFFAF5] dark:bg-[#0A0A1B] -z-50" />
 
       {/* Main gradient effect */}
-      <div className="fixed inset-0 -z-40 dark:hidden" style={lightGradientStyles.main} />
-      <div className="fixed inset-0 -z-40 hidden dark:block" style={darkGradientStyles.main} />
+      <div 
+        className="fixed inset-0 -z-40 block" 
+        style={lightGradientStyles.main} 
+      />
+      <div 
+        className="fixed inset-0 -z-40 hidden dark:block" 
+        style={darkGradientStyles.main} 
+      />
 
       {/* Strong center glow */}
-      <div className="fixed inset-0 -z-30 dark:hidden" style={lightGradientStyles.centerGlow} />
-      <div className="fixed inset-0 -z-30 hidden dark:block" style={darkGradientStyles.centerGlow} />
+      <div 
+        className="fixed inset-0 -z-30 block" 
+        style={lightGradientStyles.centerGlow} 
+      />
+      <div 
+        className="fixed inset-0 -z-30 hidden dark:block" 
+        style={darkGradientStyles.centerGlow} 
+      />
 
       {/* Additional subtle glows */}
-      <div className="fixed inset-0 -z-20 dark:hidden" style={lightGradientStyles.subtleGlow1} />
-      <div className="fixed inset-0 -z-20 hidden dark:block" style={darkGradientStyles.subtleGlow1} />
+      <div 
+        className="fixed inset-0 -z-20 block" 
+        style={lightGradientStyles.subtleGlow1} 
+      />
+      <div 
+        className="fixed inset-0 -z-20 hidden dark:block" 
+        style={darkGradientStyles.subtleGlow1} 
+      />
 
-      <div className="fixed inset-0 -z-10 dark:hidden" style={lightGradientStyles.subtleGlow2} />
-      <div className="fixed inset-0 -z-10 hidden dark:block" style={darkGradientStyles.subtleGlow2} />
+      <div 
+        className="fixed inset-0 -z-10 block" 
+        style={lightGradientStyles.subtleGlow2} 
+      />
+      <div 
+        className="fixed inset-0 -z-10 hidden dark:block" 
+        style={darkGradientStyles.subtleGlow2} 
+      />
     </>
   );
 }
