@@ -12,7 +12,12 @@ export default function Providers({
   session: Session | null
 }) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark">
+    <ThemeProvider 
+      attribute="class" 
+      defaultTheme="system" 
+      enableSystem={true}
+      disableTransitionOnChange
+    >
       <SessionProvider session={session}>
         {children}
       </SessionProvider>
