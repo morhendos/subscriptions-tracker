@@ -1,8 +1,10 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { Subscription, SubscriptionFormData, BillingPeriod } from '@/types/subscriptions';
 import { useSession } from 'next-auth/react';
 import { getStorageProvider } from '@/lib/storage';
-import { calculateNextBillingDate } from './utils/dates';
+import { calculateNextBillingDate, calculateNextBillingDateFromPast } from './utils/dates';
 import { calculateSummary } from './utils/calculations';
 
 const BASE_STORAGE_KEY = 'subscriptions';
@@ -10,6 +12,32 @@ const BASE_STORAGE_KEY = 'subscriptions';
 // Helper function to migrate old billing period format to new
 function migrateBillingPeriod(period: string): BillingPeriod {
   return period.toUpperCase() as BillingPeriod;
+}
+
+function updateStaleNextBillingDates(subscriptions: Subscription[]): Subscription[] {
+  const now = new Date();
+  let hasChanges = false;
+
+  const updated = subscriptions.map(sub => {
+    const nextBilling = new Date(sub.nextBillingDate);
+    
+    // If next billing date has passed
+    if (nextBilling < now) {
+      hasChanges = true;
+      return {
+        ...sub,
+        nextBillingDate: calculateNextBillingDateFromPast(
+          sub.startDate,
+          sub.billingPeriod,
+          sub.nextBillingDate
+        )
+      };
+    }
+    
+    return sub;
+  });
+
+  return hasChanges ? updated : subscriptions;
 }
 
 /**
@@ -43,12 +71,15 @@ export function useSubscriptionStorage() {
             billingPeriod: migrateBillingPeriod(sub.billingPeriod)
           }));
 
-          // Save migrated data if it's different
-          if (JSON.stringify(stored) !== JSON.stringify(migratedData)) {
-            await storage.set(storageKey, migratedData);
+          // Update any stale next billing dates
+          const updatedData = updateStaleNextBillingDates(migratedData);
+
+          // Save if there were any changes (migration or billing updates)
+          if (JSON.stringify(stored) !== JSON.stringify(updatedData)) {
+            await storage.set(storageKey, updatedData);
           }
 
-          setSubscriptions(migratedData);
+          setSubscriptions(updatedData);
         } else {
           setSubscriptions([]);
         }
@@ -68,8 +99,10 @@ export function useSubscriptionStorage() {
 
     try {
       const storage = getStorageProvider();
-      await storage.set(storageKey, subs);
-      setSubscriptions(subs);
+      // Update any stale dates before saving
+      const updatedSubs = updateStaleNextBillingDates(subs);
+      await storage.set(storageKey, updatedSubs);
+      setSubscriptions(updatedSubs);
     } catch (error) {
       console.error('Error saving subscriptions:', error);
       throw error;
@@ -102,24 +135,29 @@ export function useSubscriptionStorage() {
 
       // Check if billing-related fields are being updated
       const isBillingUpdate = 
-        data.startDate !== undefined || 
-        data.billingPeriod !== undefined;
+        'startDate' in data || 
+        'billingPeriod' in data;
 
       const updatedSub = {
         ...sub,
         ...data,
+        // Only update these if they're explicitly provided
+        startDate: data.startDate ?? sub.startDate,
+        billingPeriod: data.billingPeriod ?? sub.billingPeriod,
         description: data.description ?? sub.description,
-        // Only update these if there's a billing-related change
-        startDate: data.startDate || sub.startDate,
-        billingPeriod: data.billingPeriod || sub.billingPeriod,
         updatedAt: new Date().toISOString(),
-        // Keep the original nextBillingDate unless billing details changed
+        // If it's a billing update, calculate from the new fields
+        // If not, use the existing next billing date but check if it needs updating
         nextBillingDate: isBillingUpdate
           ? calculateNextBillingDate(
-              data.startDate || sub.startDate,
-              data.billingPeriod || sub.billingPeriod
+              data.startDate ?? sub.startDate,
+              data.billingPeriod ?? sub.billingPeriod
             )
-          : sub.nextBillingDate
+          : calculateNextBillingDateFromPast(
+              sub.startDate,
+              sub.billingPeriod,
+              sub.nextBillingDate
+            )
       };
 
       return updatedSub;

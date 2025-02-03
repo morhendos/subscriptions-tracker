@@ -26,44 +26,30 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
     mounted
   } = useSubscriptionStorage();
 
-  const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
-
   const handleSubmit = (data: SubscriptionFormData) => {
-    if (editingSubscription) {
-      updateSubscription(editingSubscription.id, data);
-      setEditingSubscription(null);
-    } else {
-      addSubscription(data);
-    }
+    addSubscription(data);
   };
 
   const handleEdit = (subscription: Subscription) => {
-    setEditingSubscription(subscription);
+    // This is now just a placeholder as we're using the sheet
+  };
+
+  const handleUpdate = (id: string, data: SubscriptionFormData) => {
+    updateSubscription(id, data);
   };
 
   const handleDelete = (id: string) => {
     if (confirm('Are you sure you want to delete this subscription?')) {
       deleteSubscription(id);
-      if (editingSubscription?.id === id) {
-        setEditingSubscription(null);
-      }
     }
   };
 
   const handleToggle = (id: string) => {
     toggleSubscription(id);
-    if (editingSubscription?.id === id) {
-      setEditingSubscription(null);
-    }
   };
 
   const handleToggleAll = (enabled: boolean) => {
     toggleAllSubscriptions(enabled);
-    setEditingSubscription(null);
-  };
-
-  const handleCancel = () => {
-    setEditingSubscription(null);
   };
 
   if (!mounted) {
@@ -111,6 +97,7 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
               <SubscriptionList
                 subscriptions={subscriptions}
                 onEdit={handleEdit}
+                onUpdate={handleUpdate}
                 onDelete={handleDelete}
                 onToggle={handleToggle}
                 onToggleAll={handleToggleAll}
@@ -126,16 +113,6 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
                   <SubscriptionSummary summary={calculateSummary()} />
                 </Section>
               </div>
-            )}
-
-            {editingSubscription && (
-              <Section title="Edit Subscription">
-                <SubscriptionForm
-                  onSubmit={handleSubmit}
-                  onCancel={handleCancel}
-                  initialData={editingSubscription}
-                />
-              </Section>
             )}
           </div>
         </>
@@ -163,6 +140,7 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
               <SubscriptionList
                 subscriptions={subscriptions}
                 onEdit={handleEdit}
+                onUpdate={handleUpdate}
                 onDelete={handleDelete}
                 onToggle={handleToggle}
                 onToggleAll={handleToggleAll}
@@ -171,17 +149,7 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
             </Section>
           </div>
 
-          <div className={layout.content}>
-            {editingSubscription && (
-              <Section title="Edit Subscription">
-                <SubscriptionForm
-                  onSubmit={handleSubmit}
-                  onCancel={handleCancel}
-                  initialData={editingSubscription}
-                />
-              </Section>
-            )}
-          </div>
+          <div className={layout.content} />
         </>
       )}
     </div>
