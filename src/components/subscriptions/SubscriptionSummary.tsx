@@ -12,10 +12,24 @@ interface SummaryData {
 }
 
 interface SubscriptionSummaryProps {
-  summary: SummaryData;
+  summary?: SummaryData;
 }
 
 export function SubscriptionSummary({ summary }: SubscriptionSummaryProps) {
+  // Early return with loading state if summary is not available
+  if (!summary) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="bg-paper p-6 rounded-xl border border-gray-200 dark:border-gray-700 h-32" />
+          <div className="bg-paper p-6 rounded-xl border border-gray-200 dark:border-gray-700 h-32" />
+        </div>
+        <div className="bg-paper rounded-xl border border-gray-200 dark:border-gray-700 p-6 h-48" />
+        <div className="bg-paper rounded-xl border border-gray-200 dark:border-gray-700 p-6 h-32" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Main spending metrics */}
@@ -27,7 +41,9 @@ export function SubscriptionSummary({ summary }: SubscriptionSummaryProps) {
             </div>
             <div>
               <p className="text-sm font-medium text-muted">Monthly</p>
-              <h3 className="text-2xl font-bold text-foreground mt-1">{summary.monthly.toFixed(2)} €</h3>
+              <h3 className="text-2xl font-bold text-foreground mt-1">
+                {(summary.monthly || 0).toFixed(2)} €
+              </h3>
               <p className="text-sm text-muted mt-1">per month</p>
             </div>
           </div>
@@ -40,7 +56,9 @@ export function SubscriptionSummary({ summary }: SubscriptionSummaryProps) {
             </div>
             <div>
               <p className="text-sm font-medium text-muted">Yearly</p>
-              <h3 className="text-2xl font-bold text-foreground mt-1">{summary.yearly.toFixed(2)} €</h3>
+              <h3 className="text-2xl font-bold text-foreground mt-1">
+                {(summary.yearly || 0).toFixed(2)} €
+              </h3>
               <p className="text-sm text-muted mt-1">per year</p>
             </div>
           </div>
@@ -55,10 +73,10 @@ export function SubscriptionSummary({ summary }: SubscriptionSummaryProps) {
         </div>
         
         <div className="grid gap-4 md:grid-cols-3">
-          {Object.entries(summary.originalAmounts).map(([currency, amount]) => (
+          {Object.entries(summary.originalAmounts || {}).map(([currency, amount]) => (
             <div key={currency} className="p-4 bg-accent/5 dark:bg-accent/10 rounded-lg border border-gray-200 dark:border-gray-700">
               <div className="text-lg font-bold text-foreground">
-                {amount.toFixed(2)} {currency === 'PLN' ? 'zł' : currency === 'USD' ? '$' : '€'}
+                {(amount || 0).toFixed(2)} {currency === 'PLN' ? 'zł' : currency === 'USD' ? '$' : '€'}
               </div>
               <div className="text-sm text-muted mt-1">
                 Total in {currency}
@@ -74,7 +92,7 @@ export function SubscriptionSummary({ summary }: SubscriptionSummaryProps) {
           Total Monthly Spending
         </h3>
         <div className="text-center mt-2 text-3xl font-bold text-accent dark:text-accent/90">
-          {summary.monthly.toFixed(2)} €
+          {(summary.monthly || 0).toFixed(2)} €
         </div>
         <p className="text-center mt-2 text-sm text-muted">
           All subscriptions converted to EUR monthly rate
