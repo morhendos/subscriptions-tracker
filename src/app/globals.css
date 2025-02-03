@@ -113,9 +113,7 @@
 input,
 select,
 textarea {
-  background-color: rgba(255, 250, 245, 0.7) !important;
-  border-color: rgba(0, 0, 0, 0.1) !important;
-  color: rgba(0, 0, 0, 0.9) !important;
+  border-color: hsl(var(--ring)) !important;
 }
 
 input:focus,
