@@ -9,6 +9,7 @@ import { EditSubscriptionSheet } from './EditSubscriptionSheet';
 interface SubscriptionListProps {
   subscriptions: Subscription[];
   onEdit: (subscription: Subscription) => void;
+  onUpdate: (id: string, data: SubscriptionFormData) => void;
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
   onToggleAll: (enabled: boolean) => void;
@@ -17,7 +18,8 @@ interface SubscriptionListProps {
 
 export function SubscriptionList({ 
   subscriptions, 
-  onEdit, 
+  onEdit,
+  onUpdate, 
   onDelete, 
   onToggle,
   onToggleAll,
@@ -48,12 +50,7 @@ export function SubscriptionList({
 
   const handleEditSubmit = (formData: SubscriptionFormData) => {
     if (editingSubscription) {
-      onEdit({
-        ...formData,
-        id: editingSubscription.id,
-        disabled: editingSubscription.disabled,
-        nextBillingDate: editingSubscription.nextBillingDate
-      });
+      onUpdate(editingSubscription.id, formData);
     }
   };
 
