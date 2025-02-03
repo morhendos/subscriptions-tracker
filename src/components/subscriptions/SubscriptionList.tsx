@@ -74,9 +74,8 @@ export function SubscriptionList({
             transition-all duration-200
             ${subscription.disabled ? 'opacity-50' : ''} 
             cursor-pointer 
-            hover:border-accent
-            hover:bg-accent/5 dark:hover:bg-accent/10
-            dark:hover:border-accent`}
+            hover:border-yellow-600 dark:hover:border-accent
+            hover:bg-accent/5 dark:hover:bg-accent/10`}
           onClick={() => onToggle(subscription.id)}
           role="button"
           tabIndex={0}
