@@ -120,6 +120,14 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
           </div>
 
           <div className={layout.content}>
+            {subscriptions.length > 0 && (
+              <div className="sticky top-4">
+                <Section title="Summary">
+                  <SubscriptionSummary summary={calculateSummary()} />
+                </Section>
+              </div>
+            )}
+
             {editingSubscription && (
               <Section title="Edit Subscription">
                 <SubscriptionForm
@@ -129,12 +137,6 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
                 />
               </Section>
             )}
-
-            {subscriptions.length > 0 && (
-              <Section title="Summary">
-                <SubscriptionSummary summary={calculateSummary()} />
-              </Section>
-            )}
           </div>
         </>
       ) : (
@@ -142,9 +144,11 @@ export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashb
         <>
           <div className={layout.list}>
             {subscriptions.length > 0 && (
-              <Section title="Summary">
-                <SubscriptionSummary summary={calculateSummary()} />
-              </Section>
+              <div className="sticky top-4">
+                <Section title="Summary">
+                  <SubscriptionSummary summary={calculateSummary()} />
+                </Section>
+              </div>
             )}
 
             <Section 
