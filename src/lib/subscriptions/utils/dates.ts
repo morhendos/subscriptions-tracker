@@ -1,35 +1,38 @@
-import { BillingPeriod } from '@/types/subscriptions';
+import { BillingPeriod } from "@/types/subscriptions";
 
-/**
- * Calculate next billing date based on start date and billing period
- * @param startDate - Initial subscription date
- * @param billingPeriod - Billing frequency (MONTHLY, YEARLY)
- * @returns Next billing date as ISO string
- */
 export function calculateNextBillingDate(startDate: string, billingPeriod: BillingPeriod): string {
-  const date = new Date(startDate);
-  const today = new Date();
-  
-  if (date > today) {
-    return date.toISOString();
+  const start = new Date(startDate);
+  const now = new Date();
+  let nextBilling = new Date(startDate);
+
+  // If billing period is monthly, add months until we find a future date
+  if (billingPeriod === 'MONTHLY') {
+    while (nextBilling <= now) {
+      nextBilling.setMonth(nextBilling.getMonth() + 1);
+    }
+  }
+  // If billing period is yearly, add years until we find a future date
+  else if (billingPeriod === 'YEARLY') {
+    while (nextBilling <= now) {
+      nextBilling.setFullYear(nextBilling.getFullYear() + 1);
+    }
   }
 
-  const timeDiff = today.getTime() - date.getTime();
-  let periodInMs: number;
+  return nextBilling.toISOString().split('T')[0];
+}
 
-  switch (billingPeriod) {
-    case 'MONTHLY':
-      periodInMs = 30 * 24 * 60 * 60 * 1000;
-      break;
-    case 'YEARLY':
-      periodInMs = 365 * 24 * 60 * 60 * 1000;
-      break;
-    default:
-      return date.toISOString();
+export function updateNextBillingDateIfNeeded(
+  nextBillingDate: string, 
+  startDate: string, 
+  billingPeriod: BillingPeriod
+): string {
+  const current = new Date(nextBillingDate);
+  const now = new Date();
+
+  // If next billing date is in the past, recalculate it
+  if (current < now) {
+    return calculateNextBillingDate(startDate, billingPeriod);
   }
 
-  const periodsElapsed = Math.ceil(timeDiff / periodInMs);
-  const nextBillingDate = new Date(date.getTime() + (periodsElapsed * periodInMs));
-
-  return nextBillingDate.toISOString();
+  return nextBillingDate;
 }
