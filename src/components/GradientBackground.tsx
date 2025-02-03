@@ -1,7 +1,6 @@
 'use client';
 
 import { useTheme } from 'next-themes';
-import { useEffect, useState } from 'react';
 
 const gradientStyles = {
   dark: {
@@ -43,50 +42,22 @@ const gradientStyles = {
 };
 
 export default function GradientBackground() {
-  const [mounted, setMounted] = useState(false);
-  const { resolvedTheme } = useTheme();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className="fixed inset-0 z-[-1] bg-[#FFFAF5] dark:bg-[#0A0A1B]" />
-    );
-  }
-
-  const currentTheme = resolvedTheme === 'dark' ? 'dark' : 'light';
-
+  // We don't need mounting state here as we'll use tailwind classes for the initial render
+  const { theme } = useTheme();
+  
+  const currentTheme = theme === 'dark' ? 'dark' : 'light';
+  const styles = gradientStyles[currentTheme];
+  
   return (
-    <div className="fixed inset-0 z-[-1]">
-      {/* Base layer */}
-      <div
-        className="absolute inset-0 transition-colors duration-300"
-        style={{ backgroundColor: currentTheme === 'dark' ? '#0A0A1B' : '#FFFAF5' }}
-      />
+    <>
+      {/* Base layer with Tailwind classes for initial render */}
+      <div className="fixed inset-0 bg-[#FFFAF5] dark:bg-[#0A0A1B] -z-50" />
 
-      {/* Main gradient effect */}
-      <div
-        className="absolute inset-0 transition-opacity duration-300"
-        style={gradientStyles[currentTheme].main}
-      />
-
-      {/* Strong center glow */}
-      <div
-        className="absolute inset-0 transition-opacity duration-300"
-        style={gradientStyles[currentTheme].centerGlow}
-      />
-
-      {/* Additional subtle glows */}
-      <div
-        className="absolute inset-0 transition-opacity duration-300"
-        style={gradientStyles[currentTheme].subtleGlow1}
-      />
-      <div
-        className="absolute inset-0 transition-opacity duration-300"
-        style={gradientStyles[currentTheme].subtleGlow2}
-      />
-    </div>
+      {/* Gradient layers with CSS-in-JS for theme-specific gradients */}
+      <div className="fixed inset-0 -z-40" style={styles.main} />
+      <div className="fixed inset-0 -z-30" style={styles.centerGlow} />
+      <div className="fixed inset-0 -z-20" style={styles.subtleGlow1} />
+      <div className="fixed inset-0 -z-10" style={styles.subtleGlow2} />
+    </>
   );
 }
