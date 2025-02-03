@@ -42,22 +42,27 @@ const gradientStyles = {
 };
 
 export default function GradientBackground() {
-  // We don't need mounting state here as we'll use tailwind classes for the initial render
-  const { theme } = useTheme();
-  
-  const currentTheme = theme === 'dark' ? 'dark' : 'light';
-  const styles = gradientStyles[currentTheme];
-  
+  const { resolvedTheme } = useTheme();
+  const theme = resolvedTheme === 'dark' ? 'dark' : 'light';
+  const styles = gradientStyles[theme];
+
   return (
     <>
-      {/* Base layer with Tailwind classes for initial render */}
-      <div className="fixed inset-0 bg-[#FFFAF5] dark:bg-[#0A0A1B] -z-50" />
+      {/* Base layer */}
+      <div 
+        className="fixed inset-0 -z-50 transition-colors duration-300" 
+        style={{ backgroundColor: theme === 'dark' ? '#0A0A1B' : '#FFFAF5' }} 
+      />
 
-      {/* Gradient layers with CSS-in-JS for theme-specific gradients */}
-      <div className="fixed inset-0 -z-40" style={styles.main} />
-      <div className="fixed inset-0 -z-30" style={styles.centerGlow} />
-      <div className="fixed inset-0 -z-20" style={styles.subtleGlow1} />
-      <div className="fixed inset-0 -z-10" style={styles.subtleGlow2} />
+      {/* Main gradient effect */}
+      <div className="fixed inset-0 -z-40 transition-opacity duration-300" style={styles.main} />
+
+      {/* Strong center glow */}
+      <div className="fixed inset-0 -z-30 transition-opacity duration-300" style={styles.centerGlow} />
+
+      {/* Additional subtle glows */}
+      <div className="fixed inset-0 -z-20 transition-opacity duration-300" style={styles.subtleGlow1} />
+      <div className="fixed inset-0 -z-10 transition-opacity duration-300" style={styles.subtleGlow2} />
     </>
   );
 }
