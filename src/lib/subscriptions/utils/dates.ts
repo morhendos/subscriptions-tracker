@@ -1,38 +1,56 @@
-import { BillingPeriod } from "@/types/subscriptions";
+'use client';
+
+import { BillingPeriod } from '@/types/subscriptions';
 
 export function calculateNextBillingDate(startDate: string, billingPeriod: BillingPeriod): string {
   const start = new Date(startDate);
   const now = new Date();
-  let nextBilling = new Date(startDate);
-
-  // If billing period is monthly, add months until we find a future date
-  if (billingPeriod === 'MONTHLY') {
-    while (nextBilling <= now) {
-      nextBilling.setMonth(nextBilling.getMonth() + 1);
-    }
-  }
-  // If billing period is yearly, add years until we find a future date
-  else if (billingPeriod === 'YEARLY') {
-    while (nextBilling <= now) {
-      nextBilling.setFullYear(nextBilling.getFullYear() + 1);
-    }
+  
+  // If start date is in the future, that's our first billing date
+  if (start > now) {
+    return start.toISOString();
   }
 
-  return nextBilling.toISOString().split('T')[0];
+  // Calculate the next billing date based on the period
+  const nextDate = new Date(startDate);
+  
+  // Keep incrementing until we find a future date
+  while (nextDate <= now) {
+    if (billingPeriod === 'MONTHLY') {
+      nextDate.setMonth(nextDate.getMonth() + 1);
+    } else if (billingPeriod === 'YEARLY') {
+      nextDate.setFullYear(nextDate.getFullYear() + 1);
+    }
+  }
+  
+  return nextDate.toISOString();
 }
 
-export function updateNextBillingDateIfNeeded(
-  nextBillingDate: string, 
-  startDate: string, 
-  billingPeriod: BillingPeriod
+export function calculateNextBillingDateFromPast(
+  startDate: string,
+  billingPeriod: BillingPeriod,
+  lastBillingDate: string
 ): string {
-  const current = new Date(nextBillingDate);
+  const start = new Date(startDate);
+  const lastBilling = new Date(lastBillingDate);
   const now = new Date();
-
-  // If next billing date is in the past, recalculate it
-  if (current < now) {
-    return calculateNextBillingDate(startDate, billingPeriod);
+  
+  // If last billing is in the future, keep it
+  if (lastBilling > now) {
+    return lastBilling.toISOString();
   }
 
-  return nextBillingDate;
+  // Calculate the next billing date from the last one
+  const nextDate = new Date(lastBillingDate);
+  
+  // Keep incrementing until we find a future date
+  while (nextDate <= now) {
+    if (billingPeriod === 'MONTHLY') {
+      nextDate.setMonth(nextDate.getMonth() + 1);
+    } else if (billingPeriod === 'YEARLY') {
+      nextDate.setFullYear(nextDate.getFullYear() + 1);
+    }
+  }
+  
+  return nextDate.toISOString();
 }
