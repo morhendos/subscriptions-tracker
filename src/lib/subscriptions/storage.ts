@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { Subscription, SubscriptionFormData, BillingPeriod } from '@/types/subscriptions';
 import { useSession } from 'next-auth/react';
@@ -101,23 +103,24 @@ export function useSubscriptionStorage() {
       if (sub.id !== id) return sub;
 
       // Check if billing-related fields are being updated
+      // Only consider fields that are explicitly provided in the update
       const isBillingUpdate = 
-        data.startDate !== undefined || 
-        data.billingPeriod !== undefined;
+        'startDate' in data || 
+        'billingPeriod' in data;
 
       const updatedSub = {
         ...sub,
         ...data,
+        // Only update these if they're explicitly provided
+        startDate: data.startDate ?? sub.startDate,
+        billingPeriod: data.billingPeriod ?? sub.billingPeriod,
         description: data.description ?? sub.description,
-        // Only update these if there's a billing-related change
-        startDate: data.startDate || sub.startDate,
-        billingPeriod: data.billingPeriod || sub.billingPeriod,
         updatedAt: new Date().toISOString(),
         // Keep the original nextBillingDate unless billing details changed
         nextBillingDate: isBillingUpdate
           ? calculateNextBillingDate(
-              data.startDate || sub.startDate,
-              data.billingPeriod || sub.billingPeriod
+              data.startDate ?? sub.startDate,
+              data.billingPeriod ?? sub.billingPeriod
             )
           : sub.nextBillingDate
       };
