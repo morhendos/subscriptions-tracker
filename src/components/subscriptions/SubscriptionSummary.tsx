@@ -99,11 +99,11 @@ export function SubscriptionSummary({ summary }: SubscriptionSummaryProps) {
       )}
 
       {/* Total monthly converted */}
-      <div className="bg-accent/5 dark:bg-accent/10 rounded-xl p-6 border border-accent/10 dark:border-gray-700 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-accent/20 dark:border-gray-700 shadow-sm">
         <h3 className="text-center text-lg font-medium text-foreground">
           Total Monthly Spending
         </h3>
-        <div className="text-center mt-2 text-3xl font-bold text-yellow-600/90 dark:text-accent/90">
+        <div className="text-center mt-2 text-3xl font-bold text-yellow-600/90 dark:text-yellow-500">
           {summary.grandTotalMonthly.toFixed(2)} €
         </div>
         <p className="text-center mt-2 text-sm text-muted">
