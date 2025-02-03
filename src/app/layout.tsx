@@ -24,9 +24,7 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} min-h-screen bg-background text-foreground relative`}>
         <Providers session={session}>
-          <div className="dark:block hidden">
-            <GradientBackground />
-          </div>
+          <GradientBackground />
           {children}
         </Providers>
       </body>
