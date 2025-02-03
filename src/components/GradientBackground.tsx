@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from '@/hooks/useTheme';
+import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
 const gradientStyles = {
@@ -43,49 +43,49 @@ const gradientStyles = {
 };
 
 export default function GradientBackground() {
-  const { theme, mounted } = useTheme();
-  const [currentTheme, setCurrentTheme] = useState(theme);
+  const { theme, systemTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
-  // Update local state when theme changes
+  // Handle mounting
   useEffect(() => {
-    if (mounted) {
-      setCurrentTheme(theme);
-    }
-  }, [theme, mounted]);
+    setMounted(true);
+  }, []);
 
   // Don't render until mounted to prevent hydration mismatch
-  if (!mounted) {
-    return null;
-  }
+  if (!mounted) return null;
+
+  // Determine current theme
+  const currentTheme = theme === 'system' ? systemTheme : theme;
+  const themeKey = (currentTheme === 'dark' ? 'dark' : 'light') as keyof typeof gradientStyles;
   
   return (
     <>
       {/* Base layer */}
       <div 
         className="fixed inset-0 transition-colors duration-300 -z-50" 
-        style={{ backgroundColor: currentTheme === 'dark' ? '#0A0A1B' : '#FFFAF5' }} 
+        style={{ backgroundColor: themeKey === 'dark' ? '#0A0A1B' : '#FFFAF5' }} 
       />
 
       {/* Main gradient effect */}
       <div 
         className="fixed inset-0 transition-opacity duration-300 -z-40" 
-        style={gradientStyles[currentTheme].main} 
+        style={gradientStyles[themeKey].main} 
       />
 
       {/* Strong center glow */}
       <div 
         className="fixed inset-0 transition-opacity duration-300 -z-30" 
-        style={gradientStyles[currentTheme].centerGlow} 
+        style={gradientStyles[themeKey].centerGlow} 
       />
 
       {/* Additional subtle glows */}
       <div 
         className="fixed inset-0 transition-opacity duration-300 -z-20" 
-        style={gradientStyles[currentTheme].subtleGlow1} 
+        style={gradientStyles[themeKey].subtleGlow1} 
       />
       <div 
         className="fixed inset-0 transition-opacity duration-300 -z-10" 
-        style={gradientStyles[currentTheme].subtleGlow2} 
+        style={gradientStyles[themeKey].subtleGlow2} 
       />
     </>
   );
