@@ -1,9 +1,10 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
-import { Subscription } from "@/types/subscriptions";
-import { formatCurrency } from "@/utils/format";
-import { Pencil, Trash, CreditCard, EyeOff, Eye } from "lucide-react";
+import { useMemo, useState } from 'react';
+import { Subscription } from '@/types/subscriptions';
+import { formatCurrency } from '@/utils/format';
+import { Pencil, Trash, CreditCard, EyeOff, Eye } from 'lucide-react';
+import { EditSubscriptionSheet } from './EditSubscriptionSheet';
 
 interface SubscriptionListProps {
   subscriptions: Subscription[];
@@ -14,21 +15,24 @@ interface SubscriptionListProps {
   mounted?: boolean;
 }
 
-export function SubscriptionList({
-  subscriptions,
-  onEdit,
-  onDelete,
+export function SubscriptionList({ 
+  subscriptions, 
+  onEdit, 
+  onDelete, 
   onToggle,
   onToggleAll,
-  mounted,
+  mounted 
 }: SubscriptionListProps) {
+  const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
+
   if (!mounted) {
     return <div />;
   }
 
   const items = subscriptions || [];
-  const activeCount = items.filter((sub) => !sub.disabled).length;
-
+  const activeCount = items.filter(sub => !sub.disabled).length;
+  
   const sortedSubscriptions = useMemo(() => {
     return [...items].sort((a, b) => {
       const nextDateA = new Date(a.nextBillingDate || a.startDate);
@@ -37,12 +41,22 @@ export function SubscriptionList({
     });
   }, [items]);
 
+  const handleEditClick = (subscription: Subscription) => {
+    setEditingSubscription(subscription);
+    setIsEditSheetOpen(true);
+  };
+
+  const handleEditSubmit = (data: any) => {
+    if (editingSubscription) {
+      onEdit({
+        ...editingSubscription,
+        ...data
+      });
+    }
+  };
+
   if (!items.length) {
-    return (
-      <div className="text-center text-muted italic py-8">
-        No subscriptions added yet
-      </div>
-    );
+    return <div className="text-center text-muted italic py-8">No subscriptions added yet</div>;
   }
 
   return (
@@ -76,44 +90,30 @@ export function SubscriptionList({
           key={subscription.id}
           className={`bg-paper p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 
             transition-all duration-200
-            ${subscription.disabled ? "opacity-50" : ""} 
+            ${subscription.disabled ? 'opacity-50' : ''} 
             cursor-pointer 
-            hover:border-yellow-600 dark:hover:border-accent
-            `}
+            hover:border-yellow-600 dark:hover:border-accent`}
           onClick={() => onToggle(subscription.id)}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
+            if (e.key === 'Enter' || e.key === ' ') {
               onToggle(subscription.id);
             }
           }}
         >
           <div className="flex justify-between items-start gap-4">
             <div className="flex items-start gap-3">
-              <div
-                className={`mt-1 ${
-                  subscription.disabled
-                    ? "text-muted"
-                    : "text-accent dark:text-accent/90"
-                }`}
-              >
+              <div className={`mt-1 ${subscription.disabled ? 'text-muted' : 'text-accent dark:text-accent/90'}`}>
                 <CreditCard size={20} />
               </div>
               <div>
-                <h3
-                  className={`font-semibold ${
-                    subscription.disabled
-                      ? "text-muted line-through"
-                      : "text-foreground"
-                  }`}
-                >
+                <h3 className={`font-semibold ${subscription.disabled ? 'text-muted line-through' : 'text-foreground'}`}>
                   {subscription.name}
                 </h3>
-
+                
                 <div className="mt-1 text-muted text-sm">
-                  {formatCurrency(subscription.price, subscription.currency)}{" "}
-                  per {subscription.billingPeriod}
+                  {formatCurrency(subscription.price, subscription.currency)} per {subscription.billingPeriod}
                 </div>
 
                 {subscription.description && (
@@ -123,20 +123,17 @@ export function SubscriptionList({
                 )}
 
                 <div className="mt-2 text-xs text-muted">
-                  Next billing:{" "}
-                  {new Date(
-                    subscription.nextBillingDate || subscription.startDate
-                  ).toLocaleDateString()}
+                  Next billing: {new Date(subscription.nextBillingDate || subscription.startDate).toLocaleDateString()}
                 </div>
               </div>
             </div>
 
-            <div
+            <div 
               className="flex items-center gap-2"
               onClick={(e) => e.stopPropagation()}
             >
               <button
-                onClick={() => onEdit(subscription)}
+                onClick={() => handleEditClick(subscription)}
                 className="p-2 text-muted hover:text-foreground transition-colors"
                 title="Edit subscription"
               >
@@ -154,6 +151,13 @@ export function SubscriptionList({
           </div>
         </div>
       ))}
+
+      <EditSubscriptionSheet
+        subscription={editingSubscription}
+        open={isEditSheetOpen}
+        onOpenChange={setIsEditSheetOpen}
+        onSubmit={handleEditSubmit}
+      />
     </div>
   );
 }
