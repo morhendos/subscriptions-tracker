@@ -85,7 +85,14 @@
   color: hsl(var(--muted-foreground));
 }
 
-/* Custom dark mode styles */
+/* Light mode section backgrounds */
+.bg-paper {
+  background-color: rgba(255, 250, 245, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Dark mode section backgrounds */
 .dark .bg-paper {
   background-color: rgba(15, 15, 25, 0.6);
   backdrop-filter: blur(8px);
