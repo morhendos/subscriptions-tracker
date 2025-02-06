@@ -8,7 +8,6 @@ import { validateEmail, validatePassword } from '@/lib/auth/validation'
 import { Section } from '@/components/common/Section'
 import { LogIn, AlertCircle, Loader2 } from 'lucide-react'
 import AuthLogo from '@/components/auth/AuthLogo'
-import GradientBackground from '@/components/GradientBackground'
 
 interface FormErrors {
   email?: string
@@ -115,7 +114,6 @@ function LoginPageContent() {
 
   return (
     <div className={`relative min-h-screen transition-all duration-500 ${isRedirecting ? 'opacity-50 blur-sm' : ''}`}>
-      <GradientBackground />
       <main className="container mx-auto h-screen px-3 py-4 sm:px-4 sm:py-12 max-w-6xl relative flex items-center justify-center">
         <Section title="" className="w-[450px]">
           <div className="w-full mx-auto relative">
@@ -194,5 +192,17 @@ function LoginPageContent() {
         </Section>
       </main>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   )
 }
