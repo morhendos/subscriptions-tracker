@@ -58,6 +58,7 @@ subscription-tracker/
 │   │   │   ├── AddSubscriptionButton.tsx
 │   │   │   ├── AddSubscriptionSheet.tsx
 │   │   │   ├── DeleteSubscriptionDialog.tsx
+│   │   │   ├── EditSubscriptionSheet.tsx
 │   │   │   ├── SubscriptionDashboard.tsx
 │   │   │   ├── SubscriptionForm.tsx
 │   │   │   ├── SubscriptionList.tsx
