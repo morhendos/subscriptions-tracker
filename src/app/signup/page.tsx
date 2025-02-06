@@ -109,8 +109,8 @@ export default function SignUpPage() {
   return (
     <div className="relative min-h-screen transition-all duration-500">
       <main className="container mx-auto h-screen px-3 py-4 sm:px-4 sm:py-12 max-w-6xl relative flex items-center justify-center">
-        <Section title="" className="min-w-[450px]">
-          <div className="w-full max-w-md mx-auto">
+        <Section title="" className="w-[450px]">
+          <div className="w-full mx-auto">
             <AuthLogo />
 
             <form onSubmit={handleSubmit} className="space-y-6">
