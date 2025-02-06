@@ -6,7 +6,7 @@ import { SubscriptionDashboard } from "@/components/subscriptions/SubscriptionDa
 export default function SubscriptionsPage() {
   return (
     <div className="min-h-screen transition-colors duration-200">
-      <main className="container mx-auto px-3 py-4 sm:px-4 sm:py-12 max-w-7xl">
+      <main className="container mx-auto px-3 py-4 sm:px-4 max-w-7xl">
         <PageHeader />
         <SubscriptionDashboard variant="default" />
       </main>
