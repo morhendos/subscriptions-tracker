@@ -16,7 +16,7 @@ export function PageHeader() {
           {/* Center - logo and title */}
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-              <img src="./logo-st.svg" alt="Logo" className=" h-10" />
+              <img src="/logo-st.svg" alt="Logo" className=" h-10" />
             </h1>
           </div>
 
