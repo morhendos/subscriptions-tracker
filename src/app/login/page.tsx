@@ -8,6 +8,7 @@ import { validateEmail, validatePassword } from '@/lib/auth/validation'
 import { Section } from '@/components/common/Section'
 import { LogIn, AlertCircle, Loader2 } from 'lucide-react'
 import AuthLogo from '@/components/auth/AuthLogo'
+import GradientBackground from '@/components/GradientBackground'
 
 interface FormErrors {
   email?: string
@@ -91,12 +92,8 @@ function LoginPageContent() {
         return
       }
 
-      // Set redirecting state before navigation
       setIsRedirecting(true)
-      
-      // Small delay to ensure smooth transition
       await new Promise(resolve => setTimeout(resolve, 200))
-      
       router.push(callbackUrl)
       router.refresh()
 
@@ -117,11 +114,11 @@ function LoginPageContent() {
   )
 
   return (
-    <div className={`min-h-screen bg-background transition-all duration-500 ${isRedirecting ? 'opacity-50 blur-sm' : ''}`}>
+    <div className={`relative min-h-screen transition-all duration-500 ${isRedirecting ? 'opacity-50 blur-sm' : ''}`}>
+      <GradientBackground />
       <main className="container mx-auto h-screen px-3 py-4 sm:px-4 sm:py-12 max-w-6xl relative flex items-center justify-center">
         <Section title="" className="w-[450px]">
           <div className="w-full mx-auto relative">
-            {/* Loading Overlay */}
             {isRedirecting && (
               <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-50 rounded-lg">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -186,7 +183,7 @@ function LoginPageContent() {
                 Don&apos;t have an account?{' '}
                 <Link 
                   href="/signup" 
-                  className="text-blue-500 hover:text-blue-400 hover:underline font-medium dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                  className="text-blue-500 hover:text-blue-400 hover:underline font-medium"
                   tabIndex={isLoading || isRedirecting ? -1 : 0}
                 >
                   Create one
@@ -197,17 +194,5 @@ function LoginPageContent() {
         </Section>
       </main>
     </div>
-  )
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    }>
-      <LoginPageContent />
-    </Suspense>
   )
 }
