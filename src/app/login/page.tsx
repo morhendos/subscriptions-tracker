@@ -1,120 +1,134 @@
-'use client'
+"use client";
 
-import { signIn } from 'next-auth/react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { useState, useCallback, Suspense } from 'react'
-import { validateEmail, validatePassword } from '@/lib/auth/validation'
-import { Section } from '@/components/common/Section'
-import { LogIn, AlertCircle, Loader2 } from 'lucide-react'
-import AuthLogo from '@/components/auth/AuthLogo'
+import { signIn } from "next-auth/react";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { useState, useCallback, Suspense } from "react";
+import { validateEmail, validatePassword } from "@/lib/auth/validation";
+import { Section } from "@/components/common/Section";
+import { LogIn, AlertCircle, Loader2 } from "lucide-react";
+import AuthLogo from "@/components/auth/AuthLogo";
 
 interface FormErrors {
-  email?: string
-  password?: string
-  general?: string
+  email?: string;
+  password?: string;
+  general?: string;
 }
 
-const USERS_STORAGE_KEY = 'st_users';
+const USERS_STORAGE_KEY = "st_users";
 
 function ErrorAlert({ message }: { message: string }) {
   return (
     <div className="rounded-lg bg-destructive/10 p-4 border border-destructive/20 animate-in fade-in-50 duration-200">
       <div className="flex">
         <div className="flex-shrink-0">
-          <AlertCircle className="h-5 w-5 text-destructive" aria-hidden="true" />
+          <AlertCircle
+            className="h-5 w-5 text-destructive"
+            aria-hidden="true"
+          />
         </div>
         <div className="ml-3">
           <p className="text-sm text-destructive">{message}</p>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function LoginPageContent() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') || '/'
-  
-  const [isLoading, setIsLoading] = useState(false)
-  const [errors, setErrors] = useState<FormErrors>({})
-  const [isRedirecting, setIsRedirecting] = useState(false)
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
 
-  const validateForm = useCallback((email: string, password: string): boolean => {
-    const newErrors: FormErrors = {}
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
-    if (!email) {
-      newErrors.email = 'Email is required'
-    } else if (!validateEmail(email)) {
-      newErrors.email = 'Invalid email format'
-    }
+  const validateForm = useCallback(
+    (email: string, password: string): boolean => {
+      const newErrors: FormErrors = {};
 
-    if (!password) {
-      newErrors.password = 'Password is required'
-    } else if (!validatePassword(password)) {
-      newErrors.password = 'Password must be at least 8 characters'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }, [])
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setErrors({})
-
-    try {
-      const formData = new FormData(e.currentTarget)
-      const email = formData.get('email') as string
-      const password = formData.get('password') as string
-
-      if (!validateForm(email, password)) {
-        setIsLoading(false)
-        return
+      if (!email) {
+        newErrors.email = "Email is required";
+      } else if (!validateEmail(email)) {
+        newErrors.email = "Invalid email format";
       }
 
-      const usersJson = localStorage.getItem(USERS_STORAGE_KEY) || '[]';
-      const result = await signIn('credentials', {
+      if (!password) {
+        newErrors.password = "Password is required";
+      } else if (!validatePassword(password)) {
+        newErrors.password = "Password must be at least 8 characters";
+      }
+
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    },
+    []
+  );
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const formData = new FormData(e.currentTarget);
+      const email = formData.get("email") as string;
+      const password = formData.get("password") as string;
+
+      if (!validateForm(email, password)) {
+        setIsLoading(false);
+        return;
+      }
+
+      const usersJson = localStorage.getItem(USERS_STORAGE_KEY) || "[]";
+      const result = await signIn("credentials", {
         email,
         password,
         usersJson,
         redirect: false,
-        callbackUrl
-      })
+        callbackUrl,
+      });
 
       if (!result?.ok) {
         setErrors({
-          general: result?.error || 'Authentication failed'
-        })
-        return
+          general: result?.error || "Authentication failed",
+        });
+        return;
       }
 
-      setIsRedirecting(true)
-      await new Promise(resolve => setTimeout(resolve, 200))
-      router.push(callbackUrl)
-      router.refresh()
-
+      setIsRedirecting(true);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      router.push(callbackUrl);
+      router.refresh();
     } catch (error) {
-      console.error('Login error:', error)
+      console.error("Login error:", error);
       setErrors({
-        general: 'An unexpected error occurred. Please try again.'
-      })
+        general: "An unexpected error occurred. Please try again.",
+      });
     } finally {
       if (!isRedirecting) {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     }
-  }
+  };
 
-  const FormError = ({ message }: { message?: string }) => (
-    message ? <p className="text-sm text-destructive mt-1 animate-in fade-in-50 duration-200">{message}</p> : null
-  )
+  const FormError = ({ message }: { message?: string }) =>
+    message ? (
+      <p className="text-sm text-destructive mt-1 animate-in fade-in-50 duration-200">
+        {message}
+      </p>
+    ) : null;
 
   return (
-    <div className={`relative min-h-screen transition-all duration-500 ${isRedirecting ? 'opacity-50 blur-sm' : ''}`}>
-      <main className="container mx-auto h-screen px-3 py-4 sm:px-4 sm:py-12 max-w-6xl relative flex items-center justify-center">
+    <div
+      className={`relative min-h-screen transition-all duration-500 ${
+        isRedirecting ? "opacity-50 blur-sm" : ""
+      }`}
+    >
+      <main className="container mx-auto h-screen px-3 py-4 sm:px-4 sm:py-12 max-w-6xl relative flex flex-col items-center justify-center">
+        <AuthLogo />
+
         <Section title="" className="w-[450px]">
           <div className="w-full mx-auto relative">
             {isRedirecting && (
@@ -123,14 +137,19 @@ function LoginPageContent() {
               </div>
             )}
 
-            <AuthLogo />
-
-            <form method="POST" onSubmit={handleSubmit} className="space-y-6 mt-6">
+            <form
+              method="POST"
+              onSubmit={handleSubmit}
+              className="space-y-6 mt-6"
+            >
               {errors.general && <ErrorAlert message={errors.general} />}
 
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium mb-2">
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium mb-2"
+                  >
                     Email address
                   </label>
                   <input
@@ -146,7 +165,10 @@ function LoginPageContent() {
                 </div>
 
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium mb-2">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium mb-2"
+                  >
                     Password
                   </label>
                   <input
@@ -170,17 +192,25 @@ function LoginPageContent() {
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <LogIn size={18} className="transition-transform" strokeWidth={1.5} />
+                  <LogIn
+                    size={18}
+                    className="transition-transform"
+                    strokeWidth={1.5}
+                  />
                 )}
                 <span>
-                  {isRedirecting ? 'Redirecting...' : isLoading ? 'Logging in...' : 'Log in'}
+                  {isRedirecting
+                    ? "Redirecting..."
+                    : isLoading
+                    ? "Logging in..."
+                    : "Log in"}
                 </span>
               </button>
 
               <p className="text-sm text-center text-muted-foreground">
-                Don&apos;t have an account?{' '}
-                <Link 
-                  href="/signup" 
+                Don&apos;t have an account?{" "}
+                <Link
+                  href="/signup"
                   className="text-[rgb(210,50,170)] hover:text-[rgb(180,40,150)] hover:underline font-medium"
                   tabIndex={isLoading || isRedirecting ? -1 : 0}
                 >
@@ -192,17 +222,19 @@ function LoginPageContent() {
         </Section>
       </main>
     </div>
-  )
+  );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
       <LoginPageContent />
     </Suspense>
-  )
+  );
 }
