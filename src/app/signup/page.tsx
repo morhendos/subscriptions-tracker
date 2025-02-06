@@ -107,10 +107,10 @@ export default function SignUpPage() {
   )
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative min-h-screen transition-all duration-500">
       <main className="container mx-auto h-screen px-3 py-4 sm:px-4 sm:py-12 max-w-6xl relative flex items-center justify-center">
-        <Section title="" className="min-w-[450px]">
-          <div className="w-full max-w-md mx-auto">
+        <Section title="" className="w-[450px]">
+          <div className="w-full mx-auto">
             <AuthLogo />
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -169,15 +169,15 @@ export default function SignUpPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-500 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-600 dark:hover:bg-blue-700"
+                className="flex w-full items-center justify-center gap-2 rounded-md bg-[rgb(210,50,170)] px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[rgb(180,40,150)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgb(210,50,170)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <UserPlus size={18} className="group-hover:scale-105 transition-transform" strokeWidth={1.5} />
+                <UserPlus size={18} className="transition-transform" strokeWidth={1.5} />
                 <span>{isLoading ? 'Creating account...' : 'Create account'}</span>
               </button>
 
               <p className="text-sm text-center text-muted-foreground">
                 Already have an account?{' '}
-                <Link href="/login" className="text-blue-500 hover:text-blue-400 hover:underline font-medium dark:text-blue-400 dark:hover:text-blue-300">
+                <Link href="/login" className="text-[rgb(210,50,170)] hover:text-[rgb(180,40,150)] hover:underline font-medium">
                   Log in
                 </Link>
               </p>
