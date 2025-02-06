@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Wallet, CalendarDays, CreditCard } from 'lucide-react';
-import { Currency } from '@/types/subscriptions';
+import React from "react";
+import { Wallet, CalendarDays, CreditCard } from "lucide-react";
+import { Currency } from "@/types/subscriptions";
 
 interface SummaryData {
   totalMonthly: number;
@@ -30,8 +30,9 @@ export function SubscriptionSummary({ summary }: SubscriptionSummaryProps) {
     );
   }
 
-  const hasOriginalAmounts = Object.entries(summary.originalAmounts)
-    .some(([_, amount]) => amount > 0);
+  const hasOriginalAmounts = Object.entries(summary.originalAmounts).some(
+    ([_, amount]) => amount > 0
+  );
 
   return (
     <div className="space-y-6">
@@ -55,7 +56,7 @@ export function SubscriptionSummary({ summary }: SubscriptionSummaryProps) {
         <div className="bg-paper p-6 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="p-2 bg-accent/5 dark:bg-accent/10 rounded-lg">
-              <Wallet className="w-6 h-6 text-accent dark:text-accent/90" />
+              <CalendarDays className="w-6 h-6 text-accent dark:text-accent/90" />
             </div>
             <div>
               <p className="text-sm font-medium text-muted">Yearly</p>
@@ -73,20 +74,27 @@ export function SubscriptionSummary({ summary }: SubscriptionSummaryProps) {
         <div className="bg-paper rounded-xl border border-gray-100 dark:border-gray-700 p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <CreditCard className="w-5 h-5 text-muted" />
-            <h3 className="text-lg font-semibold text-foreground">Original Currency Amounts</h3>
+            <h3 className="text-lg font-semibold text-foreground">
+              Original Currency Amounts
+            </h3>
           </div>
-          
+
           <div className="grid gap-4 md:grid-cols-3">
             {Object.entries(summary.originalAmounts)
               .filter(([_, amount]) => amount > 0)
               .map(([currency, amount]) => (
-                <div 
-                  key={currency} 
+                <div
+                  key={currency}
                   className="bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-700 p-4 relative overflow-hidden shadow-sm"
                 >
                   <div className="relative z-10">
                     <div className="text-lg font-bold text-foreground">
-                      {amount.toFixed(2)} {currency === 'PLN' ? 'zł' : currency === 'USD' ? '$' : '€'}
+                      {amount.toFixed(2)}{" "}
+                      {currency === "PLN"
+                        ? "zł"
+                        : currency === "USD"
+                        ? "$"
+                        : "€"}
                     </div>
                     <div className="text-sm text-muted mt-1">
                       Total in {currency}

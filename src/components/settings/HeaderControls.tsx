@@ -1,29 +1,32 @@
-'use client';
+"use client";
 
-import { Download, Upload, Sun, Moon } from 'lucide-react';
-import { useTheme } from '@/hooks/useTheme';
-import { useCallback } from 'react';
-import { useSession } from 'next-auth/react';
-import { useToast } from '@/components/ui/use-toast';
+import { Download, Upload, Sun, Moon } from "lucide-react";
+import { useTheme } from "@/hooks/useTheme";
+import { useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { useToast } from "@/components/ui/use-toast";
 
-const BASE_STORAGE_KEY = 'subscriptions';
+const BASE_STORAGE_KEY = "subscriptions";
 
 function Controls({
   theme,
   toggleTheme,
   mounted,
-  storageActions
+  storageActions,
 }: {
   theme: string;
   toggleTheme: () => void;
   mounted: boolean;
-  storageActions: { importData: (data: unknown) => Promise<void>; exportData: () => void; }
+  storageActions: {
+    importData: (data: unknown) => Promise<void>;
+    exportData: () => void;
+  };
 }) {
   const handleImport = useCallback(async () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
@@ -33,8 +36,8 @@ function Controls({
         const data = JSON.parse(text);
         await storageActions.importData(data);
       } catch (error) {
-        console.error('Error importing data:', error);
-        alert('Error importing data. Please check the file format.');
+        console.error("Error importing data:", error);
+        alert("Error importing data. Please check the file format.");
       }
     };
 
@@ -43,10 +46,7 @@ function Controls({
 
   return (
     <div className="flex justify-end gap-2">
-      <HeaderButton
-        onClick={handleImport}
-        aria-label="Import subscriptions"
-      >
+      <HeaderButton onClick={handleImport} aria-label="Import subscriptions">
         <Upload size={20} strokeWidth={1.5} />
       </HeaderButton>
 
@@ -57,17 +57,13 @@ function Controls({
         <Download size={20} strokeWidth={1.5} />
       </HeaderButton>
 
-      <HeaderButton
-        onClick={toggleTheme}
-        aria-label="Toggle theme"
-      >
-        {mounted && (
-          theme === 'dark' ? (
+      <HeaderButton onClick={toggleTheme} aria-label="Toggle theme">
+        {mounted &&
+          (theme === "dark" ? (
             <Sun size={20} strokeWidth={1.5} />
           ) : (
             <Moon size={20} strokeWidth={1.5} />
-          )
-        )}
+          ))}
       </HeaderButton>
     </div>
   );
@@ -92,7 +88,7 @@ export function HeaderControls() {
   const { theme, toggleTheme, mounted } = useTheme();
   const { data: session } = useSession();
   const { toast } = useToast();
-  
+
   const getStorageKey = () => {
     if (!session?.user?.id) return null;
     return `${BASE_STORAGE_KEY}_${session.user.id}`;
@@ -110,7 +106,7 @@ export function HeaderControls() {
             toast({
               title: "Error",
               description: "You must be logged in to import data",
-              variant: "destructive"
+              variant: "destructive",
             });
             return;
           }
@@ -118,21 +114,22 @@ export function HeaderControls() {
           try {
             // Validate the imported data structure
             if (!Array.isArray(data)) {
-              throw new Error('Invalid data format: expected an array');
+              throw new Error("Invalid data format: expected an array");
             }
 
             localStorage.setItem(storageKey, JSON.stringify(data));
             window.location.reload();
             toast({
               title: "Success",
-              description: "Subscriptions imported successfully"
+              description: "Subscriptions imported successfully",
             });
           } catch (error) {
-            console.error('Error importing data:', error);
+            console.error("Error importing data:", error);
             toast({
               title: "Error",
-              description: "Failed to import data. Please check the file format.",
-              variant: "destructive"
+              description:
+                "Failed to import data. Please check the file format.",
+              variant: "destructive",
             });
           }
         },
@@ -142,38 +139,40 @@ export function HeaderControls() {
             toast({
               title: "Error",
               description: "You must be logged in to export data",
-              variant: "destructive"
+              variant: "destructive",
             });
             return;
           }
 
           try {
-            const data = localStorage.getItem(storageKey) || '[]';
-            const blob = new Blob([data], { type: 'application/json' });
+            const data = localStorage.getItem(storageKey) || "[]";
+            const blob = new Blob([data], { type: "application/json" });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
+            const a = document.createElement("a");
             a.href = url;
             // Use a default name if email is not available (shouldn't happen due to the check above)
-            const filename = session.user.email ? `subscriptions_${session.user.email.split('@')[0]}.json` : 'subscriptions_export.json';
+            const filename = session.user.email
+              ? `subscriptions_${session.user.email.split("@")[0]}.json`
+              : "subscriptions_export.json";
             a.download = filename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
+
             toast({
               title: "Success",
-              description: "Subscriptions exported successfully"
+              description: "Subscriptions exported successfully",
             });
           } catch (error) {
-            console.error('Error exporting data:', error);
+            console.error("Error exporting data:", error);
             toast({
               title: "Error",
               description: "Failed to export data",
-              variant: "destructive"
+              variant: "destructive",
             });
           }
-        }
+        },
       }}
     />
   );
