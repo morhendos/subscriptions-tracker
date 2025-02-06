@@ -165,7 +165,7 @@ function LoginPageContent() {
               <button
                 type="submit"
                 disabled={isLoading || isRedirecting}
-                className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-500 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-600 dark:hover:bg-blue-700"
+                className="flex w-full items-center justify-center gap-2 rounded-md bg-[#5b2d75] px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#4a2460] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5b2d75] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -181,7 +181,7 @@ function LoginPageContent() {
                 Don&apos;t have an account?{' '}
                 <Link 
                   href="/signup" 
-                  className="text-blue-500 hover:text-blue-400 hover:underline font-medium"
+                  className="text-[#5b2d75] hover:text-[#4a2460] hover:underline font-medium"
                   tabIndex={isLoading || isRedirecting ? -1 : 0}
                 >
                   Create one
