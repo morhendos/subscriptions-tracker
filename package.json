@@ -2,13 +2,14 @@
   "name": "subscription-tracker",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "tree": "node scripts/tree.js",
-    "test:db": "ts-node src/lib/db/test-connection.ts"
+    "test:db": "NODE_OPTIONS='--loader ts-node/esm' ts-node src/lib/db/test-connection.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.0.5",
