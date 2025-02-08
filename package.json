@@ -9,6 +9,7 @@
     "lint": "next lint",
     "tree": "node scripts/tree.js",
     "test:db": "tsx src/lib/db/test.ts",
+    "test:model": "tsx src/models/__tests__/subscription.test.ts",
     "check:env": "tsx src/lib/db/check-env.ts"
   },
   "dependencies": {
