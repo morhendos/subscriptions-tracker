@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 if (!process.env.MONGODB_URI) {
   throw new Error('Please define MONGODB_URI environment variable');
@@ -12,7 +12,7 @@ if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
 }
 
-export async function connectToDatabase() {
+async function connectToDatabase() {
   if (cached.conn) {
     console.log('Using cached MongoDB connection');
     return cached.conn;
@@ -34,10 +34,12 @@ export async function connectToDatabase() {
   }
 }
 
-export async function disconnectFromDatabase() {
+async function disconnectFromDatabase() {
   if (cached.conn) {
     await mongoose.disconnect();
     cached.conn = null;
     cached.promise = null;
   }
 }
+
+module.exports = { connectToDatabase, disconnectFromDatabase };

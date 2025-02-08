@@ -1,4 +1,4 @@
-import { connectToDatabase, disconnectFromDatabase } from './mongodb';
+const { connectToDatabase, disconnectFromDatabase } = require('./mongodb');
 
 async function testConnection() {
   try {
