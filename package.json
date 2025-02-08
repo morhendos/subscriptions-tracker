@@ -2,14 +2,13 @@
   "name": "subscription-tracker",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "tree": "node scripts/tree.js",
-    "test:db": "NODE_OPTIONS='--loader ts-node/esm' ts-node src/lib/db/test-connection.ts"
+    "test:db": "tsx src/lib/db/test.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.0.5",
@@ -17,7 +16,6 @@
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-toast": "^1.1.5",
-    "@types/mongoose": "^5.11.97",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "lucide-react": "^0.363.0",
@@ -41,6 +39,6 @@
     "tailwindcss": "^3.3.0",
     "eslint": "^8",
     "eslint-config-next": "14.1.0",
-    "ts-node": "^10.9.2"
+    "tsx": "^4.7.0"
   }
 }
