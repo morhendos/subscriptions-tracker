@@ -1,7 +1,6 @@
 "use client";
 
-import { Download, Upload, Sun, Moon } from "lucide-react";
-import { useTheme } from "@/hooks/useTheme";
+import { Download, Upload } from "lucide-react";
 import { useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useToast } from "@/components/ui/use-toast";
@@ -9,14 +8,8 @@ import { useToast } from "@/components/ui/use-toast";
 const BASE_STORAGE_KEY = "subscriptions";
 
 function Controls({
-  theme,
-  toggleTheme,
-  mounted,
   storageActions,
 }: {
-  theme: string;
-  toggleTheme: () => void;
-  mounted: boolean;
   storageActions: {
     importData: (data: unknown) => Promise<void>;
     exportData: () => void;
@@ -56,15 +49,6 @@ function Controls({
       >
         <Download size={20} strokeWidth={1.5} />
       </HeaderButton>
-
-      <HeaderButton onClick={toggleTheme} aria-label="Toggle theme">
-        {mounted &&
-          (theme === "dark" ? (
-            <Sun size={20} strokeWidth={1.5} />
-          ) : (
-            <Moon size={20} strokeWidth={1.5} />
-          ))}
-      </HeaderButton>
     </div>
   );
 }
@@ -85,7 +69,6 @@ function HeaderButton({
 }
 
 export function HeaderControls() {
-  const { theme, toggleTheme, mounted } = useTheme();
   const { data: session } = useSession();
   const { toast } = useToast();
 
@@ -96,9 +79,6 @@ export function HeaderControls() {
 
   return (
     <Controls
-      theme={theme}
-      mounted={mounted}
-      toggleTheme={toggleTheme}
       storageActions={{
         importData: async (data) => {
           const storageKey = getStorageKey();
