@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "tree": "node scripts/tree.js"
+    "tree": "node scripts/tree.js",
+    "test:db": "ts-node src/lib/db/test-connection.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.0.5",
@@ -18,6 +19,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "lucide-react": "^0.363.0",
+    "mongoose": "^8.1.1",
     "next": "14.1.0",
     "next-auth": "4.24.5",
     "next-themes": "^0.2.1",
@@ -36,6 +38,7 @@
     "postcss": "^8",
     "tailwindcss": "^3.3.0",
     "eslint": "^8",
-    "eslint-config-next": "14.1.0"
+    "eslint-config-next": "14.1.0",
+    "ts-node": "^10.9.2"
   }
 }
