@@ -1,4 +1,8 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+
+declare global {
+  var mongoose: { conn: mongoose.Connection | null, promise: Promise<mongoose.Connection> | null } | undefined;
+}
 
 if (!process.env.MONGODB_URI) {
   throw new Error('Please define MONGODB_URI environment variable');
@@ -12,7 +16,7 @@ if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
 }
 
-async function connectToDatabase() {
+export async function connectToDatabase() {
   if (cached.conn) {
     console.log('Using cached MongoDB connection');
     return cached.conn;
@@ -21,10 +25,7 @@ async function connectToDatabase() {
   console.log('Creating new MongoDB connection...');
 
   try {
-    cached.promise = mongoose.connect(MONGODB_URI, {
-      bufferCommands: false,
-    });
-
+    cached.promise = mongoose.connect(MONGODB_URI).then((mongoose) => mongoose.connection);
     cached.conn = await cached.promise;
     console.log('Successfully connected to MongoDB');
     return cached.conn;
@@ -34,12 +35,10 @@ async function connectToDatabase() {
   }
 }
 
-async function disconnectFromDatabase() {
+export async function disconnectFromDatabase() {
   if (cached.conn) {
     await mongoose.disconnect();
     cached.conn = null;
     cached.promise = null;
   }
 }
-
-module.exports = { connectToDatabase, disconnectFromDatabase };
