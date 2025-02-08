@@ -1,15 +1,20 @@
 import mongoose from 'mongoose';
+import * as dotenv from 'dotenv';
+import { resolve } from 'path';
+
+// Load env variables first
+dotenv.config({ path: resolve(process.cwd(), '.env.local') });
+
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  throw new Error('Please define the MONGODB_URI environment variable');
+}
 
 // For TypeScript global augmentation
 declare global {
   var _mongoClientPromise: Promise<typeof mongoose> | undefined;
 }
-
-if (!process.env.MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable');
-}
-
-const MONGODB_URI = process.env.MONGODB_URI;
 
 let clientPromise: Promise<typeof mongoose>;
 
