@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "tree": "node scripts/tree.js",
-    "test:db": "tsx src/lib/db/test.ts"
+    "test:db": "tsx src/lib/db/test.ts",
+    "check:env": "tsx src/lib/db/check-env.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.0.5",
