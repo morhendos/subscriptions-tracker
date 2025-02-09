@@ -22,33 +22,35 @@ export function useSubscriptionStorage() {
     return `${BASE_STORAGE_KEY}_${session.user.id}`;
   };
 
-  useEffect(() => {
-    const loadSubscriptions = async () => {
-      const storageKey = getStorageKey();
-      if (!storageKey) {
-        setLoading(false);
-        return;
-      }
+  const loadSubscriptions = async () => {
+    const storageKey = getStorageKey();
+    if (!storageKey) {
+      setLoading(false);
+      return;
+    }
 
-      try {
-        setError(null);
-        setLoading(true);
-        const storage = getStorageProvider();
-        const data = await storage.get<Subscription[]>(storageKey);
-        if (data) {
-          setSubscriptions(data);
-        } else {
-          setSubscriptions([]);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to load subscriptions'));
+    try {
+      setError(null);
+      setLoading(true);
+      const storage = getStorageProvider();
+      const data = await storage.get<Subscription[]>(storageKey);
+      console.log('Loaded subscriptions:', data);
+      if (data) {
+        setSubscriptions(data);
+      } else {
         setSubscriptions([]);
-      } finally {
-        setLoading(false);
-        setMounted(true);
       }
-    };
+    } catch (err) {
+      console.error('Error loading subscriptions:', err);
+      setError(err instanceof Error ? err : new Error('Failed to load subscriptions'));
+      setSubscriptions([]);
+    } finally {
+      setLoading(false);
+      setMounted(true);
+    }
+  };
 
+  useEffect(() => {
     loadSubscriptions();
   }, [session?.user?.id]);
 
@@ -60,7 +62,7 @@ export function useSubscriptionStorage() {
       setError(null);
       const storage = getStorageProvider();
       await storage.set(storageKey, subs);
-      setSubscriptions(subs);
+      await loadSubscriptions(); // Reload after saving
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to save subscriptions'));
       throw err;
@@ -68,27 +70,6 @@ export function useSubscriptionStorage() {
   };
 
   const retry = () => {
-    const loadSubscriptions = async () => {
-      const storageKey = getStorageKey();
-      if (!storageKey) return;
-
-      try {
-        setError(null);
-        setLoading(true);
-        const storage = getStorageProvider();
-        const data = await storage.get<Subscription[]>(storageKey);
-        if (data) {
-          setSubscriptions(data);
-        } else {
-          setSubscriptions([]);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to load subscriptions'));
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadSubscriptions();
   };
 
