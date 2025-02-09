@@ -8,7 +8,7 @@ import { registerUser } from "@/lib/auth/auth-service";
 import { Section } from "@/components/common/Section";
 import AuthLogo from "@/components/auth/AuthLogo";
 import { useToast } from "@/components/ui/use-toast";
-import { UserPlus, AlertCircle } from "lucide-react";
+import { UserPlus, AlertCircle, Loader2 } from "lucide-react";
 
 interface FormErrors {
   email?: string;
@@ -54,7 +54,7 @@ export default function SignUpPage() {
       if (!password) {
         newErrors.password = "Password is required";
       } else if (!validatePassword(password)) {
-        newErrors.password = "Password must be at least 8 characters";
+        newErrors.password = "Password must be at least 6 characters";
       }
 
       if (!confirmPassword) {
@@ -184,11 +184,15 @@ export default function SignUpPage() {
                 disabled={isLoading}
                 className="flex w-full items-center justify-center gap-2 rounded-md bg-[rgb(210,50,170)] px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[rgb(180,40,150)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgb(210,50,170)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <UserPlus
-                  size={18}
-                  className="transition-transform"
-                  strokeWidth={1.5}
-                />
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <UserPlus
+                    size={18}
+                    className="transition-transform"
+                    strokeWidth={1.5}
+                  />
+                )}
                 <span>
                   {isLoading ? "Creating account..." : "Create account"}
                 </span>
