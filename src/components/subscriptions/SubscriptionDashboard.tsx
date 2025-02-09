@@ -5,6 +5,7 @@ import { Section } from '@/components/common/Section';
 import { SubscriptionList } from './SubscriptionList';
 import { SubscriptionSummary } from './SubscriptionSummary';
 import { AddSubscriptionSheet } from './AddSubscriptionSheet';
+import { Subscription } from '@/types/subscriptions';
 
 interface Props {
   variant?: 'default' | 'compact';
@@ -50,6 +51,11 @@ export function SubscriptionDashboard({ variant = 'default' }: Props) {
     );
   }
 
+  // Handler for initial edit click (not the actual update)
+  const handleEditClick = (subscription: Subscription) => {
+    console.log('Edit subscription:', subscription);
+  };
+
   return (
     <div className="space-y-4">
       <Section title="Summary">
@@ -69,8 +75,10 @@ export function SubscriptionDashboard({ variant = 'default' }: Props) {
           subscriptions={subscriptions}
           onToggleSubscription={toggleSubscription}
           onToggleAll={toggleAllSubscriptions}
-          onEdit={updateSubscription}
+          onEdit={handleEditClick}
+          onUpdate={updateSubscription}
           onDelete={deleteSubscription}
+          mounted={true}
         />
       </Section>
     </div>
