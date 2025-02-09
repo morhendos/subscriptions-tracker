@@ -1,53 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Subscription, SubscriptionFormData, BillingPeriod } from '@/types/subscriptions';
+import { Subscription, SubscriptionFormData } from '@/types/subscriptions';
 import { useSession } from 'next-auth/react';
 import { getStorageProvider } from '@/lib/storage';
-import { calculateNextBillingDate, calculateNextBillingDateFromPast } from './utils/dates';
+import { calculateNextBillingDate } from './utils/dates';
 import { calculateSummary } from './utils/calculations';
 
 const BASE_STORAGE_KEY = 'subscriptions';
 
-// Helper function to migrate old billing period format to new
-function migrateBillingPeriod(period: string): BillingPeriod {
-  return period.toUpperCase() as BillingPeriod;
-}
-
-function updateStaleNextBillingDates(subscriptions: Subscription[]): Subscription[] {
-  const now = new Date();
-  let hasChanges = false;
-
-  const updated = subscriptions.map(sub => {
-    const nextBilling = new Date(sub.nextBillingDate);
-    
-    // If next billing date has passed
-    if (nextBilling < now) {
-      hasChanges = true;
-      return {
-        ...sub,
-        nextBillingDate: calculateNextBillingDateFromPast(
-          sub.startDate,
-          sub.billingPeriod,
-          sub.nextBillingDate
-        )
-      };
-    }
-    
-    return sub;
-  });
-
-  return hasChanges ? updated : subscriptions;
-}
-
-/**
- * Custom hook for managing subscription data with persistence
- * @returns {object} Subscription management methods and data
- */
 export function useSubscriptionStorage() {
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [error, setError] = useState<Error | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Get storage key for current user
   const getStorageKey = () => {
@@ -58,36 +25,28 @@ export function useSubscriptionStorage() {
   useEffect(() => {
     const loadSubscriptions = async () => {
       const storageKey = getStorageKey();
-      if (!storageKey) return;
+      if (!storageKey) {
+        setLoading(false);
+        return;
+      }
 
       try {
+        setError(null);
+        setLoading(true);
         const storage = getStorageProvider();
-        const stored = await storage.get<Subscription[]>(storageKey);
-        
-        // Migrate data if needed
-        if (stored) {
-          const migratedData = stored.map(sub => ({
-            ...sub,
-            billingPeriod: migrateBillingPeriod(sub.billingPeriod)
-          }));
-
-          // Update any stale next billing dates
-          const updatedData = updateStaleNextBillingDates(migratedData);
-
-          // Save if there were any changes (migration or billing updates)
-          if (JSON.stringify(stored) !== JSON.stringify(updatedData)) {
-            await storage.set(storageKey, updatedData);
-          }
-
-          setSubscriptions(updatedData);
+        const data = await storage.get<Subscription[]>(storageKey);
+        if (data) {
+          setSubscriptions(data);
         } else {
           setSubscriptions([]);
         }
-      } catch (error) {
-        console.error('Error loading subscriptions:', error);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to load subscriptions'));
         setSubscriptions([]);
+      } finally {
+        setLoading(false);
+        setMounted(true);
       }
-      setMounted(true);
     };
 
     loadSubscriptions();
@@ -98,116 +57,117 @@ export function useSubscriptionStorage() {
     if (!storageKey) return;
 
     try {
+      setError(null);
       const storage = getStorageProvider();
-      // Update any stale dates before saving
-      const updatedSubs = updateStaleNextBillingDates(subs);
-      await storage.set(storageKey, updatedSubs);
-      setSubscriptions(updatedSubs);
-    } catch (error) {
-      console.error('Error saving subscriptions:', error);
-      throw error;
+      await storage.set(storageKey, subs);
+      setSubscriptions(subs);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to save subscriptions'));
+      throw err;
     }
   };
 
-  const addSubscription = async (data: SubscriptionFormData): Promise<Subscription | null> => {
-    const storageKey = getStorageKey();
-    if (!storageKey) return null;
+  const retry = () => {
+    const loadSubscriptions = async () => {
+      const storageKey = getStorageKey();
+      if (!storageKey) return;
 
-    const newSubscription: Subscription = {
-      ...data,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      nextBillingDate: calculateNextBillingDate(data.startDate, data.billingPeriod),
-      disabled: false
+      try {
+        setError(null);
+        setLoading(true);
+        const storage = getStorageProvider();
+        const data = await storage.get<Subscription[]>(storageKey);
+        if (data) {
+          setSubscriptions(data);
+        } else {
+          setSubscriptions([]);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to load subscriptions'));
+      } finally {
+        setLoading(false);
+      }
     };
 
-    await saveSubscriptions([...subscriptions, newSubscription]);
-    return newSubscription;
-  };
-
-  const updateSubscription = async (id: string, data: Partial<SubscriptionFormData>) => {
-    const storageKey = getStorageKey();
-    if (!storageKey) return;
-
-    const updated = subscriptions.map(sub => {
-      if (sub.id !== id) return sub;
-
-      // Check if billing-related fields are being updated
-      const isBillingUpdate = 
-        'startDate' in data || 
-        'billingPeriod' in data;
-
-      const updatedSub = {
-        ...sub,
-        ...data,
-        // Only update these if they're explicitly provided
-        startDate: data.startDate ?? sub.startDate,
-        billingPeriod: data.billingPeriod ?? sub.billingPeriod,
-        description: data.description ?? sub.description,
-        updatedAt: new Date().toISOString(),
-        // If it's a billing update, calculate from the new fields
-        // If not, use the existing next billing date but check if it needs updating
-        nextBillingDate: isBillingUpdate
-          ? calculateNextBillingDate(
-              data.startDate ?? sub.startDate,
-              data.billingPeriod ?? sub.billingPeriod
-            )
-          : calculateNextBillingDateFromPast(
-              sub.startDate,
-              sub.billingPeriod,
-              sub.nextBillingDate
-            )
-      };
-
-      return updatedSub;
-    });
-
-    await saveSubscriptions(updated);
-  };
-
-  const toggleSubscription = async (id: string) => {
-    const storageKey = getStorageKey();
-    if (!storageKey) return;
-
-    const updated = subscriptions.map(sub =>
-      sub.id === id
-        ? { ...sub, disabled: !sub.disabled, updatedAt: new Date().toISOString() }
-        : sub
-    );
-
-    await saveSubscriptions(updated);
-  };
-
-  const toggleAllSubscriptions = async (enabled: boolean) => {
-    const storageKey = getStorageKey();
-    if (!storageKey) return;
-
-    const updated = subscriptions.map(sub => ({
-      ...sub,
-      disabled: !enabled,
-      updatedAt: new Date().toISOString()
-    }));
-
-    await saveSubscriptions(updated);
-  };
-
-  const deleteSubscription = async (id: string) => {
-    const storageKey = getStorageKey();
-    if (!storageKey) return;
-
-    const filtered = subscriptions.filter(sub => sub.id !== id);
-    await saveSubscriptions(filtered);
+    loadSubscriptions();
   };
 
   return {
     subscriptions,
-    addSubscription,
-    updateSubscription,
-    deleteSubscription,
-    toggleSubscription,
-    toggleAllSubscriptions,
-    calculateSummary: () => calculateSummary(subscriptions),
-    mounted
+    error,
+    loading,
+    mounted,
+    retry,
+    addSubscription: async (data: SubscriptionFormData): Promise<Subscription | null> => {
+      const storageKey = getStorageKey();
+      if (!storageKey) return null;
+
+      const newSubscription: Subscription = {
+        ...data,
+        id: Date.now().toString(),
+        nextBillingDate: calculateNextBillingDate(data.startDate, data.billingPeriod),
+        disabled: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      await saveSubscriptions([...subscriptions, newSubscription]);
+      return newSubscription;
+    },
+    updateSubscription: async (id: string, data: Partial<SubscriptionFormData>) => {
+      const storageKey = getStorageKey();
+      if (!storageKey) return;
+
+      const updated = subscriptions.map(sub => {
+        if (sub.id !== id) return sub;
+
+        return {
+          ...sub,
+          ...data,
+          updatedAt: new Date().toISOString(),
+          // If billing-related fields are updated, recalculate next billing date
+          nextBillingDate: (data.startDate || data.billingPeriod)
+            ? calculateNextBillingDate(
+                data.startDate || sub.startDate,
+                data.billingPeriod || sub.billingPeriod
+              )
+            : sub.nextBillingDate
+        };
+      });
+
+      await saveSubscriptions(updated);
+    },
+    deleteSubscription: async (id: string) => {
+      const storageKey = getStorageKey();
+      if (!storageKey) return;
+
+      const filtered = subscriptions.filter(sub => sub.id !== id);
+      await saveSubscriptions(filtered);
+    },
+    toggleSubscription: async (id: string) => {
+      const storageKey = getStorageKey();
+      if (!storageKey) return;
+
+      const updated = subscriptions.map(sub =>
+        sub.id === id
+          ? { ...sub, disabled: !sub.disabled, updatedAt: new Date().toISOString() }
+          : sub
+      );
+
+      await saveSubscriptions(updated);
+    },
+    toggleAllSubscriptions: async (enabled: boolean) => {
+      const storageKey = getStorageKey();
+      if (!storageKey) return;
+
+      const updated = subscriptions.map(sub => ({
+        ...sub,
+        disabled: !enabled,
+        updatedAt: new Date().toISOString()
+      }));
+
+      await saveSubscriptions(updated);
+    },
+    calculateSummary: () => calculateSummary(subscriptions)
   };
 }
