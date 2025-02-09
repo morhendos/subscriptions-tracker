@@ -15,8 +15,6 @@ interface FormErrors {
   general?: string;
 }
 
-const USERS_STORAGE_KEY = "st_users";
-
 function ErrorAlert({ message }: { message: string }) {
   return (
     <div className="rounded-lg bg-destructive/10 p-4 border border-destructive/20 animate-in fade-in-50 duration-200">
@@ -57,7 +55,7 @@ function LoginPageContent() {
       if (!password) {
         newErrors.password = "Password is required";
       } else if (!validatePassword(password)) {
-        newErrors.password = "Password must be at least 8 characters";
+        newErrors.password = "Password must be at least 6 characters";
       }
 
       setErrors(newErrors);
@@ -81,11 +79,9 @@ function LoginPageContent() {
         return;
       }
 
-      const usersJson = localStorage.getItem(USERS_STORAGE_KEY) || "[]";
       const result = await signIn("credentials", {
         email,
         password,
-        usersJson,
         redirect: false,
         callbackUrl,
       });
