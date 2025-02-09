@@ -2,7 +2,7 @@ import { AuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { AUTH_CONFIG } from './config'
 import { AuthError, validateEmail, validatePassword } from './validation'
-import { authenticateUser } from './auth-service'
+import { authenticateUser } from '@/app/actions'
 import { CustomUser } from '@/types/auth'
 
 if (!process.env.NEXTAUTH_SECRET) {
@@ -22,17 +22,6 @@ console.log('[AUTH OPTIONS] Initializing with:', {
 
 export const authOptions: AuthOptions = {
   debug: isDevelopment,
-  logger: {
-    error(code, ...message) {
-      console.error('[NextAuth][Error]', code, message)
-    },
-    warn(code, ...message) {
-      console.warn('[NextAuth][Warn]', code, message)
-    },
-    debug(code, ...message) {
-      console.log('[NextAuth][Debug]', code, message)
-    },
-  },
   
   providers: [
     CredentialsProvider({
@@ -40,14 +29,12 @@ export const authOptions: AuthOptions = {
       name: 'Credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
-        usersJson: { label: 'Users JSON', type: 'text' },
+        password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
         console.log('[AUTH OPTIONS] authorize called with:', {
           hasEmail: !!credentials?.email,
-          hasPassword: !!credentials?.password,
-          hasUsersJson: !!credentials?.usersJson,
+          hasPassword: !!credentials?.password
         })
 
         if (!credentials?.email || !credentials?.password) {
@@ -62,14 +49,13 @@ export const authOptions: AuthOptions = {
 
         if (!validatePassword(credentials.password)) {
           console.error('[AUTH OPTIONS] Password too short')
-          throw new AuthError('Password must be at least 8 characters', 'invalid_credentials')
+          throw new AuthError('Password must be at least 6 characters', 'invalid_credentials')
         }
 
         try {
           const user = await authenticateUser(
             credentials.email,
-            credentials.password,
-            credentials.usersJson
+            credentials.password
           )
           console.log('[AUTH OPTIONS] User authenticated:', {
             id: user.id,
