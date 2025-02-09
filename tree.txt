@@ -1,4 +1,6 @@
 subscription-tracker/
+├── AUTH_MIGRATION.md
+├── MONGODB_MIGRATION.md
 ├── README.md
 ├── install-components.sh
 ├── next-env.d.ts
@@ -13,10 +15,13 @@ subscription-tracker/
 │   └── tree.js
 ├── src
 │   ├── app
+│   │   ├── actions.ts
 │   │   ├── api
 │   │   │   ├── auth
 │   │   │   │   └── [...nextauth]
 │   │   │   │       └── route.ts
+│   │   │   ├── storage
+│   │   │   │   └── route.ts
 │   │   │   └── subscriptions
 │   │   │       ├── [id]
 │   │   │       │   └── route.ts
@@ -49,6 +54,8 @@ subscription-tracker/
 │   │   │   └── LogoutButton.tsx
 │   │   ├── common
 │   │   │   └── Section.tsx
+│   │   ├── error
+│   │   │   └── DatabaseErrorBoundary.tsx
 │   │   ├── error-boundary.tsx
 │   │   ├── layout
 │   │   │   └── PageHeader.tsx
@@ -63,7 +70,8 @@ subscription-tracker/
 │   │   │   ├── SubscriptionDashboard.tsx
 │   │   │   ├── SubscriptionForm.tsx
 │   │   │   ├── SubscriptionList.tsx
-│   │   │   └── SubscriptionSummary.tsx
+│   │   │   ├── SubscriptionSummary.tsx
+│   │   │   └── TestStorageConnection.tsx
 │   │   └── ui
 │   │       ├── IconButton.tsx
 │   │       ├── button.tsx
@@ -86,9 +94,18 @@ subscription-tracker/
 │   │   │   ├── config.ts
 │   │   │   ├── index.ts
 │   │   │   └── validation.ts
+│   │   ├── db
+│   │   │   ├── check-env.ts
+│   │   │   ├── index.ts
+│   │   │   ├── mongodb.ts
+│   │   │   ├── test-connection.ts
+│   │   │   └── test.ts
 │   │   ├── storage
+│   │   │   ├── __tests__
+│   │   │   │   └── mongodb.test.ts
 │   │   │   ├── index.ts
 │   │   │   ├── localStorage.ts
+│   │   │   ├── mongodb.ts
 │   │   │   ├── server.ts
 │   │   │   └── types.ts
 │   │   ├── subscriptions
@@ -99,7 +116,6 @@ subscription-tracker/
 │   │   │   │   ├── useSubscriptionCalculations.ts
 │   │   │   │   └── useSubscriptionStorage.ts
 │   │   │   ├── index.ts
-│   │   │   ├── storage.ts
 │   │   │   └── utils
 │   │   │       ├── calculations.ts
 │   │   │       ├── currency.ts
@@ -109,11 +125,18 @@ subscription-tracker/
 │   │   └── validations
 │   │       └── subscription.ts
 │   ├── middleware.ts
+│   ├── models
+│   │   ├── __tests__
+│   │   │   ├── subscription.test.ts
+│   │   │   └── user.test.ts
+│   │   ├── subscription.ts
+│   │   └── user.ts
 │   ├── types
 │   │   ├── auth.ts
 │   │   ├── next-auth.d.ts
 │   │   ├── subscription.ts
-│   │   └── subscriptions.ts
+│   │   ├── subscriptions.ts
+│   │   └── user.ts
 │   └── utils
 │       ├── dates.ts
 │       └── format.ts
