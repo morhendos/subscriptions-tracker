@@ -1,157 +1,69 @@
 'use client';
 
-import { useState } from 'react';
+import { useSubscriptionStorage } from '@/lib/subscriptions/storage';
 import { Section } from '@/components/common/Section';
-import { PageHeader } from '@/components/layout/PageHeader';
-import { SubscriptionForm } from './SubscriptionForm';
 import { SubscriptionList } from './SubscriptionList';
 import { SubscriptionSummary } from './SubscriptionSummary';
-import { Subscription, SubscriptionFormData } from '@/types/subscriptions';
-import { useSubscriptionStorage } from '@/lib/subscriptions/storage';
-import { AddSubscriptionSheet } from './AddSubscriptionSheet';
 
-export interface SubscriptionDashboardProps {
+interface Props {
   variant?: 'default' | 'compact';
 }
 
-export function SubscriptionDashboard({ variant = 'default' }: SubscriptionDashboardProps) {
+export function SubscriptionDashboard({ variant = 'default' }: Props) {
   const {
     subscriptions,
+    error,
+    loading,
+    retry,
     addSubscription,
     updateSubscription,
     deleteSubscription,
     toggleSubscription,
     toggleAllSubscriptions,
-    calculateSummary,
-    mounted
+    calculateSummary
   } = useSubscriptionStorage();
 
-  const handleSubmit = (data: SubscriptionFormData) => {
-    addSubscription(data);
-  };
-
-  const handleEdit = (subscription: Subscription) => {
-    // This is now just a placeholder as we're using the sheet
-  };
-
-  const handleUpdate = (id: string, data: SubscriptionFormData) => {
-    updateSubscription(id, data);
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this subscription?')) {
-      deleteSubscription(id);
-    }
-  };
-
-  const handleToggle = (id: string) => {
-    toggleSubscription(id);
-  };
-
-  const handleToggleAll = (enabled: boolean) => {
-    toggleAllSubscriptions(enabled);
-  };
-
-  if (!mounted) {
+  if (loading) {
     return (
-      <div className="grid gap-8 mt-8">
-        <div className="h-[200px] animate-pulse rounded-lg bg-paper shadow-sm" />
-        <div className="space-y-8">
-          <div className="h-[400px] animate-pulse rounded-lg bg-paper shadow-sm" />
-          <div className="h-[200px] animate-pulse rounded-lg bg-paper shadow-sm" />
-        </div>
+      <div className="animate-pulse space-y-4">
+        <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-lg" />
+        <div className="h-64 bg-gray-200 dark:bg-gray-800 rounded-lg" />
       </div>
     );
   }
 
-  const layouts = {
-    default: {
-      container: "grid gap-8 mt-8 lg:grid-cols-12",
-      list: "lg:col-span-5",
-      content: "lg:col-span-7 space-y-8"
-    },
-    compact: {
-      container: "grid gap-8 mt-8 lg:grid-cols-2",
-      list: "space-y-8 lg:order-1",
-      content: "lg:order-2"
-    }
-  };
-
-  const layout = layouts[variant];
+  if (error) {
+    return (
+      <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/10 text-red-900 dark:text-red-200">
+        <h3 className="text-lg font-semibold mb-2">Error Loading Subscriptions</h3>
+        <p className="text-sm mb-4 text-red-800 dark:text-red-300">
+          {error.message}
+        </p>
+        <button
+          onClick={retry}
+          className="px-4 py-2 text-sm font-medium text-red-900 dark:text-red-200 bg-red-100 dark:bg-red-900/20 rounded-md hover:bg-red-200 dark:hover:bg-red-900/30 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className={layout.container}>
-      {variant === 'default' ? (
-        // Default Layout (12-column grid)
-        <>
-          <div className={layout.list}>
-            <Section 
-              title="Your Subscriptions"
-              action={
-                <AddSubscriptionSheet 
-                  onSubmit={handleSubmit} 
-                  variant="golden"
-                />
-              }
-            >
-              <SubscriptionList
-                subscriptions={subscriptions}
-                onEdit={handleEdit}
-                onUpdate={handleUpdate}
-                onDelete={handleDelete}
-                onToggle={handleToggle}
-                onToggleAll={handleToggleAll}
-                mounted={mounted}
-              />
-            </Section>
-          </div>
+    <div className="space-y-4">
+      <Section title="Summary">
+        <SubscriptionSummary summary={calculateSummary()} />
+      </Section>
 
-          <div className={layout.content}>
-            {subscriptions.length > 0 && (
-              <div className="sticky top-4">
-                <Section title="Summary">
-                  <SubscriptionSummary summary={calculateSummary()} />
-                </Section>
-              </div>
-            )}
-          </div>
-        </>
-      ) : (
-        // Compact Layout (2-column grid)
-        <>
-          <div className={layout.list}>
-            {subscriptions.length > 0 && (
-              <div className="sticky top-4">
-                <Section title="Summary">
-                  <SubscriptionSummary summary={calculateSummary()} />
-                </Section>
-              </div>
-            )}
-
-            <Section 
-              title="Your Subscriptions"
-              action={
-                <AddSubscriptionSheet 
-                  onSubmit={handleSubmit} 
-                  variant="golden"
-                />
-              }
-            >
-              <SubscriptionList
-                subscriptions={subscriptions}
-                onEdit={handleEdit}
-                onUpdate={handleUpdate}
-                onDelete={handleDelete}
-                onToggle={handleToggle}
-                onToggleAll={handleToggleAll}
-                mounted={mounted}
-              />
-            </Section>
-          </div>
-
-          <div className={layout.content} />
-        </>
-      )}
+      <Section title="Your Subscriptions">
+        <SubscriptionList
+          subscriptions={subscriptions}
+          onToggleSubscription={toggleSubscription}
+          onToggleAll={toggleAllSubscriptions}
+          onEdit={updateSubscription}
+          onDelete={deleteSubscription}
+        />
+      </Section>
     </div>
   );
 }
