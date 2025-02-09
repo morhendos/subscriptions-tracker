@@ -13,11 +13,7 @@ if (!process.env.NEXTAUTH_URL && process.env.NODE_ENV === 'production') {
   throw new Error('NEXTAUTH_URL must be set in production environment')
 }
 
-const isDevelopment = process.env.NODE_ENV === 'development'
-
 export const authOptions: AuthOptions = {
-  debug: isDevelopment,
-  
   providers: [
     CredentialsProvider({
       id: 'credentials',
@@ -39,18 +35,16 @@ export const authOptions: AuthOptions = {
           throw new AuthError('Password must be at least 6 characters', 'invalid_credentials')
         }
 
-        try {
-          const user = await authenticateUser(
-            credentials.email,
-            credentials.password
-          )
-          return user
-        } catch (error) {
-          if (error instanceof AuthError) {
-            throw error
-          }
-          throw new AuthError('Authentication failed', 'invalid_credentials')
+        const result = await authenticateUser(
+          credentials.email,
+          credentials.password
+        );
+
+        if (!result.success) {
+          throw new AuthError(result.error?.message || 'Authentication failed', result.error?.code || 'invalid_credentials');
         }
+
+        return result.data;
       },
     }),
   ],
@@ -87,21 +81,21 @@ export const authOptions: AuthOptions = {
 
   cookies: {
     sessionToken: {
-      name: isDevelopment ? 'next-auth.session-token' : `__Secure-next-auth.session-token`,
+      name: process.env.NODE_ENV === 'development' ? 'next-auth.session-token' : '__Secure-next-auth.session-token',
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: !isDevelopment
+        secure: process.env.NODE_ENV !== 'development'
       }
     },
     callbackUrl: {
-      name: isDevelopment ? 'next-auth.callback-url' : `__Secure-next-auth.callback-url`,
+      name: process.env.NODE_ENV === 'development' ? 'next-auth.callback-url' : '__Secure-next-auth.callback-url',
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: !isDevelopment
+        secure: process.env.NODE_ENV !== 'development'
       }
     },
     csrfToken: {
@@ -110,7 +104,7 @@ export const authOptions: AuthOptions = {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: !isDevelopment
+        secure: process.env.NODE_ENV !== 'development'
       }
     },
   },
