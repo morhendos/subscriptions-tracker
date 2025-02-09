@@ -37,15 +37,18 @@ export function useSubscriptionStorage() {
   const loadSubscriptions = async () => {
     // Don't attempt to load if no userId
     if (!userId) {
+      console.log('No userId available, skipping load');
       setLoading(false);
       setSubscriptions([]);
       return;
     }
 
     try {
+      console.log('Loading subscriptions for user:', userId);
       setLoading(true);
       setError(null);
       const data = await storage.get<Subscription[]>(storageKey);
+      console.log('Loaded subscriptions:', data);
       setSubscriptions(data || []);
     } catch (err) {
       console.error('Error loading subscriptions:', err);
@@ -56,6 +59,7 @@ export function useSubscriptionStorage() {
   };
 
   useEffect(() => {
+    console.log('Session changed:', session);
     setMounted(true);
     // Only load if we have a userId
     if (userId) {
@@ -65,10 +69,12 @@ export function useSubscriptionStorage() {
 
   const saveSubscriptions = async (subs: Subscription[]) => {
     if (!userId) {
+      console.log('No userId available, cannot save');
       throw new Error('User not authenticated');
     }
 
     try {
+      console.log('Saving subscriptions:', subs);
       await storage.set(storageKey, subs);
       setSubscriptions(subs);
     } catch (err) {
@@ -78,6 +84,7 @@ export function useSubscriptionStorage() {
   };
 
   const addSubscription = async (data: SubscriptionFormData): Promise<Subscription> => {
+    console.log('Adding new subscription:', data);
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -97,6 +104,7 @@ export function useSubscriptionStorage() {
   };
 
   const updateSubscription = async (id: string, data: Partial<SubscriptionFormData>) => {
+    console.log('Updating subscription:', id, data);
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -117,6 +125,7 @@ export function useSubscriptionStorage() {
   };
 
   const toggleSubscription = async (id: string) => {
+    console.log('Toggling subscription:', id);
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -130,6 +139,7 @@ export function useSubscriptionStorage() {
   };
 
   const toggleAllSubscriptions = async (enabled: boolean) => {
+    console.log('Toggling all subscriptions:', enabled);
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -143,6 +153,7 @@ export function useSubscriptionStorage() {
   };
 
   const deleteSubscription = async (id: string) => {
+    console.log('Deleting subscription:', id);
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -152,6 +163,7 @@ export function useSubscriptionStorage() {
   };
 
   const retry = () => {
+    console.log('Retrying subscription load');
     loadSubscriptions();
   };
 
