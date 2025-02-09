@@ -1,6 +1,6 @@
 'use client';
 
-import { useSubscriptionStorage } from '@/lib/subscriptions/storage';
+import { useSubscriptionStorage } from '@/lib/subscriptions/hooks/useSubscriptionStorage';
 import { Section } from '@/components/common/Section';
 import { SubscriptionList } from './SubscriptionList';
 import { SubscriptionSummary } from './SubscriptionSummary';
