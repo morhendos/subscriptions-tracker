@@ -10,6 +10,7 @@
     "tree": "node scripts/tree.js",
     "test:db": "tsx src/lib/db/test.ts",
     "test:model": "tsx src/models/__tests__/subscription.test.ts",
+    "test:storage": "tsx src/lib/storage/__tests__/mongodb.test.ts",
     "check:env": "tsx src/lib/db/check-env.ts"
   },
   "dependencies": {
