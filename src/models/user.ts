@@ -22,7 +22,6 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: [true, 'Email is required'],
-    unique: true,
     trim: true,
     lowercase: true,
     match: [/^\S+@\S+\.\S+$/, 'Please use a valid email address']
@@ -69,10 +68,10 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes
-userSchema.index({ email: 1 }, { unique: true });
-userSchema.index({ passwordResetToken: 1 }, { sparse: true });
-userSchema.index({ emailVerificationToken: 1 }, { sparse: true });
+// Indexes for queries
+userSchema.index({ email: 1 }, { unique: true }); // Primary email index
+userSchema.index({ passwordResetToken: 1 }, { sparse: true }); // For password reset
+userSchema.index({ emailVerificationToken: 1 }, { sparse: true }); // For email verification
 
 // Hide sensitive data when converting to JSON
 userSchema.methods.toJSON = function() {
@@ -119,5 +118,4 @@ userSchema.methods.updateLastLogin = function() {
   return this.save();
 };
 
-const UserModel = mongoose.models.User || mongoose.model<UserDocument>('User', userSchema);
-export { UserModel };
+export const UserModel = mongoose.models.User || mongoose.model<UserDocument>('User', userSchema);
