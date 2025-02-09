@@ -4,6 +4,7 @@ import { useSubscriptionStorage } from '@/lib/subscriptions/storage';
 import { Section } from '@/components/common/Section';
 import { SubscriptionList } from './SubscriptionList';
 import { SubscriptionSummary } from './SubscriptionSummary';
+import { AddSubscriptionSheet } from './AddSubscriptionSheet';
 
 interface Props {
   variant?: 'default' | 'compact';
@@ -55,7 +56,15 @@ export function SubscriptionDashboard({ variant = 'default' }: Props) {
         <SubscriptionSummary summary={calculateSummary()} />
       </Section>
 
-      <Section title="Your Subscriptions">
+      <Section 
+        title="Your Subscriptions"
+        action={
+          <AddSubscriptionSheet 
+            onSubmit={addSubscription} 
+            variant="golden"
+          />
+        }
+      >
         <SubscriptionList
           subscriptions={subscriptions}
           onToggleSubscription={toggleSubscription}
