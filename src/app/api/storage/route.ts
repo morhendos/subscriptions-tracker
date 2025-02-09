@@ -3,6 +3,16 @@ import { SubscriptionModel } from '@/models/subscription';
 import clientPromise from '@/lib/db';
 import mongoose from 'mongoose';
 
+const STORAGE_KEY_PREFIX = 'subscriptions';
+
+// Helper to extract userId from storage key
+function extractUserId(key: string): string | null {
+  if (!key.startsWith(STORAGE_KEY_PREFIX + '_')) {
+    return null;
+  }
+  return key.slice(STORAGE_KEY_PREFIX.length + 1);
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const key = searchParams.get('key');
@@ -14,16 +24,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Key is required' }, { status: 400 });
   }
 
+  const userId = extractUserId(key);
+  if (!userId) {
+    console.log('API: Invalid key format or missing userId');
+    return NextResponse.json({ error: 'Invalid key format' }, { status: 400 });
+  }
+
   try {
     console.log('API: Attempting MongoDB connection...');
     await clientPromise;
     console.log('API: MongoDB connected successfully');
-
-    const userId = key.split('_')[1];
-    if (!userId) {
-      console.log('API: Invalid key format');
-      return NextResponse.json({ error: 'Invalid key format' }, { status: 400 });
-    }
 
     console.log('API: Fetching subscriptions for userId:', userId);
     const subscriptions = await SubscriptionModel.find({ userId })
@@ -75,15 +85,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Key is required' }, { status: 400 });
     }
 
+    const userId = extractUserId(key);
+    if (!userId) {
+      console.log('API: Invalid key format or missing userId');
+      return NextResponse.json({ error: 'Invalid key format' }, { status: 400 });
+    }
+
     console.log('API: Attempting MongoDB connection...');
     await clientPromise;
     console.log('API: MongoDB connected successfully');
-
-    const userId = key.split('_')[1];
-    if (!userId) {
-      console.log('API: Invalid key format in POST request');
-      return NextResponse.json({ error: 'Invalid key format' }, { status: 400 });
-    }
 
     const subscriptions = value;
     console.log('API: Processing subscriptions for userId:', userId, subscriptions);
@@ -156,16 +166,16 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Key is required' }, { status: 400 });
   }
 
+  const userId = extractUserId(key);
+  if (!userId) {
+    console.log('API: Invalid key format or missing userId');
+    return NextResponse.json({ error: 'Invalid key format' }, { status: 400 });
+  }
+
   try {
     console.log('API: Attempting MongoDB connection...');
     await clientPromise;
     console.log('API: MongoDB connected successfully');
-
-    const userId = key.split('_')[1];
-    if (!userId) {
-      console.log('API: Invalid key format in DELETE request');
-      return NextResponse.json({ error: 'Invalid key format' }, { status: 400 });
-    }
 
     await SubscriptionModel.deleteMany({ userId });
     console.log('API: Successfully deleted subscriptions for userId:', userId);
