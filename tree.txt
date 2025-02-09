@@ -1,4 +1,5 @@
 subscription-tracker/
+├── AUTH_MIGRATION.md
 ├── MONGODB_MIGRATION.md
 ├── README.md
 ├── install-components.sh
@@ -114,7 +115,6 @@ subscription-tracker/
 │   │   │   │   ├── useSubscriptionCalculations.ts
 │   │   │   │   └── useSubscriptionStorage.ts
 │   │   │   ├── index.ts
-│   │   │   ├── storage.ts
 │   │   │   └── utils
 │   │   │       ├── calculations.ts
 │   │   │       ├── currency.ts
@@ -126,8 +126,10 @@ subscription-tracker/
 │   ├── middleware.ts
 │   ├── models
 │   │   ├── __tests__
-│   │   │   └── subscription.test.ts
-│   │   └── subscription.ts
+│   │   │   ├── subscription.test.ts
+│   │   │   └── user.test.ts
+│   │   ├── subscription.ts
+│   │   └── user.ts
 │   ├── types
 │   │   ├── auth.ts
 │   │   ├── next-auth.d.ts
