@@ -51,7 +51,6 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('API Storage GET error:', error);
     
-    // More detailed error message
     let errorMessage = 'Failed to read data';
     if (error instanceof mongoose.Error.MongooseError) {
       errorMessage = `MongoDB Error: ${error.message}`;
@@ -66,4 +65,104 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ... rest of the routes remain the same ...
+export async function POST(request: NextRequest) {
+  try {
+    console.log('API: Starting POST request');
+    const { key, value } = await request.json();
+    
+    if (!key) {
+      console.log('API: Missing key in POST request');
+      return NextResponse.json({ error: 'Key is required' }, { status: 400 });
+    }
+
+    console.log('API: Attempting MongoDB connection...');
+    await clientPromise;
+    console.log('API: MongoDB connected successfully');
+
+    const userId = key.split('_')[1];
+    if (!userId) {
+      console.log('API: Invalid key format in POST request');
+      return NextResponse.json({ error: 'Invalid key format' }, { status: 400 });
+    }
+
+    const subscriptions = value;
+    console.log('API: Processing subscriptions for userId:', userId);
+
+    // Delete existing subscriptions
+    await SubscriptionModel.deleteMany({ userId });
+
+    // Insert new subscriptions if any
+    if (subscriptions && subscriptions.length > 0) {
+      const docs = subscriptions.map((sub: any) => ({
+        userId,
+        name: sub.name,
+        price: sub.price,
+        currency: sub.currency,
+        billingPeriod: sub.billingPeriod,
+        startDate: new Date(sub.startDate),
+        nextBillingDate: new Date(sub.nextBillingDate),
+        description: sub.description,
+        disabled: sub.disabled
+      }));
+
+      await SubscriptionModel.insertMany(docs);
+    }
+
+    console.log('API: Successfully updated subscriptions');
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('API Storage POST error:', error);
+    let errorMessage = 'Failed to write data';
+    if (error instanceof mongoose.Error.MongooseError) {
+      errorMessage = `MongoDB Error: ${error.message}`;
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams;
+  const key = searchParams.get('key');
+
+  console.log('API: Starting DELETE request for key:', key);
+
+  if (!key) {
+    console.log('API: Missing key in DELETE request');
+    return NextResponse.json({ error: 'Key is required' }, { status: 400 });
+  }
+
+  try {
+    console.log('API: Attempting MongoDB connection...');
+    await clientPromise;
+    console.log('API: MongoDB connected successfully');
+
+    const userId = key.split('_')[1];
+    if (!userId) {
+      console.log('API: Invalid key format in DELETE request');
+      return NextResponse.json({ error: 'Invalid key format' }, { status: 400 });
+    }
+
+    await SubscriptionModel.deleteMany({ userId });
+    console.log('API: Successfully deleted subscriptions for userId:', userId);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('API Storage DELETE error:', error);
+    let errorMessage = 'Failed to delete data';
+    if (error instanceof mongoose.Error.MongooseError) {
+      errorMessage = `MongoDB Error: ${error.message}`;
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 500 }
+    );
+  }
+}
