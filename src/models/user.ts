@@ -1,5 +1,3 @@
-'use server'
-
 import mongoose from 'mongoose';
 import { Role } from '@/types/auth';
 
