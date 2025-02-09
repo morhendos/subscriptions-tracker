@@ -11,7 +11,7 @@ interface SubscriptionListProps {
   onEdit: (subscription: Subscription) => void;
   onUpdate: (id: string, data: SubscriptionFormData) => void;
   onDelete: (id: string) => void;
-  onToggle: (id: string) => void;
+  onToggleSubscription: (id: string) => void;
   onToggleAll: (enabled: boolean) => void;
   mounted?: boolean;
 }
@@ -21,7 +21,7 @@ export function SubscriptionList({
   onEdit,
   onUpdate, 
   onDelete, 
-  onToggle,
+  onToggleSubscription,
   onToggleAll,
   mounted 
 }: SubscriptionListProps) {
@@ -92,12 +92,12 @@ export function SubscriptionList({
             ${subscription.disabled ? 'opacity-50' : ''} 
             cursor-pointer 
             hover:border-yellow-600 dark:hover:border-accent`}
-          onClick={() => onToggle(subscription.id)}
+          onClick={() => onToggleSubscription(subscription.id)}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
-              onToggle(subscription.id);
+              onToggleSubscription(subscription.id);
             }
           }}
         >
