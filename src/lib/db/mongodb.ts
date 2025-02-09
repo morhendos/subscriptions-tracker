@@ -8,6 +8,10 @@ if (!process.env.MONGODB_URI) {
   throw new Error('Please define MONGODB_URI environment variable');
 }
 
+console.log('[MongoDB] Initializing with URI:', 
+  process.env.MONGODB_URI.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@')  // Hide credentials in logs
+);
+
 const MONGODB_URI = process.env.MONGODB_URI;
 
 let cached = global.mongoose;
@@ -25,21 +29,25 @@ export async function connectToDatabase() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      connectTimeoutMS: 20000, // 20 seconds
-      socketTimeoutMS: 45000,  // 45 seconds
+      connectTimeoutMS: 30000,
+      socketTimeoutMS: 30000,
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 20000, // 20 seconds
+      serverSelectionTimeoutMS: 30000,
     };
 
     console.log('[MongoDB] Creating new connection...');
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      console.log('[MongoDB] Connected successfully');
-      return mongoose.connection;
-    }).catch((error) => {
-      console.error('[MongoDB] Connection error:', error);
-      cached.promise = null;
-      throw error;
-    });
+    mongoose.set('debug', true);  // Enable debug logging
+
+    cached.promise = mongoose.connect(MONGODB_URI, opts)
+      .then((mongoose) => {
+        console.log('[MongoDB] Connected successfully');
+        return mongoose.connection;
+      })
+      .catch((error) => {
+        console.error('[MongoDB] Connection error:', error);
+        cached.promise = null;
+        throw error;
+      });
   } else {
     console.log('[MongoDB] Using existing connection promise');
   }
