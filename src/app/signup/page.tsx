@@ -82,7 +82,21 @@ export default function SignUpPage() {
         return;
       }
 
-      await registerUser(email, password);
+      const result = await registerUser(email, password);
+      
+      if (!result.success) {
+        if (result.error?.code === "email_exists") {
+          setErrors({
+            email: result.error.message
+          });
+          return;
+        }
+        
+        setErrors({
+          general: result.error?.message || "Registration failed. Please try again."
+        });
+        return;
+      }
       
       toast({
         title: "✨ Account created successfully",
@@ -93,27 +107,10 @@ export default function SignUpPage() {
       // Small delay for better UX
       await new Promise(resolve => setTimeout(resolve, 500));
       router.push("/login?registered=true");
-    } catch (error: any) {
-      // Handle known error types
-      if (error.code === 'email_exists') {
-        setErrors({
-          email: error.message || "This email is already registered"
-        });
-      }
-      // Handle unexpected errors
-      else {
-        console.error("Signup error:", error);
-        setErrors({
-          general: error.message || "An unexpected error occurred. Please try again."
-        });
-        
-        toast({
-          title: "⚠️ Registration failed",
-          description: "Please check the error message and try again",
-          variant: "destructive",
-          duration: 5000,
-        });
-      }
+    } catch (error) {
+      setErrors({
+        general: "An unexpected error occurred. Please try again."
+      });
     } finally {
       setIsLoading(false);
     }
