@@ -1,11 +1,19 @@
 'use server'
 
-import { AuthError } from '@/lib/auth/validation';
 import { CustomUser } from '@/types/auth';
 import bcrypt from 'bcryptjs';
 import { UserModel } from '@/models/user';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Types } from 'mongoose';
+
+interface AuthResult {
+  success: boolean;
+  data?: CustomUser;
+  error?: {
+    code: string;
+    message: string;
+  };
+}
 
 async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
@@ -30,7 +38,7 @@ function serializeUser(user: any): CustomUser {
 export async function authenticateUser(
   email: string,
   password: string
-): Promise<CustomUser> {
+): Promise<AuthResult> {
   try {
     await connectToDatabase();
 
@@ -38,22 +46,40 @@ export async function authenticateUser(
     const user = await UserModel.findOne({ email: email.toLowerCase() });
     
     if (!user) {
-      throw new AuthError('No account found with this email. Please check your email or create a new account.', 'invalid_credentials');
+      return {
+        success: false,
+        error: {
+          code: 'invalid_credentials',
+          message: 'No account found with this email. Please check your email or create a new account.'
+        }
+      };
     }
 
     // Verify password
     const isValid = await comparePasswords(password, user.hashedPassword);
     if (!isValid) {
-      throw new AuthError('Incorrect password. Please try again.', 'invalid_credentials');
+      return {
+        success: false,
+        error: {
+          code: 'invalid_credentials',
+          message: 'Incorrect password. Please try again.'
+        }
+      };
     }
 
-    return serializeUser(user);
+    return {
+      success: true,
+      data: serializeUser(user)
+    };
   } catch (error) {
-    if (error instanceof AuthError) {
-      throw error;
-    }
     console.error('Authentication error:', error);
-    throw new AuthError('Something went wrong. Please try again.', 'invalid_credentials');
+    return {
+      success: false,
+      error: {
+        code: 'server_error',
+        message: 'An unexpected error occurred. Please try again.'
+      }
+    };
   }
 }
 
@@ -61,40 +87,46 @@ export async function registerUser(
   email: string,
   password: string,
   name?: string
-): Promise<CustomUser> {
+): Promise<AuthResult> {
   try {
-    console.log('[Actions] Connecting to database...');
     await connectToDatabase();
-    console.log('[Actions] Database connected');
 
     // Check if user exists
-    console.log('[Actions] Checking for existing user:', email);
     const existingUser = await UserModel.findOne({ email: email.toLowerCase() });
     
     if (existingUser) {
-      throw new AuthError('This email is already registered. Please use a different email or log in.', 'email_exists');
+      return {
+        success: false,
+        error: {
+          code: 'email_exists',
+          message: 'This email is already registered. Please use a different email or log in.'
+        }
+      };
     }
 
     // Hash password
-    console.log('[Actions] Hashing password...');
     const hashedPassword = await hashPassword(password);
 
     // Create user
-    console.log('[Actions] Creating user...');
     const user = await UserModel.create({
       email: email.toLowerCase(),
       name: name || email.split('@')[0],
       hashedPassword,
       roles: [{ id: '1', name: 'user' }]
     });
-    console.log('[Actions] User created:', user._id);
 
-    return serializeUser(user);
+    return {
+      success: true,
+      data: serializeUser(user)
+    };
   } catch (error) {
-    if (error instanceof AuthError) {
-      throw error;
-    }
     console.error('Registration error:', error);
-    throw new AuthError('Failed to create account. Please try again.', 'registration_failed');
+    return {
+      success: false,
+      error: {
+        code: 'server_error',
+        message: 'An unexpected error occurred. Please try again.'
+      }
+    };
   }
 }
