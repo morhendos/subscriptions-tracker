@@ -11,6 +11,19 @@ interface Props {
   variant?: 'default' | 'compact';
 }
 
+const layouts = {
+  default: {
+    container: "grid gap-8 mt-8 lg:grid-cols-12",
+    list: "lg:col-span-5",
+    content: "lg:col-span-7 space-y-8"
+  },
+  compact: {
+    container: "grid gap-8 mt-8 lg:grid-cols-2",
+    list: "space-y-8 lg:order-1",
+    content: "lg:order-2"
+  }
+};
+
 export function SubscriptionDashboard({ variant = 'default' }: Props) {
   const {
     subscriptions,
@@ -27,9 +40,12 @@ export function SubscriptionDashboard({ variant = 'default' }: Props) {
 
   if (loading) {
     return (
-      <div className="animate-pulse space-y-4">
-        <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-lg" />
-        <div className="h-64 bg-gray-200 dark:bg-gray-800 rounded-lg" />
+      <div className="grid gap-8 mt-8">
+        <div className="h-[200px] animate-pulse rounded-lg bg-paper shadow-sm" />
+        <div className="space-y-8">
+          <div className="h-[400px] animate-pulse rounded-lg bg-paper shadow-sm" />
+          <div className="h-[200px] animate-pulse rounded-lg bg-paper shadow-sm" />
+        </div>
       </div>
     );
   }
@@ -56,31 +72,81 @@ export function SubscriptionDashboard({ variant = 'default' }: Props) {
     console.log('Edit subscription:', subscription);
   };
 
-  return (
-    <div className="space-y-4">
-      <Section title="Summary">
-        <SubscriptionSummary summary={calculateSummary()} />
-      </Section>
+  const layout = layouts[variant];
 
-      <Section 
-        title="Your Subscriptions"
-        action={
-          <AddSubscriptionSheet 
-            onSubmit={addSubscription} 
-            variant="golden"
-          />
-        }
-      >
-        <SubscriptionList
-          subscriptions={subscriptions}
-          onToggleSubscription={toggleSubscription}
-          onToggleAll={toggleAllSubscriptions}
-          onEdit={handleEditClick}
-          onUpdate={updateSubscription}
-          onDelete={deleteSubscription}
-          mounted={true}
-        />
-      </Section>
+  return (
+    <div className={layout.container}>
+      {variant === 'default' ? (
+        // Default Layout (12-column grid)
+        <>
+          <div className={layout.list}>
+            <Section 
+              title="Your Subscriptions"
+              action={
+                <AddSubscriptionSheet 
+                  onSubmit={addSubscription} 
+                  variant="golden"
+                />
+              }
+            >
+              <SubscriptionList
+                subscriptions={subscriptions}
+                onEdit={handleEditClick}
+                onUpdate={updateSubscription}
+                onDelete={deleteSubscription}
+                onToggleSubscription={toggleSubscription}
+                onToggleAll={toggleAllSubscriptions}
+                mounted={true}
+              />
+            </Section>
+          </div>
+
+          <div className={layout.content}>
+            {subscriptions.length > 0 && (
+              <div className="sticky top-4">
+                <Section title="Summary">
+                  <SubscriptionSummary summary={calculateSummary()} />
+                </Section>
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        // Compact Layout (2-column grid)
+        <>
+          <div className={layout.list}>
+            {subscriptions.length > 0 && (
+              <div className="sticky top-4">
+                <Section title="Summary">
+                  <SubscriptionSummary summary={calculateSummary()} />
+                </Section>
+              </div>
+            )}
+
+            <Section 
+              title="Your Subscriptions"
+              action={
+                <AddSubscriptionSheet 
+                  onSubmit={addSubscription} 
+                  variant="golden"
+                />
+              }
+            >
+              <SubscriptionList
+                subscriptions={subscriptions}
+                onEdit={handleEditClick}
+                onUpdate={updateSubscription}
+                onDelete={deleteSubscription}
+                onToggleSubscription={toggleSubscription}
+                onToggleAll={toggleAllSubscriptions}
+                mounted={true}
+              />
+            </Section>
+          </div>
+
+          <div className={layout.content} />
+        </>
+      )}
     </div>
   );
 }
