@@ -1,6 +1,7 @@
 import { IStorageProvider, StorageError } from './types';
 import { SubscriptionModel } from '@/models/subscription';
 import clientPromise from '@/lib/db';
+import mongoose from 'mongoose';
 
 export class MongoDBStorageProvider implements IStorageProvider {
   private connected = false;
@@ -71,35 +72,50 @@ export class MongoDBStorageProvider implements IStorageProvider {
       // Process array of subscriptions
       const subscriptions = value as any[];
       
-      // Start a session for transaction
-      const session = await SubscriptionModel.startSession();
-      
-      await session.withTransaction(async () => {
-        // Remove all existing subscriptions for user
-        await SubscriptionModel.deleteMany({ userId }, { session });
+      // Check if we're in a replica set environment
+      const isReplicaSet = mongoose.connection.client.topology?.hasOwnProperty('replSet');
 
-        // Insert new subscriptions
-        const docs = subscriptions.map(sub => ({
-          userId,
-          name: sub.name,
-          price: sub.price,
-          currency: sub.currency,
-          billingPeriod: sub.billingPeriod,
-          startDate: new Date(sub.startDate),
-          nextBillingDate: new Date(sub.nextBillingDate),
-          description: sub.description,
-          disabled: sub.disabled
-        }));
-
-        await SubscriptionModel.insertMany(docs, { session });
-      });
-
-      await session.endSession();
+      if (isReplicaSet) {
+        // Use transaction if in replica set
+        const session = await SubscriptionModel.startSession();
+        await session.withTransaction(async () => {
+          await this.updateSubscriptions(userId, subscriptions, session);
+        });
+        await session.endSession();
+      } else {
+        // Direct operations if not in replica set
+        await this.updateSubscriptions(userId, subscriptions);
+      }
     } catch (error) {
       throw new StorageError(
         `Failed to write to MongoDB: ${error.message}`,
         'write_error'
       );
+    }
+  }
+
+  private async updateSubscriptions(userId: string, subscriptions: any[], session?: mongoose.ClientSession) {
+    const options = session ? { session } : {};
+
+    // Remove existing subscriptions
+    await SubscriptionModel.deleteMany({ userId }, options);
+
+    // Prepare new subscription documents
+    const docs = subscriptions.map(sub => ({
+      userId,
+      name: sub.name,
+      price: sub.price,
+      currency: sub.currency,
+      billingPeriod: sub.billingPeriod,
+      startDate: new Date(sub.startDate),
+      nextBillingDate: new Date(sub.nextBillingDate),
+      description: sub.description,
+      disabled: sub.disabled
+    }));
+
+    // Insert new subscriptions
+    if (docs.length > 0) {
+      await SubscriptionModel.insertMany(docs, options);
     }
   }
 
