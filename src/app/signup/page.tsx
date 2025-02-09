@@ -83,20 +83,35 @@ export default function SignUpPage() {
       }
 
       await registerUser(email, password);
+      
       toast({
-        title: "Account created successfully",
+        title: "✨ Account created successfully",
         description: "You can now log in with your credentials",
+        duration: 5000,
       });
+      
+      // Small delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 500));
       router.push("/login?registered=true");
-    } catch (error) {
-      console.error("Signup error:", error);
-      if (error instanceof Error) {
+    } catch (error: any) {
+      // Handle known error types
+      if (error.code === 'email_exists') {
         setErrors({
-          general: error.message || "An unexpected error occurred. Please try again.",
+          email: error.message || "This email is already registered"
         });
-      } else {
+      }
+      // Handle unexpected errors
+      else {
+        console.error("Signup error:", error);
         setErrors({
-          general: "An unexpected error occurred. Please try again.",
+          general: error.message || "An unexpected error occurred. Please try again."
+        });
+        
+        toast({
+          title: "⚠️ Registration failed",
+          description: "Please check the error message and try again",
+          variant: "destructive",
+          duration: 5000,
         });
       }
     } finally {
@@ -199,6 +214,7 @@ export default function SignUpPage() {
                 <Link
                   href="/login"
                   className="text-[rgb(210,50,170)] hover:text-[rgb(180,40,150)] hover:underline font-medium"
+                  tabIndex={isLoading ? -1 : 0}
                 >
                   Log in
                 </Link>
