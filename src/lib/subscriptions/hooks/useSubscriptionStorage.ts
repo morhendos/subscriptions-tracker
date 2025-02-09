@@ -9,6 +9,18 @@ const STORAGE_KEY_PREFIX = 'subscriptions';
 
 /**
  * Custom hook for managing subscription data with MongoDB persistence
+ * @returns {object} Subscription management methods and data
+ * @property {Subscription[]} subscriptions - List of all subscriptions
+ * @property {function} addSubscription - Add a new subscription
+ * @property {function} updateSubscription - Update existing subscription
+ * @property {function} deleteSubscription - Remove a subscription
+ * @property {function} toggleSubscription - Toggle subscription active state
+ * @property {function} toggleAllSubscriptions - Enable or disable all subscriptions
+ * @property {function} calculateSummary - Calculate spending summary
+ * @property {boolean} mounted - Component mount status
+ * @property {boolean} loading - Data loading state
+ * @property {Error|null} error - Error state if any
+ * @property {function} retry - Retry loading data after error
  */
 export function useSubscriptionStorage() {
   const [mounted, setMounted] = useState(false);
