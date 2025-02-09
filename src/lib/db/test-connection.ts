@@ -1,13 +1,12 @@
-import { connectToDatabase, disconnectFromDatabase } from './mongodb';
+import { connectToDatabase } from './mongodb';
 
 async function testConnection() {
+  console.log('Testing MongoDB connection...');
   try {
-    await connectToDatabase();
-    console.log('✅ MongoDB connection test successful!');
+    const conn = await connectToDatabase();
+    console.log('Connection successful!', conn.host);
   } catch (error) {
-    console.error('❌ MongoDB connection test failed:', error);
-  } finally {
-    await disconnectFromDatabase();
+    console.error('Connection failed:', error);
   }
 }
 

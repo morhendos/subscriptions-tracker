@@ -4,11 +4,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useCallback } from "react";
 import { validateEmail, validatePassword } from "@/lib/auth/validation";
-import { registerUser } from "@/lib/auth/auth-service";
+import { registerUser } from "@/app/actions";
 import { Section } from "@/components/common/Section";
 import AuthLogo from "@/components/auth/AuthLogo";
 import { useToast } from "@/components/ui/use-toast";
-import { UserPlus, AlertCircle } from "lucide-react";
+import { UserPlus, AlertCircle, Loader2 } from "lucide-react";
 
 interface FormErrors {
   email?: string;
@@ -22,10 +22,7 @@ function ErrorAlert({ message }: { message: string }) {
     <div className="rounded-lg bg-destructive/10 p-4 border border-destructive/20">
       <div className="flex">
         <div className="flex-shrink-0">
-          <AlertCircle
-            className="h-5 w-5 text-destructive"
-            aria-hidden="true"
-          />
+          <AlertCircle className="h-5 w-5 text-destructive" aria-hidden="true" />
         </div>
         <div className="ml-3">
           <p className="text-sm text-destructive">{message}</p>
@@ -54,7 +51,7 @@ export default function SignUpPage() {
       if (!password) {
         newErrors.password = "Password is required";
       } else if (!validatePassword(password)) {
-        newErrors.password = "Password must be at least 8 characters";
+        newErrors.password = "Password must be at least 6 characters";
       }
 
       if (!confirmPassword) {
@@ -85,24 +82,35 @@ export default function SignUpPage() {
         return;
       }
 
-      await registerUser(email, password);
+      const result = await registerUser(email, password);
+      
+      if (!result.success) {
+        if (result.error?.code === "email_exists") {
+          setErrors({
+            email: result.error.message
+          });
+          return;
+        }
+        
+        setErrors({
+          general: result.error?.message || "Registration failed. Please try again."
+        });
+        return;
+      }
+      
       toast({
-        title: "Account created successfully",
+        title: "✨ Account created successfully",
         description: "You can now log in with your credentials",
+        duration: 5000,
       });
+      
+      // Small delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 500));
       router.push("/login?registered=true");
     } catch (error) {
-      console.error("Signup error:", error);
-      if (error instanceof Error) {
-        setErrors({
-          general:
-            error.message || "An unexpected error occurred. Please try again.",
-        });
-      } else {
-        setErrors({
-          general: "An unexpected error occurred. Please try again.",
-        });
-      }
+      setErrors({
+        general: "An unexpected error occurred. Please try again."
+      });
     } finally {
       setIsLoading(false);
     }
@@ -184,11 +192,15 @@ export default function SignUpPage() {
                 disabled={isLoading}
                 className="flex w-full items-center justify-center gap-2 rounded-md bg-[rgb(210,50,170)] px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[rgb(180,40,150)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgb(210,50,170)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <UserPlus
-                  size={18}
-                  className="transition-transform"
-                  strokeWidth={1.5}
-                />
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <UserPlus
+                    size={18}
+                    className="transition-transform"
+                    strokeWidth={1.5}
+                  />
+                )}
                 <span>
                   {isLoading ? "Creating account..." : "Create account"}
                 </span>
@@ -199,6 +211,7 @@ export default function SignUpPage() {
                 <Link
                   href="/login"
                   className="text-[rgb(210,50,170)] hover:text-[rgb(180,40,150)] hover:underline font-medium"
+                  tabIndex={isLoading ? -1 : 0}
                 >
                   Log in
                 </Link>

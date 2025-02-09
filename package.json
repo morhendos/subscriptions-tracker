@@ -11,6 +11,7 @@
     "test:db": "tsx src/lib/db/test.ts",
     "test:model": "tsx src/models/__tests__/subscription.test.ts",
     "test:storage": "tsx src/lib/storage/__tests__/mongodb.test.ts",
+    "test:connection": "tsx src/lib/db/test-connection.ts",
     "check:env": "tsx src/lib/db/check-env.ts"
   },
   "dependencies": {
@@ -19,6 +20,7 @@
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-toast": "^1.1.5",
+    "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "dotenv": "^16.4.1",
@@ -35,6 +37,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

@@ -4,8 +4,7 @@ import { Currency, BillingPeriod } from '@/types/subscriptions';
 const subscriptionSchema = new mongoose.Schema({
   userId: {
     type: String,
-    required: true,
-    index: true // For faster user-based queries
+    required: true
   },
   name: {
     type: String,
@@ -51,9 +50,10 @@ const subscriptionSchema = new mongoose.Schema({
   validateBeforeSave: true
 });
 
-// Add compound index for common queries
-subscriptionSchema.index({ userId: 1, nextBillingDate: 1 });
-subscriptionSchema.index({ userId: 1, disabled: 1 });
+// Add indexes for common queries
+subscriptionSchema.index({ userId: 1 }); // Basic index for user lookups
+subscriptionSchema.index({ userId: 1, nextBillingDate: 1 }); // For listing by date
+subscriptionSchema.index({ userId: 1, disabled: 1 }); // For filtering active/inactive
 
 // Add method to convert MongoDB document to our app's Subscription type
 subscriptionSchema.methods.toSubscription = function() {
