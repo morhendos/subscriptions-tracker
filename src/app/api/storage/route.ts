@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       .sort({ nextBillingDate: 1 })
       .lean();
 
-    console.log('API: Found subscriptions:', subscriptions.length);
+    console.log('API: Found subscriptions:', subscriptions);
 
     const result = subscriptions.map(sub => ({
       id: sub._id.toString(),
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       updatedAt: sub.updatedAt.toISOString()
     }));
 
-    console.log('API: Successfully processed subscriptions');
+    console.log('API: Returning processed subscriptions:', result);
     return NextResponse.json(result);
   } catch (error) {
     console.error('API Storage GET error:', error);
@@ -86,10 +86,11 @@ export async function POST(request: NextRequest) {
     }
 
     const subscriptions = value;
-    console.log('API: Processing subscriptions for userId:', userId);
+    console.log('API: Processing subscriptions for userId:', userId, subscriptions);
 
     // Delete existing subscriptions
     await SubscriptionModel.deleteMany({ userId });
+    console.log('API: Deleted existing subscriptions');
 
     // Insert new subscriptions if any
     if (subscriptions && subscriptions.length > 0) {
@@ -105,11 +106,29 @@ export async function POST(request: NextRequest) {
         disabled: sub.disabled
       }));
 
-      await SubscriptionModel.insertMany(docs);
+      const result = await SubscriptionModel.insertMany(docs);
+      console.log('API: Inserted new subscriptions:', result);
+
+      // Return the newly inserted subscriptions with their IDs
+      const insertedSubscriptions = result.map(sub => ({
+        id: sub._id.toString(),
+        name: sub.name,
+        price: sub.price,
+        currency: sub.currency,
+        billingPeriod: sub.billingPeriod,
+        startDate: sub.startDate.toISOString(),
+        nextBillingDate: sub.nextBillingDate.toISOString(),
+        description: sub.description,
+        disabled: sub.disabled,
+        createdAt: sub.createdAt.toISOString(),
+        updatedAt: sub.updatedAt.toISOString()
+      }));
+
+      return NextResponse.json({ success: true, subscriptions: insertedSubscriptions });
     }
 
     console.log('API: Successfully updated subscriptions');
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, subscriptions: [] });
   } catch (error) {
     console.error('API Storage POST error:', error);
     let errorMessage = 'Failed to write data';
