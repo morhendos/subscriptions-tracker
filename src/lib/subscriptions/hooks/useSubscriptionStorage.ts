@@ -30,9 +30,18 @@ export function useSubscriptionStorage() {
   const { data: session } = useSession();
   const storage = new MongoDBStorageProvider();
 
-  const storageKey = `${STORAGE_KEY_PREFIX}_${session?.user?.email}`;
+  // Use email as userId, ensure it exists
+  const userId = session?.user?.email;
+  const storageKey = `${STORAGE_KEY_PREFIX}_${userId || ''}`;
 
   const loadSubscriptions = async () => {
+    // Don't attempt to load if no userId
+    if (!userId) {
+      setLoading(false);
+      setSubscriptions([]);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -48,12 +57,17 @@ export function useSubscriptionStorage() {
 
   useEffect(() => {
     setMounted(true);
-    if (session?.user?.email) {
+    // Only load if we have a userId
+    if (userId) {
       loadSubscriptions();
     }
-  }, [session?.user?.email]);
+  }, [userId]); // Changed from session?.user?.email to userId for consistency
 
   const saveSubscriptions = async (subs: Subscription[]) => {
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
     try {
       await storage.set(storageKey, subs);
       setSubscriptions(subs);
@@ -64,6 +78,10 @@ export function useSubscriptionStorage() {
   };
 
   const addSubscription = async (data: SubscriptionFormData): Promise<Subscription> => {
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
     const newSubscription: Subscription = {
       ...data,
       id: Date.now().toString(),
@@ -79,6 +97,10 @@ export function useSubscriptionStorage() {
   };
 
   const updateSubscription = async (id: string, data: Partial<SubscriptionFormData>) => {
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
     const updatedSubs = subscriptions.map(sub =>
       sub.id === id
         ? {
@@ -95,6 +117,10 @@ export function useSubscriptionStorage() {
   };
 
   const toggleSubscription = async (id: string) => {
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
     const updatedSubs = subscriptions.map(sub =>
       sub.id === id
         ? { ...sub, disabled: !sub.disabled, updatedAt: new Date().toISOString() }
@@ -104,6 +130,10 @@ export function useSubscriptionStorage() {
   };
 
   const toggleAllSubscriptions = async (enabled: boolean) => {
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
     const updatedSubs = subscriptions.map(sub => ({
       ...sub,
       disabled: !enabled,
@@ -113,6 +143,10 @@ export function useSubscriptionStorage() {
   };
 
   const deleteSubscription = async (id: string) => {
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
     const filteredSubs = subscriptions.filter(sub => sub.id !== id);
     await saveSubscriptions(filteredSubs);
   };
