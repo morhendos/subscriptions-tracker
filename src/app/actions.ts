@@ -5,6 +5,7 @@ import { CustomUser } from '@/types/auth';
 import bcrypt from 'bcryptjs';
 import { UserModel } from '@/models/user';
 import { connectToDatabase } from '@/lib/db/mongodb';
+import { Types } from 'mongoose';
 
 async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
@@ -12,6 +13,18 @@ async function hashPassword(password: string): Promise<string> {
 
 async function comparePasswords(plain: string, hashed: string): Promise<boolean> {
   return bcrypt.compare(plain, hashed);
+}
+
+function serializeUser(user: any): CustomUser {
+  return {
+    id: user._id.toString(),
+    email: user.email,
+    name: user.name,
+    roles: user.roles.map((role: any) => ({
+      id: role.id,
+      name: role.name
+    }))
+  };
 }
 
 export async function authenticateUser(
@@ -34,15 +47,7 @@ export async function authenticateUser(
       throw new AuthError('Incorrect password. Please try again.', 'invalid_credentials');
     }
 
-    // Convert to CustomUser format
-    const customUser: CustomUser = {
-      id: user._id.toString(),
-      email: user.email,
-      name: user.name,
-      roles: user.roles
-    };
-
-    return customUser;
+    return serializeUser(user);
   } catch (error) {
     if (error instanceof AuthError) {
       throw error;
@@ -84,15 +89,7 @@ export async function registerUser(
     });
     console.log('[Actions] User created:', user._id);
 
-    // Convert to CustomUser format
-    const customUser: CustomUser = {
-      id: user._id.toString(),
-      email: user.email,
-      name: user.name,
-      roles: user.roles
-    };
-
-    return customUser;
+    return serializeUser(user);
   } catch (error) {
     if (error instanceof AuthError) {
       throw error;
