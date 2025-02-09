@@ -1,17 +1,9 @@
+'use server';
+
 import { AuthError } from './validation';
 import { CustomUser } from '@/types/auth';
 import bcrypt from 'bcryptjs';
 import { UserModel } from '@/models/user';
-
-// For development/testing only
-const isDev = process.env.NODE_ENV === 'development';
-
-// Keep old implementation as fallback
-// const USERS_STORAGE_KEY = 'st_users';
-
-function generateUserId(): string {
-  return Math.random().toString(36).substring(2, 15);
-}
 
 async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
@@ -23,23 +15,9 @@ async function comparePasswords(plain: string, hashed: string): Promise<boolean>
 
 export async function authenticateUser(
   email: string,
-  password: string,
-  usersJson?: string // Keep for development/testing
+  password: string
 ): Promise<CustomUser> {
   try {
-    // For development, allow using provided JSON
-    if (isDev && usersJson) {
-      try {
-        const users = JSON.parse(usersJson);
-        const user = users.find((u: any) => u.email.toLowerCase() === email.toLowerCase());
-        if (user) {
-          return user;
-        }
-      } catch (error) {
-        console.error('Failed to parse development users JSON');
-      }
-    }
-
     // Find user by email
     const user = await UserModel.findOne({ email: email.toLowerCase() });
     
@@ -110,9 +88,4 @@ export async function registerUser(
     console.error('Registration error:', error);
     throw new AuthError('Failed to create account. Please try again.', 'registration_failed');
   }
-}
-
-// Optional: Helper to migrate existing users
-export async function migrateExistingUsers(): Promise<void> {
-  // We'll implement this when needed
 }
