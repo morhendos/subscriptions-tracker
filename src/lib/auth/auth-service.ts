@@ -1,102 +1,72 @@
 import { AuthError } from './validation';
 import { CustomUser } from '@/types/auth';
-import { getStorageProvider } from '@/lib/storage';
+import bcrypt from 'bcryptjs';
+import { UserModel } from '@/models/user';
 
-interface StoredUser extends Omit<CustomUser, 'id'> {
-  id: string;
-  hashedPassword: string;
-}
+// For development/testing only
+const isDev = process.env.NODE_ENV === 'development';
 
-const USERS_STORAGE_KEY = 'st_users';
+// Keep old implementation as fallback
+// const USERS_STORAGE_KEY = 'st_users';
 
 function generateUserId(): string {
   return Math.random().toString(36).substring(2, 15);
 }
 
-function hashPassword(password: string): string {
-  // In a real app, use bcrypt or similar
-  return Buffer.from(password).toString('base64');
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 10);
 }
 
-function comparePasswords(plain: string, hashed: string): boolean {
-  return hashPassword(plain) === hashed;
-}
-
-async function getStoredUsers(providedUsersJson?: string): Promise<StoredUser[]> {
-  // For development/testing purposes
-  if (providedUsersJson) {
-    try {
-      return JSON.parse(providedUsersJson);
-    } catch {
-      console.error('Failed to parse provided users JSON');
-    }
-  }
-
-  // Check for server-side rendering
-  if (typeof window === 'undefined') return [];
-
-  try {
-    const storage = getStorageProvider();
-    const users = await storage.get<StoredUser[]>(USERS_STORAGE_KEY);
-
-    // Debug log
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[AUTH] Found stored users:', users?.length || 0);
-    }
-
-    return users || [];
-  } catch (error) {
-    console.error('Error reading users from storage:', error);
-    return [];
-  }
-}
-
-async function saveUsers(users: StoredUser[]): Promise<void> {
-  if (typeof window === 'undefined') return;
-
-  try {
-    const storage = getStorageProvider();
-    await storage.set(USERS_STORAGE_KEY, users);
-
-    // Debug log
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[AUTH] Saved users:', users.length);
-    }
-  } catch (error) {
-    console.error('Error saving users to storage:', error);
-    throw new AuthError('Failed to save user data', 'storage_error');
-  }
+async function comparePasswords(plain: string, hashed: string): Promise<boolean> {
+  return bcrypt.compare(plain, hashed);
 }
 
 export async function authenticateUser(
   email: string,
   password: string,
-  usersJson?: string
+  usersJson?: string // Keep for development/testing
 ): Promise<CustomUser> {
   try {
-    const users = await getStoredUsers(usersJson);
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[AUTH] Authenticating user:', { email, usersCount: users.length });
+    // For development, allow using provided JSON
+    if (isDev && usersJson) {
+      try {
+        const users = JSON.parse(usersJson);
+        const user = users.find((u: any) => u.email.toLowerCase() === email.toLowerCase());
+        if (user) {
+          return user;
+        }
+      } catch (error) {
+        console.error('Failed to parse development users JSON');
+      }
     }
 
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    // Find user by email
+    const user = await UserModel.findOne({ email: email.toLowerCase() });
     
     if (!user) {
       throw new AuthError('No account found with this email. Please check your email or create a new account.', 'invalid_credentials');
     }
 
-    if (!comparePasswords(password, user.hashedPassword)) {
+    // Verify password
+    const isValid = await comparePasswords(password, user.hashedPassword);
+    if (!isValid) {
       throw new AuthError('Incorrect password. Please try again.', 'invalid_credentials');
     }
 
-    const { hashedPassword, ...safeUserData } = user;
-    return safeUserData;
+    // Convert to CustomUser format
+    const customUser: CustomUser = {
+      id: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      roles: user.roles
+    };
 
+    return customUser;
   } catch (error) {
     if (error instanceof AuthError) {
       throw error;
     }
+    console.error('Authentication error:', error);
     throw new AuthError('Something went wrong. Please try again.', 'invalid_credentials');
   }
 }
@@ -106,27 +76,43 @@ export async function registerUser(
   password: string,
   name?: string
 ): Promise<CustomUser> {
-  const users = await getStoredUsers();
-  
-  if (users.some(user => user.email.toLowerCase() === email.toLowerCase())) {
-    throw new AuthError('This email is already registered. Please use a different email or log in.', 'email_exists');
+  try {
+    // Check if user exists
+    const existingUser = await UserModel.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      throw new AuthError('This email is already registered. Please use a different email or log in.', 'email_exists');
+    }
+
+    // Hash password
+    const hashedPassword = await hashPassword(password);
+
+    // Create user
+    const user = await UserModel.create({
+      email: email.toLowerCase(),
+      name: name || email.split('@')[0],
+      hashedPassword,
+      roles: [{ id: '1', name: 'user' }]
+    });
+
+    // Convert to CustomUser format
+    const customUser: CustomUser = {
+      id: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      roles: user.roles
+    };
+
+    return customUser;
+  } catch (error) {
+    if (error instanceof AuthError) {
+      throw error;
+    }
+    console.error('Registration error:', error);
+    throw new AuthError('Failed to create account. Please try again.', 'registration_failed');
   }
+}
 
-  const newUser: StoredUser = {
-    id: generateUserId(),
-    email,
-    name: name || email.split('@')[0],
-    hashedPassword: hashPassword(password),
-    roles: [{ id: '1', name: 'user' }],
-  };
-
-  await saveUsers([...users, newUser]);
-
-  // Debug log
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[AUTH] Registered new user:', { email, id: newUser.id });
-  }
-
-  const { hashedPassword, ...safeUserData } = newUser;
-  return safeUserData;
+// Optional: Helper to migrate existing users
+export async function migrateExistingUsers(): Promise<void> {
+  // We'll implement this when needed
 }
