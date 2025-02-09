@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useCallback } from "react";
 import { validateEmail, validatePassword } from "@/lib/auth/validation";
-import { registerUser } from "@/lib/auth/auth-service";
+import { registerUser } from "@/app/actions";
 import { Section } from "@/components/common/Section";
 import AuthLogo from "@/components/auth/AuthLogo";
 import { useToast } from "@/components/ui/use-toast";
@@ -22,10 +22,7 @@ function ErrorAlert({ message }: { message: string }) {
     <div className="rounded-lg bg-destructive/10 p-4 border border-destructive/20">
       <div className="flex">
         <div className="flex-shrink-0">
-          <AlertCircle
-            className="h-5 w-5 text-destructive"
-            aria-hidden="true"
-          />
+          <AlertCircle className="h-5 w-5 text-destructive" aria-hidden="true" />
         </div>
         <div className="ml-3">
           <p className="text-sm text-destructive">{message}</p>
@@ -95,8 +92,7 @@ export default function SignUpPage() {
       console.error("Signup error:", error);
       if (error instanceof Error) {
         setErrors({
-          general:
-            error.message || "An unexpected error occurred. Please try again.",
+          general: error.message || "An unexpected error occurred. Please try again.",
         });
       } else {
         setErrors({
