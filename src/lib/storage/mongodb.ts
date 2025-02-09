@@ -31,6 +31,11 @@ export class MongoDBStorageProvider implements IStorageProvider {
         const error = await response.json();
         throw new Error(error.error || 'Failed to write data');
       }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error('Failed to save data');
+      }
     } catch (error) {
       throw new StorageError(
         `Failed to write to MongoDB: ${error.message}`,
@@ -49,6 +54,11 @@ export class MongoDBStorageProvider implements IStorageProvider {
         const error = await response.json();
         throw new Error(error.error || 'Failed to delete data');
       }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error('Failed to delete data');
+      }
     } catch (error) {
       throw new StorageError(
         `Failed to remove data from MongoDB: ${error.message}`,
@@ -58,23 +68,25 @@ export class MongoDBStorageProvider implements IStorageProvider {
   }
 
   async clear(): Promise<void> {
-    // For safety, we won't implement clear in production
-    if (process.env.NODE_ENV === 'development') {
-      try {
-        const response = await fetch('/api/storage?key=all', {
-          method: 'DELETE'
-        });
+    try {
+      const response = await fetch('/api/storage?key=all', {
+        method: 'DELETE'
+      });
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Failed to clear data');
-        }
-      } catch (error) {
-        throw new StorageError(
-          `Failed to clear MongoDB data: ${error.message}`,
-          'write_error'
-        );
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to clear data');
       }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error('Failed to clear data');
+      }
+    } catch (error) {
+      throw new StorageError(
+        `Failed to clear MongoDB data: ${error.message}`,
+        'write_error'
+      );
     }
   }
 }
