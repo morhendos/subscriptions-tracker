@@ -1,3 +1,5 @@
+'use server'
+
 import mongoose from 'mongoose';
 import { Role } from '@/types/auth';
 
@@ -120,4 +122,5 @@ userSchema.methods.updateLastLogin = function() {
   return this.save();
 };
 
-export const UserModel = mongoose.models.User || mongoose.model<UserDocument>('User', userSchema);
+const UserModel = mongoose.models.User || mongoose.model<UserDocument>('User', userSchema);
+export { UserModel };
