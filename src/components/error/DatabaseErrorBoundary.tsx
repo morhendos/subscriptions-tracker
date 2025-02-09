@@ -7,6 +7,7 @@ import { StorageError } from '@/lib/storage/types';
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  onRetry?: () => void;
 }
 
 interface State {
@@ -30,11 +31,19 @@ export class DatabaseErrorBoundary extends Component<Props, State> {
     };
   }
 
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('Database Error:', error, info);
+  }
+
   handleRetry = () => {
     this.setState({
       hasError: false,
       error: null
     });
+    
+    if (this.props.onRetry) {
+      this.props.onRetry();
+    }
   };
 
   render() {
@@ -52,9 +61,7 @@ export class DatabaseErrorBoundary extends Component<Props, State> {
             {isStorageError ? 'Database Error' : 'Something went wrong'}
           </h3>
           <p className="text-sm mb-4 text-red-800 dark:text-red-300">
-            {isStorageError 
-              ? this.getStorageErrorMessage(error as StorageError)
-              : 'An unexpected error occurred while accessing your data.'}
+            {error?.message || 'An error occurred while accessing the database.'}
           </p>
           <div className="flex gap-2">
             <Button
@@ -70,18 +77,5 @@ export class DatabaseErrorBoundary extends Component<Props, State> {
     }
 
     return this.props.children;
-  }
-
-  private getStorageErrorMessage(error: StorageError): string {
-    switch (error.code) {
-      case 'storage_unavailable':
-        return 'Unable to connect to the database. Please check your connection.';
-      case 'read_error':
-        return 'Failed to read your subscription data. Please try again.';
-      case 'write_error':
-        return 'Failed to save your changes. Please try again.';
-      default:
-        return error.message;
-    }
   }
 }
