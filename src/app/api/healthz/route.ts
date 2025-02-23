@@ -27,12 +27,19 @@ export async function GET() {
       schemas: schemaHealth,
       timestamp: new Date().toISOString()
     });
-  } catch (error: any) {
+  } catch (error) {
+    let errorMessage = 'Failed to check database health';
+    if (error instanceof mongoose.mongo.MongoError) {
+      errorMessage = `MongoDB Error: ${error.message}`;
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+
     console.error('[Health Check] Error:', error);
     return NextResponse.json(
       { 
         status: 'error', 
-        message: error.message,
+        message: errorMessage,
         timestamp: new Date().toISOString()
       },
       { status: 500 }
