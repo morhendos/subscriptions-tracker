@@ -10,8 +10,9 @@ export class MongoDBStorageProvider implements IStorageProvider {
       }
       return await response.json();
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       throw new StorageError(
-        `Failed to read from MongoDB: ${error.message}`,
+        `Failed to read from MongoDB: ${errorMessage}`,
         'read_error'
       );
     }
@@ -37,8 +38,9 @@ export class MongoDBStorageProvider implements IStorageProvider {
         throw new Error('Failed to save data');
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       throw new StorageError(
-        `Failed to write to MongoDB: ${error.message}`,
+        `Failed to write to MongoDB: ${errorMessage}`,
         'write_error'
       );
     }
@@ -60,8 +62,9 @@ export class MongoDBStorageProvider implements IStorageProvider {
         throw new Error('Failed to delete data');
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       throw new StorageError(
-        `Failed to remove data from MongoDB: ${error.message}`,
+        `Failed to remove data from MongoDB: ${errorMessage}`,
         'write_error'
       );
     }
@@ -83,8 +86,9 @@ export class MongoDBStorageProvider implements IStorageProvider {
         throw new Error('Failed to clear data');
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       throw new StorageError(
-        `Failed to clear MongoDB data: ${error.message}`,
+        `Failed to clear MongoDB data: ${errorMessage}`,
         'write_error'
       );
     }
