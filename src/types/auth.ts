@@ -1,7 +1,7 @@
 import { DefaultSession, DefaultUser } from 'next-auth'
 import { JWT } from 'next-auth/jwt'
 
-export interface UserRole {
+export interface Role {
   id: string
   name: string
 }
@@ -11,7 +11,7 @@ export interface CustomUser extends Omit<DefaultUser, 'email' | 'name'> {
   id: string
   email: string
   name: string
-  roles?: UserRole[]
+  roles?: Role[]
 }
 
 declare module 'next-auth' {
@@ -22,7 +22,7 @@ declare module 'next-auth' {
       id: string
       email: string
       name: string
-      roles?: UserRole[]
+      roles?: Role[]
     }
   }
 }
@@ -32,6 +32,6 @@ declare module 'next-auth/jwt' {
     id: string
     email: string
     name: string
-    roles?: UserRole[]
+    roles?: Role[]
   }
 }
