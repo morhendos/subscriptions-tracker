@@ -17,8 +17,7 @@ const developmentConfig: ConnectOptions = {
   minPoolSize: 1,
   maxIdleTimeMS: 60000, // 1 minute
   connectTimeoutMS: 30000,
-  // Enable detailed logging in development
-  debug: true,
+  // Development specific logging will be handled through mongoose.set('debug', true)
 };
 
 // Production environment configuration
@@ -54,15 +53,24 @@ const testConfig: ConnectOptions = {
 
 // Get configuration based on environment
 export const getMongoConfig = (): ConnectOptions => {
-  switch (process.env.NODE_ENV) {
-    case 'production':
-      return productionConfig;
-    case 'test':
-      return testConfig;
-    case 'development':
-    default:
-      return developmentConfig;
-  }
+  const config = (() => {
+    switch (process.env.NODE_ENV) {
+      case 'production':
+        return productionConfig;
+      case 'test':
+        return testConfig;
+      case 'development':
+      default:
+        // Enable debug mode in development
+        if (process.env.NODE_ENV === 'development') {
+          // This is the proper way to enable debugging in Mongoose
+          require('mongoose').set('debug', true);
+        }
+        return developmentConfig;
+    }
+  })();
+
+  return config;
 };
 
 // Validate MongoDB URI
