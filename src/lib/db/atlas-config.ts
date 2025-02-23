@@ -1,6 +1,8 @@
 import { ConnectOptions } from 'mongoose';
 import { ReadPreference, ReadPreferenceMode } from 'mongodb';
 
+type MongoCompressor = 'none' | 'snappy' | 'zlib' | 'zstd';
+
 /**
  * MongoDB Atlas specific configuration interface
  */
@@ -21,7 +23,7 @@ export interface MongoDBAtlasConfig {
   ssl: boolean;
   authSource: string;
   retryReads: boolean;
-  compressors?: string[];
+  compressors?: MongoCompressor[];
 }
 
 /**
@@ -43,7 +45,7 @@ const ATLAS_PRODUCTION_CONFIG: MongoDBAtlasConfig = {
   ssl: true,
   authSource: 'admin',
   retryReads: true,
-  compressors: ['zlib'],  // Enable network compression
+  compressors: ['zlib', 'snappy'] as MongoCompressor[],  // Enable network compression
 };
 
 /**
@@ -64,6 +66,7 @@ const ATLAS_DEVELOPMENT_CONFIG: MongoDBAtlasConfig = {
   ssl: true,
   authSource: 'admin',
   retryReads: true,
+  compressors: ['zlib'] as MongoCompressor[],
 };
 
 /**
