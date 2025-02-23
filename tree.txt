@@ -1,7 +1,10 @@
 subscription-tracker/
 ├── AUTH_MIGRATION.md
 ├── MONGODB_MIGRATION.md
+├── PRODUCTION_READINESS.md
 ├── README.md
+├── docs
+│   └── MONGODB_ATLAS_SETUP.md
 ├── install-components.sh
 ├── next-env.d.ts
 ├── next.config.js
@@ -14,12 +17,21 @@ subscription-tracker/
 ├── scripts
 │   └── tree.js
 ├── src
+│   ├── __tests__
+│   │   └── middleware.test.ts
 │   ├── app
 │   │   ├── actions.ts
 │   │   ├── api
 │   │   │   ├── auth
 │   │   │   │   └── [...nextauth]
 │   │   │   │       └── route.ts
+│   │   │   ├── health
+│   │   │   │   └── db
+│   │   │   │       ├── __tests__
+│   │   │   │       │   └── route.test.ts
+│   │   │   │       └── route.ts
+│   │   │   ├── healthz
+│   │   │   │   └── route.ts
 │   │   │   ├── storage
 │   │   │   │   └── route.ts
 │   │   │   └── subscriptions
@@ -95,7 +107,12 @@ subscription-tracker/
 │   │   │   ├── index.ts
 │   │   │   └── validation.ts
 │   │   ├── db
+│   │   │   ├── __tests__
+│   │   │   │   ├── atlas-config.test.ts
+│   │   │   │   └── mongodb.test.ts
+│   │   │   ├── atlas-config.ts
 │   │   │   ├── check-env.ts
+│   │   │   ├── config.ts
 │   │   │   ├── index.ts
 │   │   │   ├── mongodb.ts
 │   │   │   ├── test-connection.ts
@@ -124,6 +141,10 @@ subscription-tracker/
 │   │   ├── utils.ts
 │   │   └── validations
 │   │       └── subscription.ts
+│   ├── middleware
+│   │   ├── __tests__
+│   │   │   └── rate-limit.test.ts
+│   │   └── rate-limit.ts
 │   ├── middleware.ts
 │   ├── models
 │   │   ├── __tests__
