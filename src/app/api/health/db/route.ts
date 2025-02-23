@@ -1,21 +1,64 @@
 import { NextResponse } from 'next/server';
 import { checkDatabaseHealth } from '@/lib/db/mongodb';
+import { rateLimit } from '@/middleware/rate-limit';
+
+// Add rate limiting to prevent abuse
+const limiter = rateLimit({
+  interval: 60 * 1000, // 1 minute
+  uniqueTokenPerInterval: 500
+});
 
 export async function GET() {
   try {
+    // Apply rate limiting
+    await limiter.check(10, 'HEALTH_CHECK'); // 10 requests per minute
+
     const health = await checkDatabaseHealth();
+    const headers = {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    };
     
     if (health.status === 'healthy') {
-      return NextResponse.json(health, { status: 200 });
+      return NextResponse.json(health, { 
+        status: 200,
+        headers
+      });
     } else {
-      return NextResponse.json(health, { status: 503 });
+      // Log unhealthy state for monitoring
+      console.error('Database health check failed:', health);
+      return NextResponse.json(health, { 
+        status: 503,
+        headers: {
+          ...headers,
+          'Retry-After': '30'
+        }
+      });
     }
   } catch (error: any) {
-    return NextResponse.json({
+    // Enhanced error handling with specific error types
+    const errorResponse = {
       status: 'unhealthy',
       latency: -1,
-      message: `Failed to check database health: ${error.message}`
-    }, { status: 500 });
+      timestamp: new Date().toISOString(),
+      error: {
+        type: error.name || 'UnknownError',
+        message: `Failed to check database health: ${error.message}`,
+        code: error.code || 'UNKNOWN',
+      }
+    };
+
+    // Log error for monitoring
+    console.error('Database health check error:', error);
+
+    return NextResponse.json(errorResponse, { 
+      status: 500,
+      headers: {
+        'Cache-Control': 'no-store',
+        'Retry-After': '60'
+      }
+    });
   }
 }
 
