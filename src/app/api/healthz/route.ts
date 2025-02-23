@@ -16,8 +16,9 @@ export async function GET() {
 
     // If database is connected, check collections
     if (health.status === 'healthy' && SubscriptionModel.db) {
-      const collections = await SubscriptionModel.db.listCollections().map(col => col.name).toArray();
-      schemaHealth.collections = collections;
+      // List collections without using toArray
+      const collections = await mongoose.connection.db.collections();
+      schemaHealth.collections = collections.map(col => col.collectionName);
     }
 
     return NextResponse.json({
