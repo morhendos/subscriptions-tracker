@@ -12,7 +12,13 @@
     "test:model": "tsx src/models/__tests__/subscription.test.ts",
     "test:storage": "tsx src/lib/storage/__tests__/mongodb.test.ts",
     "test:connection": "tsx src/lib/db/test-connection.ts",
-    "check:env": "tsx src/lib/db/check-env.ts"
+    "check:env": "tsx src/lib/db/check-env.ts",
+    "mongodb:start": "brew services start mongodb-community",
+    "mongodb:stop": "brew services stop mongodb-community",
+    "mongodb:restart": "brew services restart mongodb-community",
+    "mongodb:status": "brew services list | grep mongodb",
+    "dev:with-db": "npm run mongodb:start && next dev",
+    "dev:stop": "npm run mongodb:stop"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.0.5",
