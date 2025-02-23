@@ -1,146 +1,125 @@
-import { ConnectionOptions } from 'mongoose';
+import { ConnectOptions } from 'mongoose';
 
 /**
  * MongoDB Atlas specific configuration interface
  */
-interface AtlasConfig extends ConnectionOptions {
-  replicaSet?: string;
-  readPreference: string;
+export interface MongoDBAtlasConfig {
   retryWrites: boolean;
   w: string | number;
-  maxStalenessSeconds?: number;
+  readPreference: string;
+  maxPoolSize: number;
+  minPoolSize: number;
+  maxIdleTimeMS: number;
+  serverSelectionTimeoutMS: number;
+  socketTimeoutMS: number;
+  connectTimeoutMS: number;
+  autoIndex: boolean;
+  autoCreate: boolean;
 }
 
 /**
- * MongoDB Atlas configuration for different environments
+ * Default MongoDB Atlas configuration values for production environment
  */
-export const getAtlasConfig = (env: string = process.env.NODE_ENV || 'development'): AtlasConfig => {
-  // Base configuration for all environments
-  const baseConfig: AtlasConfig = {
-    retryWrites: true,
-    w: 'majority',
-    readPreference: 'primary',
-    ssl: true,
-    maxPoolSize: 50,
-    minPoolSize: 10,
-    socketTimeoutMS: 45000,
-    connectTimeoutMS: 20000,
-    serverSelectionTimeoutMS: 30000,
-    heartbeatFrequencyMS: 10000,
-  };
-
-  switch (env) {
-    case 'production':
-      return {
-        ...baseConfig,
-        maxPoolSize: 100,
-        minPoolSize: 20,
-        maxIdleTimeMS: 120000, // 2 minutes
-        // Production specific settings
-        readPreference: 'primaryPreferred',
-        w: 'majority',
-        // Staleness settings for secondaries
-        maxStalenessSeconds: 90,
-        // Connection pool settings
-        waitQueueTimeoutMS: 15000,
-        // Monitoring settings
-        monitorCommands: true,
-        serverMonitoringMode: 'auto',
-      };
-
-    case 'staging':
-      return {
-        ...baseConfig,
-        maxPoolSize: 50,
-        minPoolSize: 10,
-        maxIdleTimeMS: 60000, // 1 minute
-        // Staging specific settings
-        readPreference: 'primaryPreferred',
-        w: 'majority',
-        monitorCommands: true,
-      };
-
-    case 'test':
-      return {
-        ...baseConfig,
-        maxPoolSize: 10,
-        minPoolSize: 2,
-        maxIdleTimeMS: 30000, // 30 seconds
-        // Test specific settings
-        readPreference: 'primary',
-        w: 1,
-        monitorCommands: false,
-      };
-
-    default: // development
-      return {
-        ...baseConfig,
-        maxPoolSize: 10,
-        minPoolSize: 2,
-        maxIdleTimeMS: 60000, // 1 minute
-        // Development specific settings
-        readPreference: 'primary',
-        w: 1,
-        monitorCommands: true,
-        debug: true,
-      };
-  }
+const ATLAS_PRODUCTION_CONFIG: MongoDBAtlasConfig = {
+  retryWrites: true,
+  w: 'majority',
+  readPreference: 'primary',
+  maxPoolSize: 50,
+  minPoolSize: 10,
+  maxIdleTimeMS: 60000,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  connectTimeoutMS: 10000,
+  autoIndex: true,
+  autoCreate: false,
 };
 
 /**
- * Get backup configuration for MongoDB Atlas
+ * Default MongoDB Atlas configuration values for development environment
  */
-export const getBackupConfig = () => ({
-  enabled: process.env.MONGODB_BACKUP_ENABLED === 'true',
-  schedule: {
-    type: process.env.MONGODB_BACKUP_TYPE || 'scheduled',
-    hourly: {
-      retentionDays: parseInt(process.env.MONGODB_BACKUP_HOURLY_RETENTION || '24', 10),
-    },
-    daily: {
-      retentionDays: parseInt(process.env.MONGODB_BACKUP_DAILY_RETENTION || '7', 10),
-      preferredTime: process.env.MONGODB_BACKUP_PREFERRED_TIME || '02:00',
-    },
-    weekly: {
-      retentionWeeks: parseInt(process.env.MONGODB_BACKUP_WEEKLY_RETENTION || '4', 10),
-      preferredDay: process.env.MONGODB_BACKUP_PREFERRED_DAY || 'Sunday',
-    },
-    monthly: {
-      retentionMonths: parseInt(process.env.MONGODB_BACKUP_MONTHLY_RETENTION || '12', 10),
-      preferredDate: parseInt(process.env.MONGODB_BACKUP_PREFERRED_DATE || '1', 10),
-    },
-  },
-});
+const ATLAS_DEVELOPMENT_CONFIG: MongoDBAtlasConfig = {
+  retryWrites: true,
+  w: 1,
+  readPreference: 'primary',
+  maxPoolSize: 10,
+  minPoolSize: 1,
+  maxIdleTimeMS: 120000,
+  serverSelectionTimeoutMS: 10000,
+  socketTimeoutMS: 60000,
+  connectTimeoutMS: 20000,
+  autoIndex: true,
+  autoCreate: true,
+};
 
 /**
- * Get monitoring configuration for MongoDB Atlas
+ * Get MongoDB Atlas configuration based on environment
+ * @param env - Environment ('development' | 'production')
+ * @returns MongoDB connection options
  */
-export const getMonitoringConfig = () => ({
+export function getAtlasConfig(env?: string): ConnectOptions {
+  const isProduction = env === 'production';
+  const config = isProduction ? ATLAS_PRODUCTION_CONFIG : ATLAS_DEVELOPMENT_CONFIG;
+
+  return {
+    ...config,
+    retryWrites: config.retryWrites,
+    w: config.w,
+    maxPoolSize: config.maxPoolSize,
+    minPoolSize: config.minPoolSize,
+    serverSelectionTimeoutMS: config.serverSelectionTimeoutMS,
+    socketTimeoutMS: config.socketTimeoutMS,
+    connectTimeoutMS: config.connectTimeoutMS,
+    autoIndex: config.autoIndex,
+    autoCreate: config.autoCreate,
+  };
+}
+
+/**
+ * Monitoring configuration interface
+ */
+export interface MonitoringConfig {
   metrics: {
-    enabled: true,
-    intervalSeconds: parseInt(process.env.MONGODB_METRICS_INTERVAL || '60', 10),
-  },
+    enabled: boolean;
+    intervalSeconds: number;
+  };
   alerts: {
-    connectionPoolUtilization: {
-      enabled: true,
-      threshold: parseInt(process.env.MONGODB_ALERT_POOL_THRESHOLD || '80', 10),
-    },
-    opLogLag: {
-      enabled: true,
-      thresholdSeconds: parseInt(process.env.MONGODB_ALERT_OPLOG_LAG || '10', 10),
-    },
-    replicationLag: {
-      enabled: true,
-      thresholdSeconds: parseInt(process.env.MONGODB_ALERT_REPLICATION_LAG || '20', 10),
-    },
     queryPerformance: {
-      enabled: true,
-      slowQueryThresholdMs: parseInt(process.env.MONGODB_ALERT_SLOW_QUERY || '100', 10),
-    },
-  },
+      enabled: boolean;
+      slowQueryThresholdMs: number;
+    };
+    connectionPoolUtilization: {
+      enabled: boolean;
+      threshold: number;
+    };
+  };
   logging: {
-    profilerEnabled: process.env.NODE_ENV === 'production',
-    slowQueryThresholdMs: parseInt(process.env.MONGODB_SLOW_QUERY_THRESHOLD || '100', 10),
-    logRotationDays: parseInt(process.env.MONGODB_LOG_ROTATION_DAYS || '7', 10),
-  },
-});
+    slowQueryThresholdMs: number;
+    rotationDays: number;
+  };
+}
+
+/**
+ * Get monitoring configuration
+ */
+export function getMonitoringConfig(): MonitoringConfig {
+  return {
+    metrics: {
+      enabled: process.env.MONGODB_METRICS_ENABLED === 'true',
+      intervalSeconds: parseInt(process.env.MONGODB_METRICS_INTERVAL || '60', 10),
+    },
+    alerts: {
+      queryPerformance: {
+        enabled: true,
+        slowQueryThresholdMs: parseInt(process.env.MONGODB_SLOW_QUERY_THRESHOLD || '100', 10),
+      },
+      connectionPoolUtilization: {
+        enabled: true,
+        threshold: parseInt(process.env.MONGODB_ALERT_POOL_THRESHOLD || '80', 10),
+      },
+    },
+    logging: {
+      slowQueryThresholdMs: parseInt(process.env.MONGODB_SLOW_QUERY_THRESHOLD || '100', 10),
+      rotationDays: parseInt(process.env.MONGODB_LOG_ROTATION_DAYS || '7', 10),
+    },
+  };
+}
