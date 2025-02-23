@@ -1,64 +1,51 @@
-'use client';
-
-import { getStorageProvider } from '@/lib/storage';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
 export function TestStorageConnection() {
-  const [status, setStatus] = useState<string>('');
-  const [error, setError] = useState<string>('');
+  const [status, setStatus] = useState('');
+  const [error, setError] = useState('');
 
   const testConnection = async () => {
-    const storage = getStorageProvider();
-    const testKey = 'subscriptions_test-user';
+    setStatus('Testing connection...');
+    setError('');
 
     try {
-      setStatus('Testing connection...');
-      setError('');
+      const response = await fetch('/api/healthz');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Connection test failed');
+      }
 
-      // Test write
-      await storage.set(testKey, [{
-        name: 'Test Subscription',
-        price: 9.99,
-        currency: 'USD',
-        billingPeriod: 'MONTHLY',
-        startDate: new Date().toISOString(),
-        nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        description: 'Test subscription',
-        disabled: false
-      }]);
-
-      // Test read
-      const data = await storage.get(testKey);
-      console.log('Retrieved data:', data);
-
-      // Test delete
-      await storage.remove(testKey);
-
-      setStatus('✅ Connection test successful!');
+      const data = await response.json();
+      
+      if (data.status === 'healthy') {
+        setStatus(`✅ Connection successful!
+        Latency: ${data.latency}ms
+        Collections: ${data.schemas.collections.join(', ') || 'none'}`);
+      } else {
+        throw new Error(data.message || 'Connection test failed');
+      }
     } catch (err) {
       console.error('Connection test failed:', err);
-      setError(`❌ Test failed: ${err.message}`);
+      setError(`❌ Test failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setStatus('');
     }
   };
 
   return (
-    <div className="p-4 space-y-4">
-      <Button onClick={testConnection}>
-        Test MongoDB Connection
+    <div className="space-y-4">
+      <Button onClick={testConnection} variant="outline">
+        Test Database Connection
       </Button>
-      
       {status && (
-        <div className="text-sm text-green-500">
+        <pre className="p-4 bg-gray-100 dark:bg-gray-900 rounded-lg whitespace-pre-wrap">
           {status}
-        </div>
+        </pre>
       )}
-      
       {error && (
-        <div className="text-sm text-red-500">
+        <pre className="p-4 bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-300 rounded-lg whitespace-pre-wrap">
           {error}
-        </div>
+        </pre>
       )}
     </div>
   );
