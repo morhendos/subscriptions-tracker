@@ -1,12 +1,15 @@
 import { ConnectOptions } from 'mongoose';
 
+// Valid MongoDB read preference modes
+type ReadPreferenceMode = 'primary' | 'primaryPreferred' | 'secondary' | 'secondaryPreferred' | 'nearest';
+
 /**
  * MongoDB Atlas specific configuration interface
  */
 export interface MongoDBAtlasConfig {
   retryWrites: boolean;
   w: number | 'majority';  // Write concern
-  readPreference: string;
+  readPreference: ReadPreferenceMode;
   maxPoolSize: number;
   minPoolSize: number;
   maxIdleTimeMS: number;
@@ -66,6 +69,7 @@ export function getAtlasConfig(env?: string): ConnectOptions {
     writeConcern: {
       w: config.w
     },
+    // readPreference needs to be a string
     readPreference: config.readPreference,
     maxPoolSize: config.maxPoolSize,
     minPoolSize: config.minPoolSize,
