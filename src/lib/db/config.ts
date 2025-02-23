@@ -37,9 +37,8 @@ const productionConfig: ConnectOptions = {
   retryWrites: true,
   // Read from secondaries when possible
   readPreference: 'secondaryPreferred' as ReadPreferenceMode,
-  // Keep idle connections alive
-  keepAlive: true,
-  keepAliveInitialDelay: 300000, // 5 minutes
+  // Keep connections alive with heartbeat
+  heartbeatFrequencyMS: 300000, // 5 minutes
 };
 
 // Test environment configuration
