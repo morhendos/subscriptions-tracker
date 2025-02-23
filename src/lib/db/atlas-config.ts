@@ -1,11 +1,11 @@
-import { ConnectOptions, type W } from 'mongoose';
+import { ConnectOptions } from 'mongoose';
 
 /**
  * MongoDB Atlas specific configuration interface
  */
 export interface MongoDBAtlasConfig {
   retryWrites: boolean;
-  w: W;
+  w: number | 'majority';  // Write concern
   readPreference: string;
   maxPoolSize: number;
   minPoolSize: number;
@@ -60,10 +60,13 @@ export function getAtlasConfig(env?: string): ConnectOptions {
   const isProduction = env === 'production';
   const config = isProduction ? ATLAS_PRODUCTION_CONFIG : ATLAS_DEVELOPMENT_CONFIG;
 
-  return {
-    ...config,
+  // Create a type-safe configuration object
+  const mongooseConfig: ConnectOptions = {
     retryWrites: config.retryWrites,
-    w: config.w,
+    writeConcern: {
+      w: config.w
+    },
+    readPreference: config.readPreference,
     maxPoolSize: config.maxPoolSize,
     minPoolSize: config.minPoolSize,
     serverSelectionTimeoutMS: config.serverSelectionTimeoutMS,
@@ -72,6 +75,8 @@ export function getAtlasConfig(env?: string): ConnectOptions {
     autoIndex: config.autoIndex,
     autoCreate: config.autoCreate,
   };
+
+  return mongooseConfig;
 }
 
 /**
