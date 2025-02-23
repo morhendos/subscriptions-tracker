@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { checkDatabaseHealth } from '@/lib/db/mongodb';
 import { SubscriptionModel } from '@/models/subscription';
+import mongoose from 'mongoose';
 
 export async function GET() {
   try {
@@ -15,13 +16,14 @@ export async function GET() {
 
     // If database is connected, check collections
     if (health.status === 'healthy' && SubscriptionModel.db) {
-      const collections = await SubscriptionModel.db.listCollections().toArray();
-      schemaHealth.collections = collections.map(col => col.name);
+      const collections = await SubscriptionModel.db.listCollections().map(col => col.name).toArray();
+      schemaHealth.collections = collections;
     }
 
     return NextResponse.json({
       ...health,
-      schemas: schemaHealth
+      schemas: schemaHealth,
+      timestamp: new Date().toISOString()
     });
   } catch (error: any) {
     console.error('[Health Check] Error:', error);
