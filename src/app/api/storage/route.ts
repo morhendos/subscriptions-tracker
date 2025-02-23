@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SubscriptionModel } from '@/models/subscription';
+import { SubscriptionModel, SubscriptionDocument } from '@/models/subscription';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import mongoose from 'mongoose';
+import { Subscription } from '@/types/subscriptions';
 
 const STORAGE_KEY_PREFIX = 'subscriptions';
 
@@ -33,18 +34,18 @@ export async function GET(request: NextRequest) {
       .sort({ nextBillingDate: 1 })
       .lean();
 
-    const result = subscriptions.map(sub => ({
-      id: sub._id.toString(),
+    const result = subscriptions.map((sub): Subscription => ({
+      id: (sub._id as mongoose.Types.ObjectId).toString(),
       name: sub.name,
       price: sub.price,
       currency: sub.currency,
       billingPeriod: sub.billingPeriod,
-      startDate: sub.startDate.toISOString(),
-      nextBillingDate: sub.nextBillingDate.toISOString(),
+      startDate: (sub.startDate as Date).toISOString(),
+      nextBillingDate: (sub.nextBillingDate as Date).toISOString(),
       description: sub.description,
       disabled: sub.disabled,
-      createdAt: sub.createdAt.toISOString(),
-      updatedAt: sub.updatedAt.toISOString()
+      createdAt: (sub.createdAt as Date).toISOString(),
+      updatedAt: (sub.updatedAt as Date).toISOString()
     }));
 
     return NextResponse.json(result);
@@ -85,22 +86,22 @@ export async function POST(request: NextRequest) {
 
     // Insert new subscriptions if any
     if (subscriptions && subscriptions.length > 0) {
-      const docs = subscriptions.map((sub: any) => ({
+      const docs = subscriptions.map((sub: Partial<Subscription>) => ({
         userId,
         name: sub.name,
         price: sub.price,
         currency: sub.currency,
         billingPeriod: sub.billingPeriod,
-        startDate: new Date(sub.startDate),
-        nextBillingDate: new Date(sub.nextBillingDate),
+        startDate: sub.startDate ? new Date(sub.startDate) : new Date(),
+        nextBillingDate: sub.nextBillingDate ? new Date(sub.nextBillingDate) : new Date(),
         description: sub.description,
-        disabled: sub.disabled
+        disabled: sub.disabled ?? false
       }));
 
       const result = await SubscriptionModel.insertMany(docs);
 
       // Return the newly inserted subscriptions with their IDs
-      const insertedSubscriptions = result.map(sub => ({
+      const insertedSubscriptions = result.map((sub: SubscriptionDocument): Subscription => ({
         id: sub._id.toString(),
         name: sub.name,
         price: sub.price,
