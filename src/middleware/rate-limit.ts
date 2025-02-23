@@ -92,11 +92,14 @@ export function createRateLimit(config: Partial<RateLimitConfig> = {}) {
  */
 export function cleanupRateLimitStore() {
   const now = Date.now();
-  for (const [clientId, info] of rateLimitStore.entries()) {
+  // Convert to array first to avoid iteration issues
+  const entries = Array.from(rateLimitStore);
+  
+  entries.forEach(([clientId, info]) => {
     if (now - info.startTime > defaultConfig.windowMs) {
       rateLimitStore.delete(clientId);
     }
-  }
+  });
 }
 
 // Automatically cleanup every minute
