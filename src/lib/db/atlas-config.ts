@@ -1,5 +1,5 @@
 import { ConnectOptions } from 'mongoose';
-import { ReadPreference } from 'mongodb';
+import { ReadPreference, ReadPreferenceMode } from 'mongodb';
 
 /**
  * MongoDB Atlas specific configuration interface
@@ -7,7 +7,7 @@ import { ReadPreference } from 'mongodb';
 export interface MongoDBAtlasConfig {
   retryWrites: boolean;
   w: number | 'majority';  // Write concern
-  readPreference: string;
+  readPreference: ReadPreferenceMode;
   maxPoolSize: number;
   minPoolSize: number;
   maxIdleTimeMS: number;
@@ -24,7 +24,7 @@ export interface MongoDBAtlasConfig {
 const ATLAS_PRODUCTION_CONFIG: MongoDBAtlasConfig = {
   retryWrites: true,
   w: 'majority',
-  readPreference: ReadPreference.PRIMARY,
+  readPreference: 'primary',
   maxPoolSize: 50,
   minPoolSize: 10,
   maxIdleTimeMS: 60000,
@@ -41,7 +41,7 @@ const ATLAS_PRODUCTION_CONFIG: MongoDBAtlasConfig = {
 const ATLAS_DEVELOPMENT_CONFIG: MongoDBAtlasConfig = {
   retryWrites: true,
   w: 1,
-  readPreference: ReadPreference.PRIMARY,
+  readPreference: 'primary',
   maxPoolSize: 10,
   minPoolSize: 1,
   maxIdleTimeMS: 120000,
@@ -62,7 +62,7 @@ export function getAtlasConfig(env?: string): ConnectOptions {
   const config = isProduction ? ATLAS_PRODUCTION_CONFIG : ATLAS_DEVELOPMENT_CONFIG;
 
   // Create the read preference instance
-  const readPref = new ReadPreference(config.readPreference);
+  const readPref = new ReadPreference(config.readPreference as ReadPreferenceMode);
 
   // Create a type-safe configuration object
   const mongooseConfig: ConnectOptions = {
