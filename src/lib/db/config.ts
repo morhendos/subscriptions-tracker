@@ -7,7 +7,6 @@ const baseConfig: ConnectOptions = {
   serverSelectionTimeoutMS: 30000,
   socketTimeoutMS: 45000,
   family: 4,
-  ssl: true,
 };
 
 // Development environment configuration
@@ -17,6 +16,7 @@ const developmentConfig: ConnectOptions = {
   minPoolSize: 1,
   maxIdleTimeMS: 60000, // 1 minute
   connectTimeoutMS: 30000,
+  ssl: false, // Disable SSL for local development
   // Development specific logging will be handled through mongoose.set('debug', true)
 };
 
@@ -27,6 +27,7 @@ const productionConfig: ConnectOptions = {
   minPoolSize: 10,
   maxIdleTimeMS: 120000, // 2 minutes
   connectTimeoutMS: 20000,
+  ssl: true,  // Enable SSL for production
   // Disable auto-indexing in production
   autoIndex: false,
   // Enable write concern for production
@@ -48,6 +49,7 @@ const testConfig: ConnectOptions = {
   minPoolSize: 1,
   maxIdleTimeMS: 30000, // 30 seconds
   connectTimeoutMS: 10000,
+  ssl: false, // Disable SSL for testing
 };
 
 // Get configuration based on environment
@@ -78,11 +80,18 @@ export const validateMongoURI = (uri: string): boolean => {
   
   try {
     // Basic URI validation
-    const mongoRegex = /^mongodb(\+srv)?:\/\/.+/;
+    const mongoRegex = /^mongodb(\\+srv)?:\/\/.+/;
     if (!mongoRegex.test(uri)) return false;
 
     // Parse URI to validate structure
     const url = new URL(uri);
+    
+    // For local development, we don't require username/password
+    if (process.env.NODE_ENV === 'development') {
+      return !!url.hostname;  // Only require hostname for local development
+    }
+    
+    // For production, require full authentication
     if (!url.username || !url.password) return false;
     if (!url.hostname) return false;
     
@@ -96,7 +105,10 @@ export const validateMongoURI = (uri: string): boolean => {
 export const getSanitizedURI = (uri: string): string => {
   try {
     const url = new URL(uri);
-    return uri.replace(`${url.username}:${url.password}`, '***:***');
+    if (url.username && url.password) {
+      return uri.replace(`${url.username}:${url.password}`, '***:***');
+    }
+    return uri;
   } catch {
     return uri.replace(/\/\/(.*?):(.*?)@/, '//***:***@');
   }
