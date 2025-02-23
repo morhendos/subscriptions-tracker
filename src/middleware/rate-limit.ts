@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
+import { headers as getHeaders } from 'next/headers';
 
 interface RateLimitConfig {
   maxRequests: number;  // Maximum number of requests allowed within the window
@@ -29,7 +29,7 @@ export function createRateLimit(config: Partial<RateLimitConfig> = {}) {
   const { maxRequests, windowMs } = { ...defaultConfig, ...config };
 
   return async function rateLimit(request: NextRequest) {
-    const headersList = headers();
+    const headersList = getHeaders();
     
     // Get client identifier (IP address or API key)
     const clientId = request.ip || 
@@ -57,7 +57,7 @@ export function createRateLimit(config: Partial<RateLimitConfig> = {}) {
     const reset = Math.ceil((rateLimitInfo.startTime + windowMs - now) / 1000);
 
     // Set rate limit headers
-    const headers = {
+    const responseHeaders = {
       'X-RateLimit-Limit': maxRequests.toString(),
       'X-RateLimit-Remaining': remaining.toString(),
       'X-RateLimit-Reset': reset.toString(),
@@ -74,7 +74,7 @@ export function createRateLimit(config: Partial<RateLimitConfig> = {}) {
         {
           status: 429,
           headers: {
-            ...headers,
+            ...responseHeaders,
             'Content-Type': 'application/json',
             'Retry-After': reset.toString()
           }
