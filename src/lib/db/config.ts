@@ -1,7 +1,8 @@
-import { ConnectionOptions } from 'mongoose';
+import { ConnectOptions } from 'mongoose';
+import { ReadPreferenceMode } from 'mongodb';
 
 // Base configuration shared between all environments
-const baseConfig: ConnectionOptions = {
+const baseConfig: ConnectOptions = {
   autoIndex: true,
   serverSelectionTimeoutMS: 30000,
   socketTimeoutMS: 45000,
@@ -10,7 +11,7 @@ const baseConfig: ConnectionOptions = {
 };
 
 // Development environment configuration
-const developmentConfig: ConnectionOptions = {
+const developmentConfig: ConnectOptions = {
   ...baseConfig,
   maxPoolSize: 5,
   minPoolSize: 1,
@@ -21,7 +22,7 @@ const developmentConfig: ConnectionOptions = {
 };
 
 // Production environment configuration
-const productionConfig: ConnectionOptions = {
+const productionConfig: ConnectOptions = {
   ...baseConfig,
   maxPoolSize: 50,
   minPoolSize: 10,
@@ -30,18 +31,20 @@ const productionConfig: ConnectionOptions = {
   // Disable auto-indexing in production
   autoIndex: false,
   // Enable write concern for production
-  w: 'majority',
-  wtimeout: 2500,
+  writeConcern: {
+    w: 'majority',
+    wtimeoutMS: 2500,
+  },
   retryWrites: true,
   // Read from secondaries when possible
-  readPreference: 'secondaryPreferred',
+  readPreference: 'secondaryPreferred' as ReadPreferenceMode,
   // Keep idle connections alive
   keepAlive: true,
   keepAliveInitialDelay: 300000, // 5 minutes
 };
 
 // Test environment configuration
-const testConfig: ConnectionOptions = {
+const testConfig: ConnectOptions = {
   ...baseConfig,
   maxPoolSize: 5,
   minPoolSize: 1,
@@ -50,7 +53,7 @@ const testConfig: ConnectionOptions = {
 };
 
 // Get configuration based on environment
-export const getMongoConfig = (): ConnectionOptions => {
+export const getMongoConfig = (): ConnectOptions => {
   switch (process.env.NODE_ENV) {
     case 'production':
       return productionConfig;
@@ -88,6 +91,6 @@ export const getSanitizedURI = (uri: string): string => {
     const url = new URL(uri);
     return uri.replace(`${url.username}:${url.password}`, '***:***');
   } catch {
-    return uri.replace(/\/\/(.*?):(.+?)@/, '//***:***@');
+    return uri.replace(/\/\/(.*?):(.*?)@/, '//***:***@');
   }
 };
