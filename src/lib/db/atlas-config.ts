@@ -1,11 +1,11 @@
-import { ConnectOptions } from 'mongoose';
+import { ConnectOptions, type W } from 'mongoose';
 
 /**
  * MongoDB Atlas specific configuration interface
  */
 export interface MongoDBAtlasConfig {
   retryWrites: boolean;
-  w: string | number;
+  w: W;
   readPreference: string;
   maxPoolSize: number;
   minPoolSize: number;
