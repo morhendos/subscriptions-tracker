@@ -44,68 +44,116 @@ const validateEnv = () => {
   }
 };
 
-// Setup monitoring if enabled
+// Enhanced monitoring setup for Atlas
 const setupMonitoring = (connection: mongoose.Connection) => {
   const config = getMonitoringConfig();
+  const metricsInterval = config.metrics.intervalSeconds * 1000;
   
   if (config.metrics.enabled) {
-    // Setup command monitoring
+    // Command monitoring with detailed performance tracking
     connection.on('commandStarted', (event) => {
-      if (event.commandName === 'find' || event.commandName === 'insert' || 
-          event.commandName === 'update' || event.commandName === 'delete') {
-        console.debug(`[MongoDB] Command ${event.commandName} started`);
+      const monitoredCommands = ['find', 'insert', 'update', 'delete', 'aggregate'];
+      if (monitoredCommands.includes(event.commandName)) {
+        console.debug(`[MongoDB Atlas] Command ${event.commandName} started`, {
+          namespace: event.databaseName,
+          commandName: event.commandName,
+          timestamp: new Date().toISOString()
+        });
       }
     });
 
     connection.on('commandSucceeded', (event) => {
-      if (event.commandName === 'find' || event.commandName === 'insert' || 
-          event.commandName === 'update' || event.commandName === 'delete') {
-        console.debug(`[MongoDB] Command ${event.commandName} succeeded (${event.duration}ms)`);
+      const monitoredCommands = ['find', 'insert', 'update', 'delete', 'aggregate'];
+      if (monitoredCommands.includes(event.commandName)) {
+        // Track command latency
+        const latency = event.duration;
+        console.debug(`[MongoDB Atlas] Command ${event.commandName} succeeded`, {
+          duration: latency,
+          timestamp: new Date().toISOString()
+        });
 
-        // Check for slow queries
-        if (event.duration > config.logging.slowQueryThresholdMs) {
-          console.warn(`[MongoDB] Slow query detected: ${event.commandName} (${event.duration}ms)`);
+        // Check against different thresholds based on command type
+        const threshold = event.commandName === 'aggregate' 
+          ? config.alerts.queryPerformance.aggregationThresholdMs 
+          : config.alerts.queryPerformance.slowQueryThresholdMs;
+
+        if (latency > threshold) {
+          console.warn(`[MongoDB Atlas] Slow ${event.commandName} detected`, {
+            duration: latency,
+            threshold,
+            timestamp: new Date().toISOString()
+          });
         }
       }
     });
 
     connection.on('commandFailed', (event) => {
-      console.error(`[MongoDB] Command ${event.commandName} failed:`, event.failure);
+      console.error(`[MongoDB Atlas] Command ${event.commandName} failed:`, {
+        error: event.failure,
+        timestamp: new Date().toISOString()
+      });
     });
   }
 
-  // Setup performance monitoring
+  // Enhanced performance monitoring for Atlas
   if (config.alerts.queryPerformance.enabled) {
-    const slowQueryThreshold = config.alerts.queryPerformance.slowQueryThresholdMs;
-    
-    connection.on('commandSucceeded', (event) => {
-      if (event.duration > slowQueryThreshold) {
-        console.warn(`[MongoDB] Performance alert: Slow query detected (${event.duration}ms)`);
-        // Here you would typically send this to your monitoring service
-      }
-    });
-  }
-
-  // Setup connection pool monitoring
-  if (config.alerts.connectionPoolUtilization.enabled) {
-    const poolThreshold = config.alerts.connectionPoolUtilization.threshold;
     const db = connection.db;
     
     if (db) {
       setInterval(async () => {
         try {
-          const stats = await db.admin().serverStatus();
-          const connections = stats.connections;
-          const utilizationPercentage = (connections.current / connections.available) * 100;
-          
-          if (utilizationPercentage > poolThreshold) {
-            console.warn(`[MongoDB] Connection pool utilization high: ${utilizationPercentage.toFixed(2)}%`);
-            // Here you would typically send this to your monitoring service
+          const adminDb = db.admin();
+          const [serverStatus, replSetStatus] = await Promise.all([
+            adminDb.serverStatus(),
+            adminDb.command({ replSetGetStatus: 1 }).catch(() => null) // Might fail in standalone
+          ]);
+
+          // Track comprehensive metrics
+          const metrics = {
+            connections: {
+              current: serverStatus.connections.current,
+              available: serverStatus.connections.available,
+              utilizationPercentage: (serverStatus.connections.current / serverStatus.connections.available) * 100
+            },
+            opcounters: serverStatus.opcounters,
+            network: serverStatus.network,
+            memory: serverStatus.mem,
+            replication: replSetStatus ? {
+              lag: replSetStatus.members.filter((m: any) => !m.self).map((m: any) => m.optimeDate),
+              status: replSetStatus.members.map((m: any) => ({ 
+                name: m.name, 
+                state: m.stateStr,
+                health: m.health 
+              }))
+            } : null
+          };
+
+          // Check against thresholds
+          if (metrics.connections.utilizationPercentage > config.alerts.connectionPoolUtilization.threshold) {
+            console.warn('[MongoDB Atlas] High connection pool utilization', {
+              utilization: metrics.connections.utilizationPercentage,
+              threshold: config.alerts.connectionPoolUtilization.threshold,
+              timestamp: new Date().toISOString()
+            });
           }
+
+          if (replSetStatus && config.alerts.replication.enabled) {
+            const maxLag = Math.max(...metrics.replication!.lag);
+            if (maxLag > config.alerts.replication.maxLagSeconds * 1000) {
+              console.warn('[MongoDB Atlas] High replication lag detected', {
+                lag: maxLag,
+                threshold: config.alerts.replication.maxLagSeconds * 1000,
+                timestamp: new Date().toISOString()
+              });
+            }
+          }
+
+          // Store metrics for health checks
+          (global as any).mongoMetrics = metrics;
         } catch (error) {
-          console.error('[MongoDB] Failed to check connection pool stats:', error);
+          console.error('[MongoDB Atlas] Failed to collect metrics:', error);
         }
-      }, config.metrics.intervalSeconds * 1000);
+      }, metricsInterval);
     }
   }
 };
@@ -116,26 +164,26 @@ async function connectWithRetry(retryCount = 0): Promise<mongoose.Connection> {
     validateEnv();
 
     const uri = process.env.MONGODB_URI as string;
-    isDev && console.log('[MongoDB] Connecting to:', getSanitizedURI(uri));
+    isDev && console.log('[MongoDB Atlas] Connecting to:', getSanitizedURI(uri));
 
     const atlasConfig = getAtlasConfig(process.env.NODE_ENV);
     const connection = await mongoose.connect(uri, atlasConfig);
-    isDev && console.log('[MongoDB] Connected successfully');
+    isDev && console.log('[MongoDB Atlas] Connected successfully');
 
-    // Set up connection monitoring
+    // Enhanced connection monitoring
     connection.connection.on('disconnected', () => {
-      console.warn('[MongoDB] Disconnected. Attempting to reconnect...');
+      console.warn('[MongoDB Atlas] Disconnected. Attempting to reconnect...');
     });
 
     connection.connection.on('reconnected', () => {
-      console.log('[MongoDB] Reconnected successfully');
+      console.log('[MongoDB Atlas] Reconnected successfully');
     });
 
     connection.connection.on('error', (err) => {
-      console.error('[MongoDB] Connection error:', err);
+      console.error('[MongoDB Atlas] Connection error:', err);
     });
 
-    // Setup monitoring if in production or explicitly enabled
+    // Setup Atlas monitoring in production or when explicitly enabled
     if (process.env.NODE_ENV === 'production' || process.env.ENABLE_MONITORING === 'true') {
       setupMonitoring(connection.connection);
     }
@@ -143,15 +191,15 @@ async function connectWithRetry(retryCount = 0): Promise<mongoose.Connection> {
     return connection.connection;
   } catch (error: any) {
     if (retryCount < MAX_RETRIES) {
-      console.warn(`[MongoDB] Connection attempt ${retryCount + 1} failed. Retrying in ${RETRY_DELAY_MS * Math.pow(2, retryCount)}ms...`);
-      console.error('[MongoDB] Error:', error.message);
+      console.warn(`[MongoDB Atlas] Connection attempt ${retryCount + 1} failed. Retrying in ${RETRY_DELAY_MS * Math.pow(2, retryCount)}ms...`);
+      console.error('[MongoDB Atlas] Error:', error.message);
       
       await delay(retryCount);
       return connectWithRetry(retryCount + 1);
     }
 
     throw new MongoConnectionError(
-      `Failed to connect to MongoDB after ${MAX_RETRIES} attempts: ${error.message}`,
+      `Failed to connect to MongoDB Atlas after ${MAX_RETRIES} attempts: ${error.message}`,
       retryCount
     );
   }
@@ -159,13 +207,11 @@ async function connectWithRetry(retryCount = 0): Promise<mongoose.Connection> {
 
 // Main connection function
 export async function connectToDatabase(): Promise<mongoose.Connection> {
-  // Check cached connection
   if (cached.conn) {
-    isDev && console.log('[MongoDB] Using cached connection');
+    isDev && console.log('[MongoDB Atlas] Using cached connection');
     return cached.conn;
   }
 
-  // Create new connection if none exists
   if (!cached.promise) {
     cached.promise = connectWithRetry()
       .catch((error) => {
@@ -190,15 +236,17 @@ export async function disconnectFromDatabase(): Promise<void> {
       await mongoose.disconnect();
       cached.conn = null;
       cached.promise = null;
-      isDev && console.log('[MongoDB] Disconnected successfully');
+      isDev && console.log('[MongoDB Atlas] Disconnected successfully');
+      // Clear stored metrics
+      (global as any).mongoMetrics = null;
     } catch (error: any) {
-      console.error('[MongoDB] Disconnect error:', error.message);
+      console.error('[MongoDB Atlas] Disconnect error:', error.message);
       throw error;
     }
   }
 }
 
-// Health check function with enhanced metrics
+// Enhanced health check function with Atlas metrics
 export async function checkDatabaseHealth(): Promise<{
   status: 'healthy' | 'unhealthy';
   latency: number;
@@ -208,11 +256,29 @@ export async function checkDatabaseHealth(): Promise<{
       available: number;
       utilizationPercentage: number;
     };
+    opcounters?: {
+      insert: number;
+      query: number;
+      update: number;
+      delete: number;
+      getmore: number;
+      command: number;
+    };
+    replication?: {
+      status: Array<{
+        name: string;
+        state: string;
+        health: number;
+      }>;
+      maxLagMs?: number;
+    };
   };
   message?: string;
+  timestamp: string;
 }> {
+  const startTime = Date.now();
+  
   try {
-    const startTime = Date.now();
     const conn = mongoose.connection;
     
     if (!conn.db) {
@@ -220,30 +286,63 @@ export async function checkDatabaseHealth(): Promise<{
     }
 
     const adminDb = conn.db.admin();
-    const ping = await adminDb.ping();
-    const stats = await adminDb.serverStatus();
-    const latency = Date.now() - startTime;
+    
+    // Execute checks in parallel
+    const [ping, serverStatus, replSetStatus] = await Promise.all([
+      adminDb.ping(),
+      adminDb.serverStatus(),
+      adminDb.command({ replSetGetStatus: 1 }).catch(() => null)
+    ]);
 
     if (!ping.ok) {
       throw new Error('Database ping failed');
     }
 
-    return {
-      status: 'healthy',
+    // Calculate latency
+    const latency = Date.now() - startTime;
+
+    // Get cached metrics if available
+    const cachedMetrics = (global as any).mongoMetrics;
+
+    const response = {
+      status: 'healthy' as const,
       latency,
+      timestamp: new Date().toISOString(),
       metrics: {
         connections: {
-          current: stats.connections.current,
-          available: stats.connections.available,
-          utilizationPercentage: (stats.connections.current / stats.connections.available) * 100
-        }
+          current: serverStatus.connections.current,
+          available: serverStatus.connections.available,
+          utilizationPercentage: (serverStatus.connections.current / serverStatus.connections.available) * 100
+        },
+        opcounters: serverStatus.opcounters,
+        ...cachedMetrics  // Include additional cached metrics if available
       },
       message: 'Database is responding normally'
     };
+
+    // Add replication metrics if available
+    if (replSetStatus) {
+      const replicationMetrics = {
+        status: replSetStatus.members.map((m: any) => ({
+          name: m.name,
+          state: m.stateStr,
+          health: m.health
+        })),
+        maxLagMs: Math.max(...replSetStatus.members
+          .filter((m: any) => !m.self)
+          .map((m: any) => m.optimeDate)
+        )
+      };
+
+      response.metrics.replication = replicationMetrics;
+    }
+
+    return response;
   } catch (error: any) {
     return {
       status: 'unhealthy',
-      latency: -1,
+      latency: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
       message: `Database health check failed: ${error.message}`
     };
   }
