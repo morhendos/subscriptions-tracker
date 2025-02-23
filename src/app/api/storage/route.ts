@@ -101,18 +101,18 @@ export async function POST(request: NextRequest) {
       const result = await SubscriptionModel.insertMany(docs);
 
       // Return the newly inserted subscriptions with their IDs
-      const insertedSubscriptions = result.map((sub: SubscriptionDocument): Subscription => ({
-        id: sub._id.toString(),
-        name: sub.name,
-        price: sub.price,
-        currency: sub.currency,
-        billingPeriod: sub.billingPeriod,
-        startDate: sub.startDate.toISOString(),
-        nextBillingDate: sub.nextBillingDate.toISOString(),
-        description: sub.description,
-        disabled: sub.disabled,
-        createdAt: sub.createdAt.toISOString(),
-        updatedAt: sub.updatedAt.toISOString()
+      const insertedSubscriptions = result.map((doc): Subscription => ({
+        id: doc._id.toString(),
+        name: doc.name,
+        price: doc.price,
+        currency: doc.currency,
+        billingPeriod: doc.billingPeriod,
+        startDate: doc.startDate.toISOString(),
+        nextBillingDate: doc.nextBillingDate.toISOString(),
+        description: doc.description,
+        disabled: doc.disabled,
+        createdAt: doc.createdAt.toISOString(),
+        updatedAt: doc.updatedAt.toISOString()
       }));
 
       return NextResponse.json({ success: true, subscriptions: insertedSubscriptions });
