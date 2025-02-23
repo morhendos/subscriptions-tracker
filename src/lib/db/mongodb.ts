@@ -87,17 +87,24 @@ const setupMonitoring = (connection: mongoose.Connection) => {
   // Setup connection pool monitoring
   if (config.alerts.connectionPoolUtilization.enabled) {
     const poolThreshold = config.alerts.connectionPoolUtilization.threshold;
-    const maxPoolSize = connection.client.options.maxPoolSize || 100;
+    const db = connection.db;
     
-    setInterval(() => {
-      const activeConnections = connection.client.connections.length;
-      const utilizationPercentage = (activeConnections / maxPoolSize) * 100;
-      
-      if (utilizationPercentage > poolThreshold) {
-        console.warn(`[MongoDB] Connection pool utilization high: ${utilizationPercentage.toFixed(2)}%`);
-        // Here you would typically send this to your monitoring service
-      }
-    }, config.metrics.intervalSeconds * 1000);
+    if (db) {
+      setInterval(async () => {
+        try {
+          const stats = await db.admin().serverStatus();
+          const connections = stats.connections;
+          const utilizationPercentage = (connections.current / connections.available) * 100;
+          
+          if (utilizationPercentage > poolThreshold) {
+            console.warn(`[MongoDB] Connection pool utilization high: ${utilizationPercentage.toFixed(2)}%`);
+            // Here you would typically send this to your monitoring service
+          }
+        } catch (error) {
+          console.error('[MongoDB] Failed to check connection pool stats:', error);
+        }
+      }, config.metrics.intervalSeconds * 1000);
+    }
   }
 };
 
@@ -192,30 +199,41 @@ export async function checkDatabaseHealth(): Promise<{
   status: 'healthy' | 'unhealthy';
   latency: number;
   metrics?: {
-    connections: number;
-    poolSize: number;
-    utilizationPercentage: number;
+    connections: {
+      current: number;
+      available: number;
+      utilizationPercentage: number;
+    };
   };
   message?: string;
 }> {
   try {
     const startTime = Date.now();
-    const adminDb = mongoose.connection.db.admin();
-    await adminDb.ping();
+    const conn = mongoose.connection;
+    
+    if (!conn.db) {
+      throw new Error('Database connection not established');
+    }
+
+    const adminDb = conn.db.admin();
+    const ping = await adminDb.ping();
+    const stats = await adminDb.serverStatus();
     const latency = Date.now() - startTime;
 
-    // Get connection metrics if available
-    const metrics = mongoose.connection.client ? {
-      connections: mongoose.connection.client.connections.length,
-      poolSize: mongoose.connection.client.options.maxPoolSize || 100,
-      utilizationPercentage: (mongoose.connection.client.connections.length / 
-        (mongoose.connection.client.options.maxPoolSize || 100)) * 100
-    } : undefined;
+    if (!ping.ok) {
+      throw new Error('Database ping failed');
+    }
 
     return {
       status: 'healthy',
       latency,
-      metrics,
+      metrics: {
+        connections: {
+          current: stats.connections.current,
+          available: stats.connections.available,
+          utilizationPercentage: (stats.connections.current / stats.connections.available) * 100
+        }
+      },
       message: 'Database is responding normally'
     };
   } catch (error: any) {
