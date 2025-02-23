@@ -63,7 +63,7 @@ const ATLAS_DEVELOPMENT_CONFIG: MongoDBAtlasConfig = {
   connectTimeoutMS: 20000,
   autoIndex: true,
   autoCreate: true,
-  ssl: true,
+  ssl: false,  // Disable SSL for local development
   authSource: 'admin',
   retryReads: true,
   compressors: ['zlib'] as MongoCompressor[],
