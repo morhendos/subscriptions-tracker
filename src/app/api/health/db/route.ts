@@ -1,18 +1,21 @@
 import { NextResponse } from 'next/server';
 import { checkDatabaseHealth } from '@/lib/db/mongodb';
-import { rateLimit } from '@/middleware/rate-limit';
+import { createRateLimit } from '@/middleware/rate-limit';
 
 // Add rate limiting to prevent abuse
-const limiter = rateLimit({
-  interval: 60 * 1000, // 1 minute
-  uniqueTokenPerInterval: 500
+const rateLimiter = createRateLimit({
+  maxRequests: 10,    // 10 requests
+  windowMs: 60 * 1000 // per minute
 });
 
-export async function GET() {
-  try {
-    // Apply rate limiting
-    await limiter.check(10, 'HEALTH_CHECK'); // 10 requests per minute
+export async function GET(request: Request) {
+  // Check rate limit
+  const rateLimitResponse = await rateLimiter(request);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
 
+  try {
     const health = await checkDatabaseHealth();
     const headers = {
       'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -26,8 +29,6 @@ export async function GET() {
         headers
       });
     } else {
-      // Log unhealthy state for monitoring
-      console.error('Database health check failed:', health);
       return NextResponse.json(health, { 
         status: 503,
         headers: {
@@ -37,7 +38,6 @@ export async function GET() {
       });
     }
   } catch (error: any) {
-    // Enhanced error handling with specific error types
     const errorResponse = {
       status: 'unhealthy',
       latency: -1,
@@ -48,9 +48,6 @@ export async function GET() {
         code: error.code || 'UNKNOWN',
       }
     };
-
-    // Log error for monitoring
-    console.error('Database health check error:', error);
 
     return NextResponse.json(errorResponse, { 
       status: 500,
