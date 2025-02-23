@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { checkDatabaseHealth } from '@/lib/db/mongodb';
 import { createRateLimit } from '@/middleware/rate-limit';
 
@@ -8,7 +8,7 @@ const rateLimiter = createRateLimit({
   windowMs: 60 * 1000 // per minute
 });
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   // Check rate limit
   const rateLimitResponse = await rateLimiter(request);
   if (rateLimitResponse) {
