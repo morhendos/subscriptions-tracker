@@ -6,17 +6,23 @@ export async function GET() {
     console.log('Testing MongoDB connection...');
     console.log('Mongoose version:', mongoose.version);
     console.log('Current connection state:', mongoose.connection.readyState);
+    
+    const uri = process.env.MONGODB_URI;
     console.log('Environment check:', {
-      hasMongoDBURI: !!process.env.MONGODB_URI,
-      uriLength: process.env.MONGODB_URI?.length,
+      hasMongoDBURI: !!uri,
+      uriLength: uri?.length,
       // Show URI format without exposing credentials
-      uriFormat: process.env.MONGODB_URI 
-        ? process.env.MONGODB_URI.replace(/\/\/([^:]+):([^@]+)@/, '//[username]:[hidden]@')
+      uriFormat: uri 
+        ? uri.replace(/\/\/([^:]+):([^@]+)@/, '//[username]:[hidden]@')
         : 'undefined'
     });
     
+    if (!uri) {
+      throw new Error('MONGODB_URI environment variable is not defined');
+    }
+    
     // Connect with a timeout to avoid hanging
-    await mongoose.connect(process.env.MONGODB_URI, {
+    await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 5000, // 5 second timeout
       connectTimeoutMS: 10000, // 10 second timeout
     });
