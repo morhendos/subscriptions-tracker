@@ -45,18 +45,18 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Connection error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack?.split('\n').slice(0, 3).join('\n')
+      name: error instanceof Error ? error.name : 'Unknown error',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3).join('\n') : undefined
     });
     
     return NextResponse.json({
       success: false,
       error: {
-        name: error.name,
-        message: error.message,
-        code: error.code,
-        codeName: error.codeName
+        name: error instanceof Error ? error.name : 'Unknown error',
+        message: error instanceof Error ? error.message : String(error),
+        code: error instanceof Error && 'code' in error ? (error as any).code : undefined,
+        codeName: error instanceof Error && 'codeName' in error ? (error as any).codeName : undefined
       }
     }, { status: 500 });
   }
