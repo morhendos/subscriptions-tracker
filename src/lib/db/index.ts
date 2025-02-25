@@ -155,15 +155,19 @@ export async function getDatabaseHealth(): Promise<{
   }
 }
 
-// Export all modules for advanced usage
+// Export classes and functions
 export {
   MongoConnectionFactory,
-  ConnectionOptions,
   handleMongoError,
   logMongoError,
-  MongoDBError,
-  MongoDBErrorCode,
   normalizeMongoURI,
   getSanitizedURI,
   dbConfig,
+};
+
+// Export types (using 'export type' for isolated modules)
+export type {
+  ConnectionOptions,
+  MongoDBError,
+  MongoDBErrorCode,
 };
