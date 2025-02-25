@@ -3,8 +3,8 @@
 import { CustomUser } from '@/types/auth';
 import bcrypt from 'bcryptjs';
 import { UserModel } from '@/models/user';
-import { connectToDatabase } from '@/lib/db/mongodb';
-import { Types } from 'mongoose';
+import mongoose from 'mongoose';
+import { getAtlasConfig } from '@/lib/db/atlas-config';
 
 interface AuthResult {
   success: boolean;
@@ -45,15 +45,81 @@ function serializeUser(user: any): CustomUser {
   };
 }
 
+// Direct connection to MongoDB without using cached connection
+async function createDirectConnection(): Promise<mongoose.Connection> {
+  const uri = process.env.MONGODB_URI;
+  
+  if (!uri) {
+    throw new Error('MONGODB_URI environment variable is not defined');
+  }
+
+  // Get Atlas configuration
+  const atlasConfig = getAtlasConfig(process.env.NODE_ENV);
+  
+  // Log the sanitized URI
+  const sanitizedUri = uri.replace(/\/\/([^:]+):([^@]+)@/, '//[username]:[hidden]@');
+  console.log('Attempting direct MongoDB connection to:', sanitizedUri);
+  
+  // Add or ensure the database name
+  let uriWithDb = uri;
+  if (!uri.includes('subscriptions?') && !uri.includes('/subscriptions?') && uri.includes('?')) {
+    // Insert database name before query parameters
+    uriWithDb = uri.replace('?', '/subscriptions?');
+  } else if (!uri.includes('/subscriptions?') && !uri.includes('/subscriptions/?')) {
+    // Add database name if missing
+    if (uri.endsWith('/')) {
+      uriWithDb = `${uri}subscriptions?retryWrites=true&w=majority`;
+    } else {
+      uriWithDb = `${uri}/subscriptions?retryWrites=true&w=majority`;
+    }
+  }
+
+  console.log('Connecting with database name explicitly set');
+  
+  try {
+    // Connect with a direct connection, not using the cached connection
+    const mongooseInstance = await mongoose.connect(uriWithDb, {
+      ...atlasConfig,
+      serverSelectionTimeoutMS: 5000, // 5 second timeout
+      connectTimeoutMS: 10000, // 10 second timeout
+    });
+    
+    console.log('Direct MongoDB connection established successfully!');
+    return mongooseInstance.connection;
+  } catch (error) {
+    console.error('Direct MongoDB connection failed with error:', error instanceof Error ? error.message : String(error));
+    throw error;
+  }
+}
+
 export async function authenticateUser(
   email: string,
   password: string
 ): Promise<AuthResult> {
   try {
-    await connectToDatabase();
+    let connection: mongoose.Connection | null = null;
+    
+    try {
+      // Use direct connection instead of cached
+      connection = await createDirectConnection();
+    } catch (dbError) {
+      console.error('Database connection failed:', dbError);
+      return {
+        success: false,
+        error: {
+          code: 'db_connection_error',
+          message: 'Unable to connect to database. Please try again later.'
+        }
+      };
+    }
 
     // Find user by email
     const user = await UserModel.findOne({ email: email.toLowerCase() });
+    
+    // Close the direct connection
+    if (connection) {
+      await mongoose.disconnect();
+    }
     
     if (!user) {
       return {
@@ -98,15 +164,17 @@ export async function registerUser(
   password: string,
   name?: string
 ): Promise<AuthResult> {
+  let connection: mongoose.Connection | null = null;
+  
   try {
     console.log('Starting user registration process for email:', email);
     
-    // Connect to database with better error handling
+    // Establish direct MongoDB connection (not cached)
     try {
-      await connectToDatabase();
-      console.log('Database connection successful');
+      connection = await createDirectConnection();
+      console.log('Database connection successful for registration');
     } catch (dbError) {
-      console.error('Database connection failed:', dbError);
+      console.error('Database connection failed during registration:', dbError);
       return {
         success: false,
         error: {
@@ -189,5 +257,15 @@ export async function registerUser(
         message: 'An unexpected error occurred during registration. Please try again.'
       }
     };
+  } finally {
+    // Always ensure we close the direct connection
+    if (connection) {
+      try {
+        await mongoose.disconnect();
+        console.log('Database connection closed after registration');
+      } catch (error) {
+        console.error('Error closing database connection:', error);
+      }
+    }
   }
 }
