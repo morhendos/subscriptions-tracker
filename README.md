@@ -51,12 +51,23 @@ npm run dev
 npm run test:connection
 ```
 
+### MongoDB Configuration
+
+The application has robust MongoDB connection handling that:
+
+- Automatically normalizes connection URIs
+- Handles various formats of connection strings
+- Provides automatic retries with exponential backoff
+- Implements environment-specific optimization
+
+For detailed MongoDB setup instructions, see [MongoDB Setup Guide](./docs/MONGODB_SETUP.md).
+
 ### Production Setup
 
 The application uses MongoDB Atlas in production. Required environment variables in Vercel:
 
 ```env
-MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/subscriptions?retryWrites=true&w=majority
 ```
 
 Additional MongoDB Atlas configuration:
@@ -88,4 +99,18 @@ API endpoints are protected with rate limiting:
 - Environment-specific database configurations
 - Production-ready security settings
 
-[Rest of the README remains the same...]
+## Troubleshooting
+
+For common issues and their solutions, refer to the [MongoDB Setup Guide](./docs/MONGODB_SETUP.md#common-issues-and-solutions). This includes:
+
+- Connection string format problems
+- Authentication issues
+- Connection timeouts
+- Database name validation errors
+
+## Recent Improvements
+
+- Enhanced MongoDB connection reliability
+- Robust URI parsing and normalization
+- Improved error handling throughout the application
+- Comprehensive documentation for setup and troubleshooting
