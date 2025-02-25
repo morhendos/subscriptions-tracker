@@ -78,6 +78,11 @@ export async function GET(request: Request) {
     const { connection: conn, uri } = await createDirectConnection(dbName);
     connection = conn;
     
+    // Verify db is available
+    if (!connection.db) {
+      throw new Error('Database connection not established');
+    }
+    
     const serverInfo = await connection.db.admin().serverInfo();
     
     // Get available collections
