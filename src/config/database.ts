@@ -8,6 +8,9 @@
 
 import { ReadPreferenceMode } from 'mongodb';
 
+// Supported write concern types
+type WriteConcern = number | 'majority';
+
 // Environment detection
 export const isDevelopment = process.env.NODE_ENV === 'development';
 export const isProduction = process.env.NODE_ENV === 'production';
@@ -38,7 +41,7 @@ export const dbConfig = {
   retryDelayMS: parseInt(process.env.MONGODB_RETRY_DELAY || '1000'),
   
   // Read/Write preferences
-  writeConcern: isProduction ? 'majority' : 1,
+  writeConcern: (isProduction ? 'majority' : 1) as WriteConcern,
   readPreference: (isProduction ? 'primaryPreferred' : 'primary') as ReadPreferenceMode,
   
   // Auto-indexing (enabled in development, disabled in production)
