@@ -29,6 +29,11 @@ export async function GET() {
     
     console.log('Connection successful!');
     
+    // Check if db is available
+    if (!mongoose.connection.db) {
+      throw new Error('Database connection not established');
+    }
+    
     // Basic database operation test
     const dbName = mongoose.connection.db.databaseName;
     const collections = await mongoose.connection.db.listCollections().toArray();
