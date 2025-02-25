@@ -85,6 +85,11 @@ async function createDirectConnection(): Promise<mongoose.Connection> {
     });
     
     console.log('Direct MongoDB connection established successfully!');
+    
+    if (!mongooseInstance.connection.db) {
+      throw new Error('Database connection not fully established');
+    }
+    
     return mongooseInstance.connection;
   } catch (error) {
     console.error('Direct MongoDB connection failed with error:', error instanceof Error ? error.message : String(error));
