@@ -15,6 +15,16 @@ interface AuthResult {
   };
 }
 
+// Interface for MongoDB validation errors
+interface ValidationError {
+  name: string;
+  errors: {
+    [key: string]: {
+      message: string;
+    }
+  }
+}
+
 async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
 }
@@ -141,31 +151,35 @@ export async function registerUser(
         success: true,
         data: serializeUser(user)
       };
-    } catch (modelError) {
-      console.error('Error creating user:', modelError);
+    } catch (error) {
+      console.error('Error creating user:', error);
       // Check for specific validation errors
-      if (modelError.name === 'ValidationError') {
-        const validationErrors = Object.keys(modelError.errors)
-          .map(field => modelError.errors[field].message)
-          .join('; ');
-          
-        return {
-          success: false,
-          error: {
-            code: 'validation_error',
-            message: `Validation failed: ${validationErrors}`
-          }
-        };
+      if (error && typeof error === 'object' && 'name' in error) {
+        const modelError = error as ValidationError;
+        
+        if (modelError.name === 'ValidationError' && modelError.errors) {
+          const validationErrors = Object.keys(modelError.errors)
+            .map(field => modelError.errors[field].message)
+            .join('; ');
+            
+          return {
+            success: false,
+            error: {
+              code: 'validation_error',
+              message: `Validation failed: ${validationErrors}`
+            }
+          };
+        }
       }
       
-      throw modelError; // Re-throw to be caught by outer catch
+      throw error; // Re-throw to be caught by outer catch
     }
   } catch (error) {
     console.error('Registration error details:', {
-      message: error.message,
-      stack: error.stack?.split('\n').slice(0, 3).join('\n'),
-      name: error.name,
-      code: error.code
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3).join('\n') : undefined,
+      name: error instanceof Error ? error.name : 'Unknown',
+      code: error instanceof Error && 'code' in error ? (error as any).code : undefined
     });
     
     return {
