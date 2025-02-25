@@ -50,6 +50,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
+    console.error('Error loading subscriptions:', error);
+    
     let errorMessage = 'Failed to read data';
     if (error instanceof mongoose.mongo.MongoError) {
       errorMessage = `MongoDB Error: ${error.message}`;
@@ -120,6 +122,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, subscriptions: [] });
   } catch (error) {
+    console.error('Error saving subscriptions:', error);
+    
     let errorMessage = 'Failed to write data';
     if (error instanceof mongoose.mongo.MongoError) {
       errorMessage = `MongoDB Error: ${error.message}`;
@@ -152,6 +156,8 @@ export async function DELETE(request: NextRequest) {
     await SubscriptionModel.deleteMany({ userId });
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('Error deleting subscriptions:', error);
+    
     let errorMessage = 'Failed to delete data';
     if (error instanceof mongoose.mongo.MongoError) {
       errorMessage = `MongoDB Error: ${error.message}`;
