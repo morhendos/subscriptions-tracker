@@ -81,7 +81,7 @@ export function getAtlasConfig(env?: string): ConnectOptions {
   // Create the read preference instance
   const readPref = new ReadPreference(config.readPreference as ReadPreferenceMode);
 
-  // Create a type-safe configuration object
+  // Create a type-safe configuration object with only supported options
   const mongooseConfig: ConnectOptions = {
     retryWrites: config.retryWrites,
     writeConcern: {
@@ -100,15 +100,13 @@ export function getAtlasConfig(env?: string): ConnectOptions {
     authSource: config.authSource,
     retryReads: config.retryReads,
     compressors: config.compressors,
+    // REMOVED: keepAlive and keepAliveInitialDelay options as they're not supported
   };
 
   if (isProduction) {
-    // Additional production-specific settings
+    // Additional production-specific settings that are supported
     Object.assign(mongooseConfig, {
-      keepAlive: true,
-      keepAliveInitialDelay: 300000, // 5 minutes
       maxIdleTimeMS: config.maxIdleTimeMS,
-      serverSelectionTimeoutMS: 5000,
       heartbeatFrequencyMS: 10000,
     });
   }
