@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import { UserModel } from '@/models/user';
 import mongoose from 'mongoose';
 import { getAtlasConfig } from '@/lib/db/atlas-config';
+import { normalizeMongoURI } from '@/lib/db/mongodb';
 
 interface AuthResult {
   success: boolean;
@@ -56,29 +57,19 @@ async function createDirectConnection(): Promise<mongoose.Connection> {
   // Get Atlas configuration
   const atlasConfig = getAtlasConfig(process.env.NODE_ENV);
   
-  // Log the sanitized URI
+  // Log the sanitized URI (hiding credentials)
   const sanitizedUri = uri.replace(/\/\/([^:]+):([^@]+)@/, '//[username]:[hidden]@');
   console.log('Attempting direct MongoDB connection to:', sanitizedUri);
   
-  // Add or ensure the database name
-  let uriWithDb = uri;
-  if (!uri.includes('subscriptions?') && !uri.includes('/subscriptions?') && uri.includes('?')) {
-    // Insert database name before query parameters
-    uriWithDb = uri.replace('?', '/subscriptions?');
-  } else if (!uri.includes('/subscriptions?') && !uri.includes('/subscriptions/?')) {
-    // Add database name if missing
-    if (uri.endsWith('/')) {
-      uriWithDb = `${uri}subscriptions?retryWrites=true&w=majority`;
-    } else {
-      uriWithDb = `${uri}/subscriptions?retryWrites=true&w=majority`;
-    }
-  }
-
-  console.log('Connecting with database name explicitly set');
+  // Use the normalizeMongoURI function to ensure proper database name
+  const dbName = 'subscriptions';
+  const normalizedUri = normalizeMongoURI(uri, dbName);
+  
+  console.log('Connecting with properly formatted database URI');
   
   try {
     // Connect with a direct connection, not using the cached connection
-    const mongooseInstance = await mongoose.connect(uriWithDb, {
+    const mongooseInstance = await mongoose.connect(normalizedUri, {
       ...atlasConfig,
       serverSelectionTimeoutMS: 5000, // 5 second timeout
       connectTimeoutMS: 10000, // 10 second timeout
