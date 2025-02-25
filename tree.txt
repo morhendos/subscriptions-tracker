@@ -109,6 +109,7 @@ subscription-tracker/
 │   │   ├── db
 │   │   │   ├── __tests__
 │   │   │   │   ├── atlas-config.test.ts
+│   │   │   │   ├── atlas-integration.test.ts
 │   │   │   │   └── mongodb.test.ts
 │   │   │   ├── atlas-config.ts
 │   │   │   ├── check-env.ts
@@ -117,6 +118,8 @@ subscription-tracker/
 │   │   │   ├── mongodb.ts
 │   │   │   ├── test-connection.ts
 │   │   │   └── test.ts
+│   │   ├── monitoring
+│   │   │   └── index.ts
 │   │   ├── storage
 │   │   │   ├── __tests__
 │   │   │   │   └── mongodb.test.ts
