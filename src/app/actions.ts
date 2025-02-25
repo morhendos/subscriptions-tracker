@@ -89,12 +89,29 @@ export async function registerUser(
   name?: string
 ): Promise<AuthResult> {
   try {
-    await connectToDatabase();
+    console.log('Starting user registration process for email:', email);
+    
+    // Connect to database with better error handling
+    try {
+      await connectToDatabase();
+      console.log('Database connection successful');
+    } catch (dbError) {
+      console.error('Database connection failed:', dbError);
+      return {
+        success: false,
+        error: {
+          code: 'db_connection_error',
+          message: 'Unable to connect to database. Please try again later.'
+        }
+      };
+    }
 
     // Check if user exists
+    console.log('Checking if user already exists');
     const existingUser = await UserModel.findOne({ email: email.toLowerCase() });
     
     if (existingUser) {
+      console.log('User already exists with this email');
       return {
         success: false,
         error: {
@@ -105,27 +122,57 @@ export async function registerUser(
     }
 
     // Hash password
+    console.log('Hashing password');
     const hashedPassword = await hashPassword(password);
 
-    // Create user
-    const user = await UserModel.create({
-      email: email.toLowerCase(),
-      name: name || email.split('@')[0],
-      hashedPassword,
-      roles: [{ id: '1', name: 'user' }]
-    });
-
-    return {
-      success: true,
-      data: serializeUser(user)
-    };
+    // Create user with detailed logging
+    console.log('Creating new user');
+    try {
+      const user = await UserModel.create({
+        email: email.toLowerCase(),
+        name: name || email.split('@')[0],
+        hashedPassword,
+        roles: [{ id: '1', name: 'user' }]
+      });
+      
+      console.log('User created successfully with ID:', user._id);
+      
+      return {
+        success: true,
+        data: serializeUser(user)
+      };
+    } catch (modelError) {
+      console.error('Error creating user:', modelError);
+      // Check for specific validation errors
+      if (modelError.name === 'ValidationError') {
+        const validationErrors = Object.keys(modelError.errors)
+          .map(field => modelError.errors[field].message)
+          .join('; ');
+          
+        return {
+          success: false,
+          error: {
+            code: 'validation_error',
+            message: `Validation failed: ${validationErrors}`
+          }
+        };
+      }
+      
+      throw modelError; // Re-throw to be caught by outer catch
+    }
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('Registration error details:', {
+      message: error.message,
+      stack: error.stack?.split('\n').slice(0, 3).join('\n'),
+      name: error.name,
+      code: error.code
+    });
+    
     return {
       success: false,
       error: {
         code: 'server_error',
-        message: 'An unexpected error occurred. Please try again.'
+        message: 'An unexpected error occurred during registration. Please try again.'
       }
     };
   }
