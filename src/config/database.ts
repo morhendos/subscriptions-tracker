@@ -1,74 +1,63 @@
 /**
  * MongoDB Database Configuration
  * 
- * Centralizes all database configuration values to ensure consistent
- * settings across the application. Values are loaded from environment
- * variables with sensible defaults.
+ * This is a wrapper module that exports the unified database configuration
+ * for backward compatibility with existing code.
  */
 
-import { ReadPreferenceMode } from 'mongodb';
+import mongodbConfig, { 
+  isDevelopment, 
+  isProduction, 
+  isTest, 
+  MongoDBConfig 
+} from './database-config';
 
-// Supported write concern types
-type WriteConcern = number | 'majority';
+// Re-export environment detection helpers
+export { isDevelopment, isProduction, isTest };
 
-// Environment detection
-export const isDevelopment = process.env.NODE_ENV === 'development';
-export const isProduction = process.env.NODE_ENV === 'production';
-export const isTest = process.env.NODE_ENV === 'test';
-
-/**
- * Core database configuration
- */
+// Export the core database configuration
 export const dbConfig = {
-  // Connection string - required
-  uri: process.env.MONGODB_URI || '',
+  // Connection string
+  uri: mongodbConfig.uri,
   
-  // Database name - used for normalizing URIs
-  databaseName: process.env.MONGODB_DATABASE || 'subscriptions',
+  // Database name
+  databaseName: mongodbConfig.databaseName,
   
   // Connection pool settings
-  maxPoolSize: isProduction ? 50 : 10,
-  minPoolSize: isProduction ? 10 : 1,
+  maxPoolSize: mongodbConfig.maxPoolSize,
+  minPoolSize: mongodbConfig.minPoolSize,
   
   // Timeouts
-  connectionTimeoutMS: parseInt(process.env.MONGODB_CONNECTION_TIMEOUT || '10000'),
-  serverSelectionTimeoutMS: parseInt(process.env.MONGODB_SERVER_SELECTION_TIMEOUT || '5000'),
-  socketTimeoutMS: parseInt(process.env.MONGODB_SOCKET_TIMEOUT || '30000'),
-  maxIdleTimeMS: parseInt(process.env.MONGODB_MAX_IDLE_TIME || '120000'),
+  connectionTimeoutMS: mongodbConfig.connectionTimeoutMS,
+  serverSelectionTimeoutMS: mongodbConfig.serverSelectionTimeoutMS,
+  socketTimeoutMS: mongodbConfig.socketTimeoutMS,
+  maxIdleTimeMS: mongodbConfig.maxIdleTimeMS,
   
   // Retry settings
-  maxRetries: parseInt(process.env.MONGODB_MAX_RETRIES || '3'),
-  retryDelayMS: parseInt(process.env.MONGODB_RETRY_DELAY || '1000'),
+  maxRetries: mongodbConfig.maxRetries,
+  retryDelayMS: mongodbConfig.retryDelayMS,
   
   // Read/Write preferences
-  writeConcern: (isProduction ? 'majority' : 1) as WriteConcern,
-  readPreference: (isProduction ? 'primaryPreferred' : 'primary') as ReadPreferenceMode,
-  
-  // Auto-indexing (enabled in development, disabled in production)
-  autoIndex: !isProduction,
-  
-  // SSL Settings
-  ssl: isProduction,
-  
-  // Authentication
-  authSource: 'admin',
+  writeConcern: mongodbConfig.writeConcern,
+  readPreference: mongodbConfig.readPreference,
   
   // Other settings
-  retryWrites: true,
-  retryReads: true,
+  autoIndex: mongodbConfig.autoIndex,
+  ssl: mongodbConfig.ssl,
+  authSource: mongodbConfig.authSource,
+  retryWrites: mongodbConfig.retryWrites,
+  retryReads: mongodbConfig.retryReads,
   
-  // Log database operations in development
-  logOperations: isDevelopment && (process.env.MONGODB_LOG_OPERATIONS === 'true'),
+  // Development options
+  logOperations: mongodbConfig.development.logOperations,
 };
 
-/**
- * Monitoring configuration
- */
+// Export monitoring configuration
 export const monitoringConfig = {
-  enabled: process.env.MONGODB_MONITORING_ENABLED === 'true' || isProduction,
+  enabled: mongodbConfig.monitoring.enabled,
   
   // Metrics
-  metricsInterval: parseInt(process.env.MONGODB_METRICS_INTERVAL || '60'),
+  metricsInterval: mongodbConfig.monitoring.metricsIntervalSeconds,
   customMetrics: [
     'atlas.numberOfConnections',
     'atlas.opcounters',
@@ -79,28 +68,56 @@ export const monitoringConfig = {
   // Alerts
   alerts: {
     queryPerformance: {
-      enabled: true,
-      slowQueryThresholdMs: parseInt(process.env.MONGODB_SLOW_QUERY_THRESHOLD || '100'),
-      aggregationThresholdMs: parseInt(process.env.MONGODB_AGGREGATION_THRESHOLD || '1000'),
+      enabled: mongodbConfig.monitoring.alerts.queryPerformance.enabled,
+      slowQueryThresholdMs: mongodbConfig.monitoring.alerts.queryPerformance.slowQueryThresholdMs,
+      aggregationThresholdMs: mongodbConfig.monitoring.alerts.queryPerformance.aggregationThresholdMs,
     },
     connectionPool: {
-      enabled: true,
-      threshold: parseInt(process.env.MONGODB_ALERT_POOL_THRESHOLD || '80'),
-      criticalThreshold: parseInt(process.env.MONGODB_ALERT_POOL_CRITICAL || '90'),
+      enabled: mongodbConfig.monitoring.alerts.connectionPoolUtilization.enabled,
+      threshold: mongodbConfig.monitoring.alerts.connectionPoolUtilization.threshold,
+      criticalThreshold: mongodbConfig.monitoring.alerts.connectionPoolUtilization.criticalThreshold,
     },
     replication: {
-      enabled: true,
-      maxLagSeconds: parseInt(process.env.MONGODB_MAX_REPLICATION_LAG || '10'),
+      enabled: mongodbConfig.monitoring.alerts.replication.enabled,
+      maxLagSeconds: mongodbConfig.monitoring.alerts.replication.maxLagSeconds,
     },
   },
   
   // Logging
   logging: {
-    slowQueryThresholdMs: parseInt(process.env.MONGODB_SLOW_QUERY_THRESHOLD || '100'),
-    rotationDays: parseInt(process.env.MONGODB_LOG_ROTATION_DAYS || '7'),
-    level: (process.env.MONGODB_LOG_LEVEL || 'info') as 'error' | 'warn' | 'info' | 'debug',
-    mongoDBProfileLevel: parseInt(process.env.MONGODB_PROFILE_LEVEL || '1') as 0 | 1 | 2,
+    slowQueryThresholdMs: mongodbConfig.monitoring.logging.slowQueryThresholdMs,
+    rotationDays: mongodbConfig.monitoring.logging.rotationDays,
+    level: mongodbConfig.monitoring.logging.level,
+    mongoDBProfileLevel: mongodbConfig.monitoring.logging.mongoDBProfileLevel,
   },
+};
+
+// Export mongoose connection options generator for backward compatibility
+export const getMongooseOptions = () => {
+  return {
+    // Connection pool settings
+    maxPoolSize: dbConfig.maxPoolSize,
+    minPoolSize: dbConfig.minPoolSize,
+    
+    // Timeouts
+    serverSelectionTimeoutMS: dbConfig.serverSelectionTimeoutMS,
+    socketTimeoutMS: dbConfig.socketTimeoutMS,
+    connectTimeoutMS: dbConfig.connectionTimeoutMS,
+    maxIdleTimeMS: dbConfig.maxIdleTimeMS,
+    
+    // Read/write preferences
+    writeConcern: {
+      w: dbConfig.writeConcern,
+      j: isProduction,
+    },
+    
+    // Other settings
+    autoIndex: dbConfig.autoIndex,
+    retryWrites: dbConfig.retryWrites,
+    retryReads: dbConfig.retryReads,
+    ssl: dbConfig.ssl,
+    authSource: dbConfig.authSource,
+  };
 };
 
 // Export all configurations together for convenience
@@ -111,3 +128,6 @@ export default {
   isProduction,
   isTest,
 };
+
+// Export type definition
+export type { MongoDBConfig };
