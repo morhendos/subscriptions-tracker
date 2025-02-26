@@ -53,21 +53,12 @@ export async function authenticateUser(
   email: string,
   password: string
 ): Promise<AuthResult> {
-  console.log('[AUTH DEBUG] Starting authentication for email:', email);
-  
   try {
-    // Enhanced debugging for database connection
-    console.log('[AUTH DEBUG] Connecting to database...');
-    
     const user = await withConnection(async () => {
-      console.log('[AUTH DEBUG] Connection successful, looking up user');
-      const foundUser = await UserModel.findOne({ email: email.toLowerCase() });
-      console.log('[AUTH DEBUG] User lookup result:', foundUser ? 'Found' : 'Not found');
-      return foundUser;
+      return UserModel.findOne({ email: email.toLowerCase() });
     });
     
     if (!user) {
-      console.log('[AUTH DEBUG] Authentication failed: User not found');
       return {
         success: false,
         error: {
@@ -78,11 +69,8 @@ export async function authenticateUser(
     }
 
     // Verify password
-    console.log('[AUTH DEBUG] Verifying password');
     const isValid = await comparePasswords(password, user.hashedPassword);
-    
     if (!isValid) {
-      console.log('[AUTH DEBUG] Authentication failed: Invalid password');
       return {
         success: false,
         error: {
@@ -92,13 +80,11 @@ export async function authenticateUser(
       };
     }
 
-    console.log('[AUTH DEBUG] Authentication successful');
     return {
       success: true,
       data: serializeUser(user)
     };
   } catch (error) {
-    console.error('[AUTH DEBUG] Authentication error:', error);
     logMongoError(error, 'User authentication');
     
     return {
