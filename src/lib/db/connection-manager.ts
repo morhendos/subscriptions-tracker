@@ -1,17 +1,54 @@
 /**
- * MongoDB Connection Manager
+ * MongoDB Connection Manager (Refactored)
  * 
  * Provides a unified interface for MongoDB connections with support for
  * both cached (pooled) and direct connections. Implements proper connection
  * management, error handling, and cleanup.
+ * 
+ * Phase 2 Improvements:
+ * - Proper dependency injection
+ * - Enhanced connection lifecycle management
+ * - Improved error handling
+ * - Event-driven architecture
+ * - Better connection pooling
+ * - Monitoring and logging integration
  */
 
-import mongoose from 'mongoose';
+import mongoose, { Connection } from 'mongoose';
 import { ReadPreference } from 'mongodb';
+import { EventEmitter } from 'events';
 import { normalizeMongoURI, getSanitizedURI } from '@/utils/mongodb-utils';
 import { dbConfig, monitoringConfig, isDevelopment } from '@/config/database';
+import { MongoDBError, MongoDBErrorCode, handleMongoError } from './error-handler';
 
-// Define types for connection options
+// Define interfaces for logger to enable dependency injection
+export interface Logger {
+  debug(message: string, ...args: any[]): void;
+  info(message: string, ...args: any[]): void;
+  warn(message: string, ...args: any[]): void;
+  error(message: string, ...args: any[]): void;
+}
+
+// Default logger implementation
+export class ConsoleLogger implements Logger {
+  debug(message: string, ...args: any[]): void {
+    console.debug(message, ...args);
+  }
+  
+  info(message: string, ...args: any[]): void {
+    console.info(message, ...args);
+  }
+  
+  warn(message: string, ...args: any[]): void {
+    console.warn(message, ...args);
+  }
+  
+  error(message: string, ...args: any[]): void {
+    console.error(message, ...args);
+  }
+}
+
+// Define interfaces for connection options
 export interface ConnectionOptions {
   // Whether to use a direct (non-pooled) connection
   direct?: boolean;
@@ -27,12 +64,31 @@ export interface ConnectionOptions {
   
   // Whether to enable debugging
   debug?: boolean;
+  
+  // Custom logger
+  logger?: Logger;
+  
+  // Auto-reconnect policy
+  autoReconnect?: boolean;
+  
+  // Maximum number of reconnect attempts
+  maxReconnectAttempts?: number;
+}
+
+// Type for connection events
+export interface ConnectionEvents {
+  connected: (connection: Connection) => void;
+  disconnected: (connection: Connection) => void;
+  error: (error: Error, connection: Connection) => void;
+  reconnected: (connection: Connection) => void;
+  close: (connection: Connection) => void;
+  monitoring: (metrics: any, connection: Connection) => void;
 }
 
 // Type for global cache
 interface GlobalMongoose {
-  conn: mongoose.Connection | null;
-  promise: Promise<mongoose.Connection> | null;
+  conn: Connection | null;
+  promise: Promise<Connection> | null;
 }
 
 // Define global cache for mongoose connections
@@ -50,23 +106,168 @@ if (!global.mongoose) {
  * MongoDB Connection Factory
  * 
  * Manages MongoDB connections with support for pooling, retries, and cleanup.
+ * Implements event-driven architecture for connection lifecycle events.
  */
-export class MongoConnectionFactory {
-  private connections: mongoose.Connection[] = [];
-  private logger: Console;
+export class MongoConnectionManager extends EventEmitter {
+  private connections: Connection[] = [];
+  private readonly logger: Logger;
+  private connectionStatus: Map<string, string> = new Map();
+  private reconnectAttempts: Map<string, number> = new Map();
+  private metricsInterval: NodeJS.Timeout | null = null;
+  private static instance: MongoConnectionManager | null = null;
+  
+  /**
+   * Get the singleton instance of the connection manager
+   * 
+   * @param options - Options for the connection manager
+   * @returns The singleton instance
+   */
+  public static getInstance(options?: ConnectionOptions): MongoConnectionManager {
+    if (!MongoConnectionManager.instance) {
+      MongoConnectionManager.instance = new MongoConnectionManager(options);
+    }
+    return MongoConnectionManager.instance;
+  }
 
   /**
-   * Creates a new MongoDB connection factory
+   * Creates a new MongoDB connection manager
    * 
-   * @param options - Options for the connection factory
+   * @param options - Options for the connection manager
    */
-  constructor(private options: ConnectionOptions = {}) {
-    this.logger = console;
+  private constructor(private options: ConnectionOptions = {}) {
+    super();
+    
+    // Set up logger (use injected logger or default to console)
+    this.logger = options.logger || new ConsoleLogger();
     
     // Enable mongoose debugging if requested
     if (options.debug || (isDevelopment && dbConfig.logOperations)) {
       mongoose.set('debug', true);
     }
+    
+    // Set up connection event listeners
+    this.setupGlobalEventListeners();
+    
+    // Set up metrics collection if monitoring is enabled
+    if (monitoringConfig.enabled) {
+      this.setupMetricsCollection();
+    }
+  }
+
+  /**
+   * Set up global event listeners for mongoose
+   */
+  private setupGlobalEventListeners(): void {
+    // These events are for the mongoose module in general
+    mongoose.connection.on('disconnected', () => {
+      this.logger.warn('[MongoDB] Global connection disconnected');
+    });
+
+    mongoose.connection.on('error', (err) => {
+      this.logger.error('[MongoDB] Global connection error:', err);
+    });
+  }
+
+  /**
+   * Set up metrics collection interval
+   */
+  private setupMetricsCollection(): void {
+    const intervalMs = monitoringConfig.metricsInterval * 1000;
+
+    this.metricsInterval = setInterval(() => {
+      this.collectMetrics()
+        .then(metrics => {
+          // Only emit if we have active connections
+          if (this.connections.length > 0 || cached.conn) {
+            this.emit('monitoring', metrics);
+          }
+        })
+        .catch(error => {
+          this.logger.error('[MongoDB] Error collecting metrics:', error);
+        });
+    }, intervalMs);
+  }
+
+  /**
+   * Collect metrics from all active connections
+   * 
+   * @returns Promise resolving to metrics object
+   */
+  private async collectMetrics(): Promise<any> {
+    const metrics: any = {
+      timestamp: new Date().toISOString(),
+      activeConnections: this.connections.length + (cached.conn ? 1 : 0),
+      connectionStatus: Object.fromEntries(this.connectionStatus),
+      poolStats: null
+    };
+
+    // Try to get connection pool stats from an active connection
+    const connection = cached.conn || (this.connections[0] ?? null);
+    if (connection && connection.db) {
+      try {
+        // Advanced metrics collection when admin access is available
+        const adminDb = connection.db.admin();
+        const serverStats = await adminDb.serverStatus();
+        
+        metrics.poolStats = {
+          active: serverStats.connections.active,
+          available: serverStats.connections.available,
+          current: serverStats.connections.current,
+          utilization: (serverStats.connections.current / serverStats.connections.available) * 100
+        };
+
+        metrics.operationStats = serverStats.opcounters;
+        metrics.memory = serverStats.mem;
+
+        // Check for slow operations
+        const slowOps = await this.checkForSlowOperations(connection);
+        if (slowOps.length > 0) {
+          metrics.slowOperations = slowOps;
+        }
+      } catch (error) {
+        this.logger.debug('[MongoDB] Could not collect advanced metrics:', error);
+        
+        // Fallback to basic connection status
+        metrics.error = 'Could not collect advanced metrics';
+      }
+    }
+
+    return metrics;
+  }
+
+  /**
+   * Check for slow operations
+   * 
+   * @param connection - MongoDB connection
+   * @returns Array of slow operations
+   */
+  private async checkForSlowOperations(connection: Connection): Promise<any[]> {
+    try {
+      if (!connection.db) {
+        return [];
+      }
+      
+      const adminDb = connection.db.admin();
+      
+      // Try to get current operations
+      const currentOp = await adminDb.command({ currentOp: 1, secs_running: { $gt: 1 } });
+      
+      if (currentOp && currentOp.inprog) {
+        return currentOp.inprog
+          .filter((op: any) => op.secs_running > monitoringConfig.alerts.queryPerformance.slowQueryThresholdMs / 1000)
+          .map((op: any) => ({
+            opid: op.opid,
+            operation: op.op,
+            namespace: op.ns,
+            durationSeconds: op.secs_running,
+            description: op.desc || op.query || 'Unknown operation'
+          }));
+      }
+    } catch (error) {
+      // Don't log this - it's fine if we don't have permission to check
+    }
+    
+    return [];
   }
 
   /**
@@ -75,7 +276,7 @@ export class MongoConnectionFactory {
    * @param options - Connection options (overrides constructor options)
    * @returns A promise resolving to a mongoose connection
    */
-  async getConnection(options?: ConnectionOptions): Promise<mongoose.Connection> {
+  async getConnection(options?: ConnectionOptions): Promise<Connection> {
     const opts = { ...this.options, ...options };
     
     // Use direct connection if requested
@@ -93,11 +294,21 @@ export class MongoConnectionFactory {
    * @param options - Connection options
    * @returns A promise resolving to a mongoose connection
    */
-  private async getPooledConnection(options: ConnectionOptions = {}): Promise<mongoose.Connection> {
+  private async getPooledConnection(options: ConnectionOptions = {}): Promise<Connection> {
     // If already connected, return existing connection
     if (cached.conn) {
       this.logger.debug('[MongoDB] Using cached connection');
-      return cached.conn;
+      
+      // Check if the connection is still active
+      if (cached.conn.readyState !== 1) {
+        this.logger.warn(`[MongoDB] Cached connection in ${this.getReadyStateDescription(cached.conn.readyState)} state, reconnecting...`);
+        
+        // Force reset the cache so we create a new connection
+        cached.conn = null;
+        cached.promise = null;
+      } else {
+        return cached.conn;
+      }
     }
 
     // If connection is in progress, wait for it
@@ -111,7 +322,7 @@ export class MongoConnectionFactory {
       }).catch((error) => {
         this.logger.error('[MongoDB] Failed to establish pooled connection:', error);
         cached.promise = null;
-        throw error;
+        throw handleMongoError(error, 'Failed to establish pooled connection');
       });
     }
 
@@ -126,12 +337,29 @@ export class MongoConnectionFactory {
   }
 
   /**
+   * Get human-readable description of connection ready state
+   * 
+   * @param readyState - Mongoose connection ready state number
+   * @returns Human-readable description
+   */
+  private getReadyStateDescription(readyState: number): string {
+    switch (readyState) {
+      case 0: return 'disconnected';
+      case 1: return 'connected';
+      case 2: return 'connecting';
+      case 3: return 'disconnecting';
+      case 99: return 'uninitialized';
+      default: return `unknown (${readyState})`;
+    }
+  }
+
+  /**
    * Create a direct (non-pooled) MongoDB connection
    * 
    * @param options - Connection options
    * @returns A promise resolving to a mongoose connection
    */
-  private async createDirectConnection(options: ConnectionOptions = {}): Promise<mongoose.Connection> {
+  private async createDirectConnection(options: ConnectionOptions = {}): Promise<Connection> {
     const dbName = options.dbName || dbConfig.databaseName;
     const connection = await this.createConnection(dbName, {
       ...options,
@@ -154,28 +382,44 @@ export class MongoConnectionFactory {
   private async createConnection(
     dbName: string,
     options: ConnectionOptions
-  ): Promise<mongoose.Connection> {
-    return this.connectWithRetry(dbName, options);
+  ): Promise<Connection> {
+    // Generate a unique connection ID for tracking
+    const connectionId = `${dbName}-${Date.now()}`;
+    this.connectionStatus.set(connectionId, 'connecting');
+    
+    try {
+      const connection = await this.connectWithRetry(connectionId, dbName, options);
+      this.connectionStatus.set(connectionId, 'connected');
+      return connection;
+    } catch (error) {
+      this.connectionStatus.set(connectionId, 'failed');
+      throw error;
+    }
   }
 
   /**
    * Connect to MongoDB with retry mechanism
    * 
+   * @param connectionId - Unique ID for this connection attempt
    * @param dbName - Database name
    * @param options - Connection options
    * @param retryCount - Current retry count (internal)
    * @returns Promise resolving to a mongoose connection
    */
   private async connectWithRetry(
+    connectionId: string,
     dbName: string,
     options: ConnectionOptions,
     retryCount = 0
-  ): Promise<mongoose.Connection> {
+  ): Promise<Connection> {
     try {
       // Get configurations
       const uri = dbConfig.uri;
       if (!uri) {
-        throw new Error('MONGODB_URI environment variable is not defined');
+        throw new MongoDBError(
+          'MONGODB_URI environment variable is not defined',
+          MongoDBErrorCode.INVALID_URI
+        );
       }
 
       // Normalize URI
@@ -188,29 +432,50 @@ export class MongoConnectionFactory {
       // Prepare connection options
       const connectionOptions = this.getMongooseOptions(options);
 
-      // Connect to MongoDB
-      const mongooseInstance = await mongoose.connect(normalizedUri, connectionOptions);
+      // Create a Mongoose instance for this connection (for direct connections)
+      let mongooseInstance: mongoose.Mongoose | null = null;
+      let connection: Connection;
+      
+      if (options.direct) {
+        // For direct connections, create a new Mongoose instance
+        mongooseInstance = new mongoose.Mongoose();
+        mongooseInstance.set('debug', mongoose.get('debug'));
+        
+        await mongooseInstance.connect(normalizedUri, connectionOptions);
+        connection = mongooseInstance.connection;
+      } else {
+        // For pooled connections, use the global mongoose instance
+        await mongoose.connect(normalizedUri, connectionOptions);
+        connection = mongoose.connection;
+      }
       
       this.logger.debug(`[MongoDB] Connected successfully to ${dbName}`);
       
+      // Reset reconnect counter
+      this.reconnectAttempts.set(connectionId, 0);
+      
       // Set up event listeners
-      this.setupConnectionListeners(mongooseInstance.connection);
+      this.setupConnectionListeners(connection, connectionId, options);
 
-      return mongooseInstance.connection;
+      return connection;
     } catch (error: any) {
       // Handle retry logic
-      if (retryCount < (dbConfig.maxRetries || 3)) {
+      const maxRetries = options.maxReconnectAttempts ?? dbConfig.maxRetries;
+      
+      if (retryCount < maxRetries) {
         const delay = dbConfig.retryDelayMS * Math.pow(2, retryCount);
         this.logger.warn(`[MongoDB] Connection attempt ${retryCount + 1} failed. Retrying in ${delay}ms...`);
         
         await new Promise(resolve => setTimeout(resolve, delay));
-        return this.connectWithRetry(dbName, options, retryCount + 1);
+        return this.connectWithRetry(connectionId, dbName, options, retryCount + 1);
       }
 
       // Max retries exceeded
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(`[MongoDB] Failed to connect after ${dbConfig.maxRetries} attempts: ${errorMessage}`);
-      throw error;
+      this.logger.error(`[MongoDB] Failed to connect after ${maxRetries} attempts: ${errorMessage}`);
+      
+      // Throw standardized error
+      throw handleMongoError(error, `Failed to connect to MongoDB (${dbName})`);
     }
   }
 
@@ -248,6 +513,8 @@ export class MongoConnectionFactory {
       retryReads: dbConfig.retryReads,
       ssl: dbConfig.ssl,
       authSource: dbConfig.authSource,
+      
+      // Compression - removed as it's not in dbConfig
     };
   }
 
@@ -255,42 +522,131 @@ export class MongoConnectionFactory {
    * Set up connection event listeners
    * 
    * @param connection - Mongoose connection to attach listeners to
+   * @param connectionId - Unique ID for this connection
+   * @param options - Connection options
    */
-  private setupConnectionListeners(connection: mongoose.Connection): void {
-    // Remove any existing listeners
+  private setupConnectionListeners(
+    connection: Connection, 
+    connectionId: string,
+    options: ConnectionOptions
+  ): void {
+    // Remove any existing listeners to prevent duplicates
     connection.removeAllListeners();
     
     // Add new listeners
     connection.on('disconnected', () => {
-      this.logger.warn('[MongoDB] Disconnected. Attempting to reconnect...');
+      this.logger.warn(`[MongoDB] Connection ${connectionId} disconnected`);
+      this.connectionStatus.set(connectionId, 'disconnected');
+      
+      // Emit event
+      this.emit('disconnected', connection);
+      
+      // Handle auto-reconnect if enabled
+      if (options.autoReconnect !== false) {
+        this.handleReconnect(connection, connectionId, options);
+      }
     });
 
     connection.on('reconnected', () => {
-      this.logger.info('[MongoDB] Reconnected successfully');
+      this.logger.info(`[MongoDB] Connection ${connectionId} reconnected successfully`);
+      this.connectionStatus.set(connectionId, 'connected');
+      
+      // Reset reconnect counter
+      this.reconnectAttempts.set(connectionId, 0);
+      
+      // Emit event
+      this.emit('reconnected', connection);
+    });
+
+    connection.on('connected', () => {
+      this.logger.info(`[MongoDB] Connection ${connectionId} established`);
+      this.connectionStatus.set(connectionId, 'connected');
+      
+      // Emit event
+      this.emit('connected', connection);
     });
 
     connection.on('error', (err) => {
-      this.logger.error('[MongoDB] Connection error:', err);
+      this.logger.error(`[MongoDB] Connection ${connectionId} error:`, err);
+      this.connectionStatus.set(connectionId, 'error');
+      
+      // Emit event
+      this.emit('error', err, connection);
+    });
+
+    connection.on('close', () => {
+      this.logger.debug(`[MongoDB] Connection ${connectionId} closed`);
+      this.connectionStatus.set(connectionId, 'closed');
+      
+      // Emit event
+      this.emit('close', connection);
+      
+      // Remove from connections array
+      this.connections = this.connections.filter(conn => conn !== connection);
     });
 
     // Setup monitoring in production or when explicitly enabled
     if (monitoringConfig.enabled) {
-      this.setupMonitoring(connection);
+      this.setupMonitoring(connection, connectionId);
     }
+  }
+
+  /**
+   * Handle reconnection logic
+   * 
+   * @param connection - Connection to reconnect
+   * @param connectionId - Unique ID for this connection
+   * @param options - Connection options
+   */
+  private handleReconnect(
+    connection: Connection,
+    connectionId: string,
+    options: ConnectionOptions
+  ): void {
+    // Get current attempt count
+    const currentAttempt = this.reconnectAttempts.get(connectionId) || 0;
+    const maxAttempts = options.maxReconnectAttempts ?? dbConfig.maxRetries;
+    
+    // Check if we've reached max attempts
+    if (currentAttempt >= maxAttempts) {
+      this.logger.error(`[MongoDB] Connection ${connectionId} reached max reconnect attempts (${maxAttempts})`);
+      this.connectionStatus.set(connectionId, 'failed');
+      
+      // Emit final error event
+      const error = new MongoDBError(
+        `Failed to reconnect after ${maxAttempts} attempts`,
+        MongoDBErrorCode.CONNECTION_FAILED
+      );
+      
+      this.emit('error', error, connection);
+      return;
+    }
+    
+    // Increment attempt counter
+    this.reconnectAttempts.set(connectionId, currentAttempt + 1);
+    
+    // Calculate delay with exponential backoff
+    const delay = dbConfig.retryDelayMS * Math.pow(2, currentAttempt);
+    
+    this.logger.info(`[MongoDB] Connection ${connectionId} attempting reconnect ${currentAttempt + 1}/${maxAttempts} in ${delay}ms`);
+    
+    // Mongoose will automatically attempt to reconnect
+    // We're just tracking the attempts and handling max retries
   }
 
   /**
    * Set up monitoring for the connection
    * 
    * @param connection - Mongoose connection to monitor
+   * @param connectionId - Unique ID for this connection
    */
-  private setupMonitoring(connection: mongoose.Connection): void {
+  private setupMonitoring(connection: Connection, connectionId: string): void {
     const config = monitoringConfig;
     
     connection.on('commandStarted', (event) => {
       const monitoredCommands = ['find', 'insert', 'update', 'delete', 'aggregate'];
       if (monitoredCommands.includes(event.commandName)) {
-        this.logger.debug(`[MongoDB] Command ${event.commandName} started`, {
+        this.logger.debug(`[MongoDB] Connection ${connectionId}: Command ${event.commandName} started`, {
           namespace: event.databaseName,
           commandName: event.commandName,
           timestamp: new Date().toISOString()
@@ -309,13 +665,17 @@ export class MongoConnectionFactory {
           : config.alerts.queryPerformance.slowQueryThresholdMs;
 
         if (latency > threshold) {
-          this.logger.warn(`[MongoDB] Slow ${event.commandName} detected (${latency}ms > ${threshold}ms)`);
+          this.logger.warn(`[MongoDB] Connection ${connectionId}: Slow ${event.commandName} detected (${latency}ms > ${threshold}ms)`, {
+            command: event.commandName,
+            duration: event.duration,
+            threshold
+          });
         }
       }
     });
 
     connection.on('commandFailed', (event) => {
-      this.logger.error(`[MongoDB] Command ${event.commandName} failed:`, event.failure);
+      this.logger.error(`[MongoDB] Connection ${connectionId}: Command ${event.commandName} failed:`, event.failure);
     });
   }
 
@@ -323,12 +683,18 @@ export class MongoConnectionFactory {
    * Clean up all connections created by this factory
    */
   async cleanup(): Promise<void> {
+    // Clean up metrics interval if it exists
+    if (this.metricsInterval) {
+      clearInterval(this.metricsInterval);
+      this.metricsInterval = null;
+    }
+    
     // Close all direct connections
     for (const connection of this.connections) {
       try {
         // Only disconnect if this is not the global cached connection
         if (connection !== cached.conn) {
-          await mongoose.disconnect();
+          await connection.close();
           this.logger.debug('[MongoDB] Direct connection closed');
         }
       } catch (error) {
@@ -341,17 +707,89 @@ export class MongoConnectionFactory {
   }
 
   /**
+   * Check health of connection
+   * 
+   * @param connection - Connection to check
+   * @returns Health check result
+   */
+  async checkHealth(connection?: Connection): Promise<{
+    status: 'healthy' | 'unhealthy';
+    latency: number;
+    details?: any;
+  }> {
+    const conn = connection || cached.conn || (this.connections[0] ?? null);
+    
+    if (!conn || conn.readyState !== 1) {
+      return {
+        status: 'unhealthy',
+        latency: 0,
+        details: {
+          readyState: conn ? this.getReadyStateDescription(conn.readyState) : 'no connection',
+          message: 'No active connection available'
+        }
+      };
+    }
+    
+    const startTime = Date.now();
+    
+    try {
+      // Verify db is available
+      if (!conn.db) {
+        throw new Error('Database connection not established');
+      }
+      
+      // Simple ping operation
+      await conn.db.admin().ping();
+      
+      const latency = Date.now() - startTime;
+      
+      return {
+        status: 'healthy',
+        latency,
+        details: {
+          readyState: this.getReadyStateDescription(conn.readyState),
+          connectionId: conn.id
+        }
+      };
+    } catch (error) {
+      const latency = Date.now() - startTime;
+      
+      return {
+        status: 'unhealthy',
+        latency,
+        details: {
+          readyState: this.getReadyStateDescription(conn.readyState),
+          error: error instanceof Error ? error.message : String(error),
+          connectionId: conn.id
+        }
+      };
+    }
+  }
+
+  /**
    * Static method to disconnect all mongoose connections
    * Including the cached connection
    */
   static async disconnectAll(): Promise<void> {
     try {
+      // Close the instance if it exists
+      if (MongoConnectionManager.instance) {
+        await MongoConnectionManager.instance.cleanup();
+      }
+      
+      // Close global mongoose connection
       await mongoose.disconnect();
+      
+      // Reset cache
       cached.conn = null;
       cached.promise = null;
+      
       console.debug('[MongoDB] All connections closed');
     } catch (error) {
       console.error('[MongoDB] Error disconnecting all connections:', error);
     }
   }
 }
+
+// Export the manager
+export default MongoConnectionManager;

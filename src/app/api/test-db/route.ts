@@ -1,48 +1,40 @@
 import { NextResponse } from 'next/server';
-import mongoose from 'mongoose';
+import { getConnection, disconnectAll, MongoConnectionManager } from '@/lib/db';
+import { createLogger } from '@/lib/db';
 
 export async function GET() {
+  const logger = createLogger('TestDB');
+  
   try {
-    console.log('Testing MongoDB connection...');
-    console.log('Mongoose version:', mongoose.version);
-    console.log('Current connection state:', mongoose.connection.readyState);
+    logger.info('Testing MongoDB connection...');
     
-    const uri = process.env.MONGODB_URI;
-    console.log('Environment check:', {
-      hasMongoDBURI: !!uri,
-      uriLength: uri?.length,
-      // Show URI format without exposing credentials
-      uriFormat: uri 
-        ? uri.replace(/\/\/([^:]+):([^@]+)@/, '//[username]:[hidden]@')
-        : 'undefined'
-    });
-    
-    if (!uri) {
-      throw new Error('MONGODB_URI environment variable is not defined');
-    }
-    
-    // Connect with a timeout to avoid hanging
-    await mongoose.connect(uri, {
+    // Get connection with the new connection manager
+    const connection = await getConnection({
       serverSelectionTimeoutMS: 5000, // 5 second timeout
-      connectTimeoutMS: 10000, // 10 second timeout
+      timeoutMS: 10000, // 10 second timeout
+      logger,
     });
     
-    console.log('Connection successful!');
+    logger.info('Connection successful!');
     
     // Check if db is available
-    if (!mongoose.connection.db) {
+    if (!connection.db) {
       throw new Error('Database connection not established');
     }
     
+    // Get connection health
+    const manager = MongoConnectionManager.getInstance();
+    const health = await manager.checkHealth(connection);
+    
     // Basic database operation test
-    const dbName = mongoose.connection.db.databaseName;
-    const collections = await mongoose.connection.db.listCollections().toArray();
+    const dbName = connection.db.databaseName;
+    const collections = await connection.db.listCollections().toArray();
     
     // Get server information
-    const serverInfo = await mongoose.connection.db.admin().serverInfo();
+    const serverInfo = await connection.db.admin().serverInfo();
     
     // Clean disconnect
-    await mongoose.disconnect();
+    await disconnectAll();
     
     return NextResponse.json({
       success: true,
@@ -52,10 +44,11 @@ export async function GET() {
       serverInfo: {
         version: serverInfo.version,
         gitVersion: serverInfo.gitVersion
-      }
+      },
+      health: health
     });
   } catch (error) {
-    console.error('Connection error details:', {
+    logger.error('Connection error details:', {
       name: error instanceof Error ? error.name : 'Unknown error',
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3).join('\n') : undefined
