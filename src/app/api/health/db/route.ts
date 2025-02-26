@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkDatabaseHealth } from '@/lib/db/mongodb';
+import { getDatabaseHealth } from '@/lib/db';
 import { createRateLimit } from '@/middleware/rate-limit';
 
 // Add rate limiting to prevent abuse
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const health = await checkDatabaseHealth();
+    const health = await getDatabaseHealth();
     const headers = {
       'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
       'Pragma': 'no-cache',
