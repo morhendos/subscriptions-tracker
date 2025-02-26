@@ -514,8 +514,7 @@ export class MongoConnectionManager extends EventEmitter {
       ssl: dbConfig.ssl,
       authSource: dbConfig.authSource,
       
-      // Compression
-      compressors: dbConfig.compressors,
+      // Compression - removed as it's not in dbConfig
     };
   }
 
