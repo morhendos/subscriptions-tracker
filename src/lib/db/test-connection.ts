@@ -19,6 +19,11 @@ async function testConnection() {
     
     // Get server info
     try {
+      // Check if connection.db exists before using it
+      if (!connection.db) {
+        throw new Error('Database connection not fully established (connection.db is undefined)');
+      }
+      
       const adminDb = connection.db.admin();
       const serverInfo = await adminDb.serverStatus();
       
