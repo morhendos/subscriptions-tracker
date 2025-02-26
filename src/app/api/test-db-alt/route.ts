@@ -1,38 +1,29 @@
 import { NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
+import { getConnection, disconnectAll, createLogger } from '@/lib/db';
 
 export async function GET() {
-  let client = null;
+  const logger = createLogger('TestDB-Alt');
   
   try {
-    console.log('Testing direct MongoDB connection...');
+    logger.info('Testing direct MongoDB connection...');
     
-    // Connection using direct MongoClient instead of Mongoose
-    const uri = process.env.MONGODB_URI;
-    console.log('URI format check:', 
-      uri?.includes('mongodb+srv://') && 
-      uri?.includes('@') && 
-      uri?.includes('?')
-    );
-    
-    if (!uri) {
-      throw new Error('MONGODB_URI environment variable is not defined');
-    }
-    
-    // Connect with a timeout
-    client = new MongoClient(uri, {
+    // Connection using our new connection manager with direct connection option
+    const connection = await getConnection({
       serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 10000,
+      timeoutMS: 10000,
+      direct: true, // Create a direct connection
+      logger,
     });
     
-    console.log('Attempting to connect...');
-    await client.connect();
-    console.log('Connection successful!');
+    logger.info('Connection successful!');
     
     // Get database info
-    const adminDb = client.db().admin();
+    const adminDb = connection.db.admin();
     const serverInfo = await adminDb.serverInfo();
     const dbList = await adminDb.listDatabases();
+    
+    // Close the connection
+    await disconnectAll();
     
     return NextResponse.json({
       success: true,
@@ -41,10 +32,10 @@ export async function GET() {
         version: serverInfo.version,
         gitVersion: serverInfo.gitVersion
       },
-      databases: dbList.databases.map(db => db.name)
+      databases: dbList.databases.map((db: any) => db.name)
     });
   } catch (error) {
-    console.error('Connection error details:', {
+    logger.error('Connection error details:', {
       name: error instanceof Error ? error.name : 'Unknown error',
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3).join('\n') : undefined
@@ -60,10 +51,8 @@ export async function GET() {
       }
     }, { status: 500 });
   } finally {
-    // Always close the connection
-    if (client) {
-      await client.close();
-      console.log('Connection closed');
-    }
+    // Ensure connection is closed
+    await disconnectAll();
+    logger.info('Connection cleanup complete');
   }
 }
