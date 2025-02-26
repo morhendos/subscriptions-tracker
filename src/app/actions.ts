@@ -54,11 +54,19 @@ export async function authenticateUser(
   password: string
 ): Promise<AuthResult> {
   try {
+    console.log(`[Auth] Attempting login for user: ${email}`);
+    
     const user = await withConnection(async () => {
+      // Extended timeout for authentication
       return UserModel.findOne({ email: email.toLowerCase() });
+    }, {
+      // Add longer timeout for auth operations
+      timeoutMS: 30000,
+      serverSelectionTimeoutMS: 15000,
     });
     
     if (!user) {
+      console.log(`[Auth] No user found with email: ${email}`);
       return {
         success: false,
         error: {
@@ -68,9 +76,12 @@ export async function authenticateUser(
       };
     }
 
+    console.log(`[Auth] User found, verifying password`);
+    
     // Verify password
     const isValid = await comparePasswords(password, user.hashedPassword);
     if (!isValid) {
+      console.log(`[Auth] Invalid password for user: ${email}`);
       return {
         success: false,
         error: {
@@ -80,12 +91,31 @@ export async function authenticateUser(
       };
     }
 
+    console.log(`[Auth] Login successful for user: ${email}`);
+    
     return {
       success: true,
       data: serializeUser(user)
     };
   } catch (error) {
+    console.error(`[Auth] Error during authentication:`, error);
     logMongoError(error, 'User authentication');
+    
+    // Provide more specific error message for timeouts
+    if (error instanceof Error && 
+        (error.message.includes('timed out') || 
+         error.message.includes('timeout') ||
+         error.name === 'MongoServerSelectionError')) {
+      console.error(`[Auth] Database connection timeout during authentication`);
+      
+      return {
+        success: false,
+        error: {
+          code: 'timeout_error',
+          message: 'Database connection timed out. Please try again.'
+        }
+      };
+    }
     
     return {
       success: false,
@@ -108,6 +138,10 @@ export async function registerUser(
     // Check if user exists
     const existingUser = await withConnection(async () => {
       return UserModel.findOne({ email: email.toLowerCase() });
+    }, {
+      // Add longer timeout for registration operations
+      timeoutMS: 30000,
+      serverSelectionTimeoutMS: 15000,
     });
     
     if (existingUser) {
@@ -135,6 +169,10 @@ export async function registerUser(
           hashedPassword,
           roles: [{ id: '1', name: 'user' }]
         });
+      }, {
+        // Add longer timeout for registration operations
+        timeoutMS: 30000,
+        serverSelectionTimeoutMS: 15000,
       });
       
       console.log('User created successfully with ID:', user._id);
@@ -175,6 +213,22 @@ export async function registerUser(
       name: error instanceof Error ? error.name : 'Unknown',
       code: error instanceof Error && 'code' in error ? (error as any).code : undefined
     });
+    
+    // Provide more specific error message for timeouts
+    if (error instanceof Error && 
+        (error.message.includes('timed out') || 
+         error.message.includes('timeout') ||
+         error.name === 'MongoServerSelectionError')) {
+      console.error(`[Auth] Database connection timeout during registration`);
+      
+      return {
+        success: false,
+        error: {
+          code: 'timeout_error',
+          message: 'Database connection timed out. Please try again.'
+        }
+      };
+    }
     
     return {
       success: false,
