@@ -4,7 +4,8 @@ subscription-tracker/
 ├── PRODUCTION_READINESS.md
 ├── README.md
 ├── docs
-│   └── MONGODB_ATLAS_SETUP.md
+│   ├── MONGODB_ATLAS_SETUP.md
+│   └── MONGODB_SETUP.md
 ├── install-components.sh
 ├── next-env.d.ts
 ├── next.config.js
@@ -34,9 +35,17 @@ subscription-tracker/
 │   │   │   │   └── route.ts
 │   │   │   ├── storage
 │   │   │   │   └── route.ts
-│   │   │   └── subscriptions
-│   │   │       ├── [id]
-│   │   │       │   └── route.ts
+│   │   │   ├── subscriptions
+│   │   │   │   ├── [id]
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── route.ts
+│   │   │   ├── test-db
+│   │   │   │   └── route.ts
+│   │   │   ├── test-db-alt
+│   │   │   │   └── route.ts
+│   │   │   ├── test-db-simple
+│   │   │   │   └── route.ts
+│   │   │   └── test-user-creation
 │   │   │       └── route.ts
 │   │   ├── auth
 │   │   │   ├── error
@@ -94,6 +103,8 @@ subscription-tracker/
 │   │       ├── toast.tsx
 │   │       ├── toaster.tsx
 │   │       └── use-toast.ts
+│   ├── config
+│   │   └── database.ts
 │   ├── contexts
 │   │   └── DateContext.tsx
 │   ├── hooks
@@ -114,6 +125,8 @@ subscription-tracker/
 │   │   │   ├── atlas-config.ts
 │   │   │   ├── check-env.ts
 │   │   │   ├── config.ts
+│   │   │   ├── connection-manager.ts
+│   │   │   ├── error-handler.ts
 │   │   │   ├── index.ts
 │   │   │   ├── mongodb.ts
 │   │   │   ├── test-connection.ts
@@ -163,7 +176,8 @@ subscription-tracker/
 │   │   └── user.ts
 │   └── utils
 │       ├── dates.ts
-│       └── format.ts
+│       ├── format.ts
+│       └── mongodb-utils.ts
 ├── tailwind.config.js
 ├── tree.txt
 └── tsconfig.json
