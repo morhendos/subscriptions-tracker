@@ -17,6 +17,11 @@ export async function GET() {
     
     logger.info('Connection successful!');
     
+    // Verify db is available
+    if (!connection.db) {
+      throw new Error('Database connection not established');
+    }
+    
     // Get database info
     const adminDb = connection.db.admin();
     const serverInfo = await adminDb.serverInfo();
