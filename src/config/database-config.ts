@@ -217,24 +217,28 @@ const DEVELOPMENT_CONFIG: Partial<MongoDBConfig> = {
  * environment variable overrides.
  */
 export function loadMongoDBConfig(): MongoDBConfig {
-  // Start with environment-specific config
+  // Start with environment-specific base config
   const baseConfig = isProduction ? PRODUCTION_CONFIG : DEVELOPMENT_CONFIG;
   
-  // Core settings that must be specified from env vars or have defaults
-  const config: MongoDBConfig = {
+  // Create a config object first with the required properties that won't be in the base config
+  const requiredConfig = {
     // URI - required
     uri: process.env.MONGODB_URI || '',
     databaseName: process.env.MONGODB_DATABASE || 'subscriptions',
     
-    // Merge base config
-    ...baseConfig as MongoDBConfig,
-    
-    // These always get default settings if not in base config
+    // These always get default settings if not specified elsewhere
     maxRetries: parseInt(process.env.MONGODB_MAX_RETRIES || '3'),
     retryDelayMS: parseInt(process.env.MONGODB_RETRY_DELAY || '1000'),
     authSource: 'admin',
     retryWrites: true,
     retryReads: true,
+  };
+
+  // Create the full config by merging the required config with the base config
+  // This avoids the property duplication TypeScript error
+  const config: MongoDBConfig = {
+    ...requiredConfig,
+    ...baseConfig as MongoDBConfig,
   };
 
   // Override with environment variables if provided
