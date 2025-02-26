@@ -1,8 +1,11 @@
 subscription-tracker/
 ├── AUTH_MIGRATION.md
+├── ENV_FIX.md
 ├── MONGODB_MIGRATION.md
 ├── PRODUCTION_READINESS.md
 ├── README.md
+├── REFACTORING.md
+├── REFACTORING_PLAN.md
 ├── docs
 │   ├── MONGODB_ATLAS_SETUP.md
 │   └── MONGODB_SETUP.md
@@ -16,6 +19,8 @@ subscription-tracker/
 │   ├── logo-st.svg
 │   └── logo.png
 ├── scripts
+│   ├── create-test-user.js
+│   ├── test-login.js
 │   └── tree.js
 ├── src
 │   ├── __tests__
@@ -104,6 +109,7 @@ subscription-tracker/
 │   │       ├── toaster.tsx
 │   │       └── use-toast.ts
 │   ├── config
+│   │   ├── database-config.ts
 │   │   └── database.ts
 │   ├── contexts
 │   │   └── DateContext.tsx
@@ -126,6 +132,7 @@ subscription-tracker/
 │   │   │   ├── check-env.ts
 │   │   │   ├── config.ts
 │   │   │   ├── connection-manager.ts
+│   │   │   ├── env-debug.ts
 │   │   │   ├── error-handler.ts
 │   │   │   ├── index.ts
 │   │   │   ├── mongodb.ts
@@ -177,6 +184,7 @@ subscription-tracker/
 │   └── utils
 │       ├── dates.ts
 │       ├── format.ts
+│       ├── mongodb-uri.ts
 │       └── mongodb-utils.ts
 ├── tailwind.config.js
 ├── tree.txt
