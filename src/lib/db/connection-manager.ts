@@ -243,6 +243,10 @@ export class MongoConnectionManager extends EventEmitter {
    */
   private async checkForSlowOperations(connection: Connection): Promise<any[]> {
     try {
+      if (!connection.db) {
+        return [];
+      }
+      
       const adminDb = connection.db.admin();
       
       // Try to get current operations
@@ -730,6 +734,11 @@ export class MongoConnectionManager extends EventEmitter {
     const startTime = Date.now();
     
     try {
+      // Verify db is available
+      if (!conn.db) {
+        throw new Error('Database connection not established');
+      }
+      
       // Simple ping operation
       await conn.db.admin().ping();
       
