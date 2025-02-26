@@ -98,12 +98,12 @@ const PRODUCTION_CONFIG: Partial<MongoDBConfig> = {
   // Connection pool
   maxPoolSize: 50,
   minPoolSize: 10,
-  maxIdleTimeMS: 30000,
+  maxIdleTimeMS: 60000, // Increased from 30000 to 60000
   
-  // Timeouts
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
-  connectionTimeoutMS: 10000,
+  // Timeouts - Increased to handle potential slowdowns
+  serverSelectionTimeoutMS: 15000, // Increased from 5000 to 15000
+  socketTimeoutMS: 60000, // Increased from 45000 to 60000
+  connectionTimeoutMS: 30000, // Increased from 10000 to 30000
   
   // Read/Write preferences
   writeConcern: 'majority',
@@ -123,8 +123,8 @@ const PRODUCTION_CONFIG: Partial<MongoDBConfig> = {
     alerts: {
       queryPerformance: {
         enabled: true,
-        slowQueryThresholdMs: 100,
-        aggregationThresholdMs: 1000,
+        slowQueryThresholdMs: 200, // Increased threshold to reduce noise
+        aggregationThresholdMs: 2000, // Increased threshold
       },
       connectionPoolUtilization: {
         enabled: true,
@@ -138,7 +138,7 @@ const PRODUCTION_CONFIG: Partial<MongoDBConfig> = {
     },
     
     logging: {
-      slowQueryThresholdMs: 100,
+      slowQueryThresholdMs: 200, // Increased to match performance alert threshold
       rotationDays: 7,
       level: 'warn',
       mongoDBProfileLevel: 1,
@@ -159,12 +159,12 @@ const DEVELOPMENT_CONFIG: Partial<MongoDBConfig> = {
   // Connection pool
   maxPoolSize: 10,
   minPoolSize: 1,
-  maxIdleTimeMS: 120000,
+  maxIdleTimeMS: 180000, // Increased from 120000 to 180000
   
   // Timeouts
-  serverSelectionTimeoutMS: 10000,
-  socketTimeoutMS: 60000,
-  connectionTimeoutMS: 20000,
+  serverSelectionTimeoutMS: 30000, // Increased from 10000 to 30000
+  socketTimeoutMS: 90000, // Increased from 60000 to 90000
+  connectionTimeoutMS: 45000, // Increased from 20000 to 45000
   
   // Read/Write preferences
   writeConcern: 1,
@@ -184,8 +184,8 @@ const DEVELOPMENT_CONFIG: Partial<MongoDBConfig> = {
     alerts: {
       queryPerformance: {
         enabled: true,
-        slowQueryThresholdMs: 200,
-        aggregationThresholdMs: 2000,
+        slowQueryThresholdMs: 300, // Increased threshold for development
+        aggregationThresholdMs: 3000, // Increased threshold for development
       },
       connectionPoolUtilization: {
         enabled: false,
@@ -199,7 +199,7 @@ const DEVELOPMENT_CONFIG: Partial<MongoDBConfig> = {
     },
     
     logging: {
-      slowQueryThresholdMs: 200,
+      slowQueryThresholdMs: 300, // Increased to match performance alert threshold
       rotationDays: 1,
       level: 'debug',
       mongoDBProfileLevel: 1,
@@ -227,7 +227,7 @@ export function loadMongoDBConfig(): MongoDBConfig {
     databaseName: process.env.MONGODB_DATABASE || 'subscriptions',
     
     // These always get default settings if not specified elsewhere
-    maxRetries: parseInt(process.env.MONGODB_MAX_RETRIES || '3'),
+    maxRetries: parseInt(process.env.MONGODB_MAX_RETRIES || '5'), // Increased from 3 to 5
     retryDelayMS: parseInt(process.env.MONGODB_RETRY_DELAY || '1000'),
     authSource: 'admin',
     retryWrites: true,
