@@ -4,12 +4,20 @@ import { AUTH_CONFIG } from './config'
 import { AuthError, validateEmail, validatePassword } from './validation'
 import { authenticateUser } from '@/app/actions'
 import { CustomUser } from '@/types/auth'
+import { loadEnvVars, ensureEnvVars } from '@/lib/db/env-debug'
 
+// Load environment variables to ensure they're available
+loadEnvVars();
+ensureEnvVars();
+
+// Essential environment variables for NextAuth
 if (!process.env.NEXTAUTH_SECRET) {
+  console.error('[NEXTAUTH] Missing NEXTAUTH_SECRET environment variable');
   throw new Error('NEXTAUTH_SECRET must be set in environment variables')
 }
 
 if (!process.env.NEXTAUTH_URL && process.env.NODE_ENV === 'production') {
+  console.error('[NEXTAUTH] Missing NEXTAUTH_URL environment variable in production');
   throw new Error('NEXTAUTH_URL must be set in production environment')
 }
 
@@ -53,7 +61,7 @@ export const authOptions: AuthOptions = {
             roles: result.data.roles ?? [],
           };
         } catch (error) {
-          console.error('Authentication error:', error);
+          console.error('[NEXTAUTH] Authentication error:', error);
           return null;
         }
       },
@@ -120,5 +128,6 @@ export const authOptions: AuthOptions = {
     },
   },
 
+  debug: process.env.NODE_ENV === 'development',
   secret: process.env.NEXTAUTH_SECRET,
 }

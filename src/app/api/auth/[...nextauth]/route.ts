@@ -1,21 +1,16 @@
 import NextAuth from 'next-auth'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { authOptions } from '@/lib/auth/auth-options'
+import { loadEnvVars, ensureEnvVars } from '@/lib/db/env-debug'
 
-console.log('[NEXTAUTH] Configuration:', {
-  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-  NODE_ENV: process.env.NODE_ENV,
-  HAS_SECRET: !!process.env.NEXTAUTH_SECRET,
-})
+// Ensure environment variables are loaded before configuring NextAuth
+loadEnvVars();
+ensureEnvVars();
 
 const handler = NextAuth(authOptions)
 
 const wrappedHandler = async (req: Request, res: Response) => {
   try {
-    console.log('[NEXTAUTH] Handling request:', {
-      method: req.method,
-      url: req.url,
-    })
     return await handler(req, res)
   } catch (error) {
     console.error('[NEXTAUTH] Error in auth handler:', error)

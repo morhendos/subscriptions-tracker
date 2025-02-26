@@ -1,14 +1,15 @@
-/**
- * MongoDB Connection Module
- * 
- * Provides core functionality for connecting to MongoDB, with connection
- * pooling, retry mechanisms, and monitoring.
- */
 import mongoose from 'mongoose';
 import { getAtlasConfig, getMonitoringConfig } from './atlas-config';
-import { normalizeMongoURI, getSanitizedURI, validateMongoURI } from '@/utils/mongodb-uri';
+import { validateMongoURI, getSanitizedURI } from '@/utils/mongodb-uri';
 import { monitoring } from '../monitoring';
-import { mongodbConfig, isDevelopment } from '@/config/database-config';
+import { loadEnvVars, ensureEnvVars } from './env-debug';
+
+// Load environment variables if they're not already available
+if (!process.env.MONGODB_URI) {
+  console.log('[MongoDB] MONGODB_URI not found in environment, attempting to load...');
+  loadEnvVars();
+  ensureEnvVars();
+}
 
 interface GlobalMongoose {
   conn: mongoose.Connection | null;
@@ -20,8 +21,9 @@ declare global {
 }
 
 // Constants for retry mechanism
-const MAX_RETRIES = mongodbConfig.maxRetries;
-const RETRY_DELAY_MS = mongodbConfig.retryDelayMS;
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000;
+const isDev = process.env.NODE_ENV === 'development';
 
 class MongoConnectionError extends Error {
   constructor(message: string, public readonly retryCount: number) {
@@ -42,75 +44,92 @@ const delay = (retryCount: number) =>
 
 // Validate environment variables
 const validateEnv = () => {
-  if (!mongodbConfig.uri) {
-    throw new Error('MONGODB_URI environment variable is not defined');
+  // Double-check environment variables are loaded
+  if (!process.env.MONGODB_URI) {
+    console.error('[MongoDB] MONGODB_URI still not found after loading attempts');
+    
+    // In development mode, use a fallback value as a last resort
+    if (isDev) {
+      console.warn('[MongoDB] Using fallback connection string for development');
+      process.env.MONGODB_URI = 'mongodb://127.0.0.1:27017/subscriptions';
+    } else {
+      throw new Error('MONGODB_URI environment variable is not defined');
+    }
   }
 
-  if (!validateMongoURI(mongodbConfig.uri)) {
+  if (!validateMongoURI(process.env.MONGODB_URI)) {
     throw new Error('MONGODB_URI environment variable is invalid');
   }
 };
 
-// Connect to MongoDB with retry mechanism
-async function connectWithRetry(retryCount = 0): Promise<mongoose.Connection> {
+// Parse and normalize MongoDB URI to ensure it has a valid database name
+export function normalizeMongoURI(uri: string, dbName: string = 'subscriptions'): string {
   try {
-    validateEnv();
-
-    const uri = mongodbConfig.uri;
-    const dbName = mongodbConfig.databaseName;
+    // Parse the URI to properly handle different URI formats
+    const url = new URL(uri);
     
-    // Normalize the URI to ensure it has a valid database name
-    const normalizedUri = normalizeMongoURI(uri, dbName);
+    // Extract the current path (which might contain a database name)
+    let path = url.pathname;
     
-    isDevelopment && monitoring.info('[MongoDB] Connecting to:', { 
-      uri: getSanitizedURI(normalizedUri),
-      database: dbName 
-    });
-
-    const atlasConfig = getAtlasConfig(process.env.NODE_ENV);
-    const connection = await mongoose.connect(normalizedUri, atlasConfig);
-    isDevelopment && monitoring.info('[MongoDB] Connected successfully');
-
-    // Set up connection monitoring
-    connection.connection.on('disconnected', () => {
-      monitoring.warn('[MongoDB] Disconnected. Attempting to reconnect...');
-    });
-
-    connection.connection.on('reconnected', () => {
-      monitoring.info('[MongoDB] Reconnected successfully');
-    });
-
-    connection.connection.on('error', (err) => {
-      monitoring.error('[MongoDB] Connection error:', { error: err });
-    });
-
-    // Setup monitoring in production or when explicitly enabled
-    if (mongodbConfig.monitoring.enabled) {
-      setupMonitoring(connection.connection);
-    }
-
-    return connection.connection;
-  } catch (error: any) {
-    if (retryCount < MAX_RETRIES) {
-      monitoring.warn(`[MongoDB] Connection attempt ${retryCount + 1} failed. Retrying...`, {
-        error: error.message,
-        retryCount,
-        nextRetryIn: RETRY_DELAY_MS * Math.pow(2, retryCount)
-      });
+    // Check if the path is just a slash or empty, or contains an invalid database name
+    if (path === '/' || path === '' || path.includes('_/')) {
+      // Replace the path with just the database name
+      url.pathname = `/${dbName}`;
+    } else {
+      // If the path already has a database name (but not the one we want)
+      // We extract everything before any query parameters and replace the db name
       
-      await delay(retryCount);
-      return connectWithRetry(retryCount + 1);
+      // Remove any query parameters from consideration
+      const pathWithoutQuery = path.split('?')[0];
+      
+      // Check if the path already has our desired database name
+      if (pathWithoutQuery === `/${dbName}`) {
+        // Nothing to do, correct database name is already in the path
+      } else {
+        // Replace whatever database name is there with our desired one
+        url.pathname = `/${dbName}`;
+      }
     }
-
-    throw new MongoConnectionError(
-      `Failed to connect to MongoDB after ${MAX_RETRIES} attempts: ${error.message}`,
-      retryCount
-    );
+    
+    // Ensure we have the necessary query parameters
+    const searchParams = new URLSearchParams(url.search);
+    if (!searchParams.has('retryWrites')) {
+      searchParams.set('retryWrites', 'true');
+    }
+    if (!searchParams.has('w')) {
+      searchParams.set('w', 'majority');
+    }
+    
+    // Update the search parameters
+    url.search = searchParams.toString();
+    
+    // Return the properly formatted URI
+    return url.toString();
+  } catch (error) {
+    // If URL parsing fails, fall back to a more basic string manipulation
+    isDev && console.warn('Failed to parse MongoDB URI as URL, falling back to string manipulation');
+    
+    // Remove any existing database name and query parameters
+    let baseUri = uri;
+    
+    // Check for presence of query parameters
+    const queryIndex = baseUri.indexOf('?');
+    if (queryIndex > -1) {
+      baseUri = baseUri.substring(0, queryIndex);
+    }
+    
+    // Ensure URI ends with a single slash
+    if (!baseUri.endsWith('/')) {
+      baseUri = `${baseUri}/`;
+    }
+    
+    // Append database name and query parameters
+    return `${baseUri}${dbName}?retryWrites=true&w=majority`;
   }
 }
 
-// Enhanced monitoring setup
-function setupMonitoring(connection: mongoose.Connection) {
+// Enhanced monitoring setup for Atlas
+const setupMonitoring = (connection: mongoose.Connection) => {
   const config = getMonitoringConfig();
   const metricsInterval = config.metrics.intervalSeconds * 1000;
   
@@ -119,7 +138,7 @@ function setupMonitoring(connection: mongoose.Connection) {
     connection.on('commandStarted', (event) => {
       const monitoredCommands = ['find', 'insert', 'update', 'delete', 'aggregate'];
       if (monitoredCommands.includes(event.commandName)) {
-        monitoring.info(`[MongoDB] Command ${event.commandName} started`, {
+        monitoring.info(`[MongoDB Atlas] Command ${event.commandName} started`, {
           namespace: event.databaseName,
           commandName: event.commandName,
           timestamp: new Date().toISOString()
@@ -131,7 +150,7 @@ function setupMonitoring(connection: mongoose.Connection) {
       const monitoredCommands = ['find', 'insert', 'update', 'delete', 'aggregate'];
       if (monitoredCommands.includes(event.commandName)) {
         const latency = event.duration;
-        monitoring.info(`[MongoDB] Command ${event.commandName} succeeded`, {
+        monitoring.info(`[MongoDB Atlas] Command ${event.commandName} succeeded`, {
           duration: latency,
           timestamp: new Date().toISOString()
         });
@@ -141,7 +160,7 @@ function setupMonitoring(connection: mongoose.Connection) {
           : config.alerts.queryPerformance.slowQueryThresholdMs;
 
         if (latency > threshold) {
-          monitoring.warn(`[MongoDB] Slow ${event.commandName} detected`, {
+          monitoring.warn(`[MongoDB Atlas] Slow ${event.commandName} detected`, {
             duration: latency,
             threshold,
             timestamp: new Date().toISOString()
@@ -151,15 +170,15 @@ function setupMonitoring(connection: mongoose.Connection) {
     });
 
     connection.on('commandFailed', (event) => {
-      monitoring.error(`[MongoDB] Command ${event.commandName} failed`, {
+      monitoring.error(`[MongoDB Atlas] Command ${event.commandName} failed`, {
         error: event.failure,
         timestamp: new Date().toISOString()
       });
     });
   }
 
-  // Enhanced performance monitoring
-  if (mongodbConfig.monitoring.alerts.queryPerformance.enabled) {
+  // Enhanced performance monitoring for Atlas
+  if (config.alerts.queryPerformance.enabled) {
     const db = connection.db;
     
     if (db) {
@@ -191,20 +210,20 @@ function setupMonitoring(connection: mongoose.Connection) {
           };
 
           // Check thresholds and alert if necessary
-          if (metrics.connections.utilizationPercentage > mongodbConfig.monitoring.alerts.connectionPoolUtilization.threshold) {
-            monitoring.warn('[MongoDB] High connection pool utilization', {
+          if (metrics.connections.utilizationPercentage > config.alerts.connectionPoolUtilization.threshold) {
+            monitoring.warn('[MongoDB Atlas] High connection pool utilization', {
               utilization: metrics.connections.utilizationPercentage,
-              threshold: mongodbConfig.monitoring.alerts.connectionPoolUtilization.threshold,
+              threshold: config.alerts.connectionPoolUtilization.threshold,
               timestamp: new Date().toISOString()
             });
           }
 
-          if (replSetStatus && mongodbConfig.monitoring.alerts.replication.enabled) {
+          if (replSetStatus && config.alerts.replication.enabled) {
             const maxLag = Math.max(...metrics.replication!.lag);
-            if (maxLag > mongodbConfig.monitoring.alerts.replication.maxLagSeconds * 1000) {
-              monitoring.warn('[MongoDB] High replication lag detected', {
+            if (maxLag > config.alerts.replication.maxLagSeconds * 1000) {
+              monitoring.warn('[MongoDB Atlas] High replication lag detected', {
                 lag: maxLag,
-                threshold: mongodbConfig.monitoring.alerts.replication.maxLagSeconds * 1000,
+                threshold: config.alerts.replication.maxLagSeconds * 1000,
                 timestamp: new Date().toISOString()
               });
             }
@@ -213,17 +232,75 @@ function setupMonitoring(connection: mongoose.Connection) {
           // Store metrics for health checks
           (global as any).mongoMetrics = metrics;
         } catch (error) {
-          monitoring.error('[MongoDB] Failed to collect metrics', { error });
+          monitoring.error('[MongoDB Atlas] Failed to collect metrics', { error });
         }
       }, metricsInterval);
     }
+  }
+};
+
+// Connect to MongoDB with retry mechanism
+async function connectWithRetry(retryCount = 0): Promise<mongoose.Connection> {
+  try {
+    validateEnv();
+
+    const uri = process.env.MONGODB_URI as string;
+    const dbName = process.env.MONGODB_DATABASE || 'subscriptions';
+    
+    // Normalize the URI to ensure it has a valid database name
+    const normalizedUri = normalizeMongoURI(uri, dbName);
+    
+    isDev && monitoring.info('[MongoDB Atlas] Connecting to:', { 
+      uri: getSanitizedURI(normalizedUri),
+      database: dbName 
+    });
+
+    const atlasConfig = getAtlasConfig(process.env.NODE_ENV);
+    const connection = await mongoose.connect(normalizedUri, atlasConfig);
+    isDev && monitoring.info('[MongoDB Atlas] Connected successfully');
+
+    // Set up connection monitoring
+    connection.connection.on('disconnected', () => {
+      monitoring.warn('[MongoDB Atlas] Disconnected. Attempting to reconnect...');
+    });
+
+    connection.connection.on('reconnected', () => {
+      monitoring.info('[MongoDB Atlas] Reconnected successfully');
+    });
+
+    connection.connection.on('error', (err) => {
+      monitoring.error('[MongoDB Atlas] Connection error:', { error: err });
+    });
+
+    // Setup monitoring in production or when explicitly enabled
+    if (process.env.NODE_ENV === 'production' || process.env.ENABLE_MONITORING === 'true') {
+      setupMonitoring(connection.connection);
+    }
+
+    return connection.connection;
+  } catch (error: any) {
+    if (retryCount < MAX_RETRIES) {
+      monitoring.warn(`[MongoDB Atlas] Connection attempt ${retryCount + 1} failed. Retrying...`, {
+        error: error.message,
+        retryCount,
+        nextRetryIn: RETRY_DELAY_MS * Math.pow(2, retryCount)
+      });
+      
+      await delay(retryCount);
+      return connectWithRetry(retryCount + 1);
+    }
+
+    throw new MongoConnectionError(
+      `Failed to connect to MongoDB Atlas after ${MAX_RETRIES} attempts: ${error.message}`,
+      retryCount
+    );
   }
 }
 
 // Main connection function
 export async function connectToDatabase(): Promise<mongoose.Connection> {
   if (cached.conn) {
-    isDevelopment && monitoring.info('[MongoDB] Using cached connection');
+    isDev && monitoring.info('[MongoDB Atlas] Using cached connection');
     return cached.conn;
   }
 
@@ -251,17 +328,17 @@ export async function disconnectFromDatabase(): Promise<void> {
       await mongoose.disconnect();
       cached.conn = null;
       cached.promise = null;
-      isDevelopment && monitoring.info('[MongoDB] Disconnected successfully');
+      isDev && monitoring.info('[MongoDB Atlas] Disconnected successfully');
       // Clear stored metrics
       (global as any).mongoMetrics = null;
     } catch (error: any) {
-      monitoring.error('[MongoDB] Disconnect error:', { error: error.message });
+      monitoring.error('[MongoDB Atlas] Disconnect error:', { error: error.message });
       throw error;
     }
   }
 }
 
-// Enhanced health check function with metrics
+// Enhanced health check function with Atlas metrics
 export async function checkDatabaseHealth(): Promise<{
   status: 'healthy' | 'unhealthy';
   latency: number;
@@ -358,7 +435,7 @@ export async function checkDatabaseHealth(): Promise<{
       message: `Database health check failed: ${error.message}`
     };
 
-    monitoring.error('[MongoDB] Health check failed', {
+    monitoring.error('[MongoDB Atlas] Health check failed', {
       error: error.message,
       latency: errorResponse.latency
     });
