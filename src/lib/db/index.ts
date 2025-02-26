@@ -6,7 +6,7 @@
  */
 
 import mongoose from 'mongoose';
-import { MongoConnectionFactory, ConnectionOptions } from './connection-manager';
+import MongoConnectionManager, { ConnectionOptions, Logger } from './connection-manager';
 import { handleMongoError, logMongoError, MongoDBError, MongoDBErrorCode } from './error-handler';
 import { dbConfig } from '@/config/database';
 import { normalizeMongoURI, getSanitizedURI } from '@/utils/mongodb-utils';
@@ -18,36 +18,37 @@ import { normalizeMongoURI, getSanitizedURI } from '@/utils/mongodb-utils';
  * @returns A promise resolving to a mongoose connection
  */
 export async function getConnection(options?: ConnectionOptions): Promise<mongoose.Connection> {
-  const factory = new MongoConnectionFactory(options);
-  return factory.getConnection();
+  const manager = MongoConnectionManager.getInstance(options);
+  return manager.getConnection(options);
 }
 
 /**
  * Get a direct (non-pooled) MongoDB connection
  * 
  * @param options - Connection options
- * @returns A MongoConnectionFactory with a direct connection
+ * @returns A connection manager with a direct connection
  */
 export async function getDirectConnection(options?: ConnectionOptions): Promise<{
   connection: mongoose.Connection;
   cleanup: () => Promise<void>;
 }> {
-  const factory = new MongoConnectionFactory({
-    ...options,
-    direct: true,
-  });
+  const manager = MongoConnectionManager.getInstance();
   
   try {
-    const connection = await factory.getConnection();
+    const connection = await manager.getConnection({
+      ...options,
+      direct: true,
+    });
+    
     return {
       connection,
       cleanup: async () => {
-        await factory.cleanup();
+        await manager.cleanup();
       },
     };
   } catch (error) {
     // Ensure proper cleanup even if connection fails
-    await factory.cleanup();
+    await manager.cleanup();
     throw handleMongoError(error, 'Failed to create direct connection');
   }
 }
@@ -77,7 +78,7 @@ export async function withConnection<T>(
  * Useful for application shutdown or tests
  */
 export async function disconnectAll(): Promise<void> {
-  await MongoConnectionFactory.disconnectAll();
+  await MongoConnectionManager.disconnectAll();
 }
 
 /**
@@ -92,55 +93,28 @@ export async function getDatabaseHealth(): Promise<{
   message?: string;
   timestamp: string;
 }> {
+  const manager = MongoConnectionManager.getInstance();
   const startTime = Date.now();
   
   try {
-    const { connection, cleanup } = await getDirectConnection({
-      timeoutMS: 3000,
-      serverSelectionTimeoutMS: 2000,
-    });
+    // Get health check result from the connection manager
+    const healthCheck = await manager.checkHealth();
     
-    try {
-      if (!connection.db) {
-        throw new Error('Database connection not established');
-      }
-
-      const adminDb = connection.db.admin();
-      
-      // Execute checks in parallel
-      const [ping, serverStatus] = await Promise.all([
-        adminDb.ping(),
-        adminDb.serverStatus().catch(() => null),
-      ]);
-
-      if (!ping.ok) {
-        throw new Error('Database ping failed');
-      }
-
-      const latency = Date.now() - startTime;
-      
-      // Create metrics object
-      const metrics: Record<string, any> = {};
-      
-      if (serverStatus) {
-        metrics.connections = {
-          current: serverStatus.connections.current,
-          available: serverStatus.connections.available,
-          utilizationPercentage: (serverStatus.connections.current / serverStatus.connections.available) * 100
-        };
-        
-        metrics.opcounters = serverStatus.opcounters;
-      }
-
+    if (healthCheck.status === 'healthy') {
       return {
         status: 'healthy',
-        latency,
+        latency: healthCheck.latency,
         timestamp: new Date().toISOString(),
-        metrics,
+        metrics: healthCheck.details,
         message: 'Database is responding normally'
       };
-    } finally {
-      await cleanup();
+    } else {
+      return {
+        status: 'unhealthy',
+        latency: healthCheck.latency,
+        timestamp: new Date().toISOString(),
+        message: `Database health check failed: ${healthCheck.details?.error || 'No healthy connection'}`
+      };
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -155,9 +129,19 @@ export async function getDatabaseHealth(): Promise<{
   }
 }
 
+// Create a custom logger for the connection manager
+export function createLogger(prefix: string): Logger {
+  return {
+    debug: (message: string, ...args: any[]) => console.debug(`[${prefix}] ${message}`, ...args),
+    info: (message: string, ...args: any[]) => console.info(`[${prefix}] ${message}`, ...args),
+    warn: (message: string, ...args: any[]) => console.warn(`[${prefix}] ${message}`, ...args),
+    error: (message: string, ...args: any[]) => console.error(`[${prefix}] ${message}`, ...args),
+  };
+}
+
 // Export classes and functions
 export {
-  MongoConnectionFactory,
+  MongoConnectionManager,
   handleMongoError,
   logMongoError,
   normalizeMongoURI,
@@ -170,4 +154,5 @@ export type {
   ConnectionOptions,
   MongoDBError,
   MongoDBErrorCode,
+  Logger,
 };
