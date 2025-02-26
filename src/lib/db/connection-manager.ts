@@ -172,7 +172,7 @@ export class MongoConnectionManager extends EventEmitter {
    * Set up metrics collection interval
    */
   private setupMetricsCollection(): void {
-    const intervalMs = monitoringConfig.metricsIntervalSeconds * 1000;
+    const intervalMs = monitoringConfig.metricsInterval * 1000;
 
     this.metricsInterval = setInterval(() => {
       this.collectMetrics()
