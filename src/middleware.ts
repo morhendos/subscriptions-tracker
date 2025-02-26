@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createRateLimit } from './middleware/rate-limit';
+import { getToken } from 'next-auth/jwt';
+
+// Protected routes that require authentication
+const PROTECTED_ROUTES = [
+  '/subscriptions'
+];
 
 // Rate limit configuration for different endpoints
 const rateLimitConfigs = {
@@ -53,8 +59,36 @@ export async function middleware(request: NextRequest) {
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
   };
 
-  // Apply rate limiting based on route
+  // Get the path from the URL
   const path = request.nextUrl.pathname;
+  
+  // Check if the route requires authentication
+  const isProtectedRoute = PROTECTED_ROUTES.some(route => path.startsWith(route));
+  
+  // Handle protected routes - check authentication
+  if (isProtectedRoute) {
+    try {
+      const token = await getToken({ req: request });
+      
+      // If no token, redirect to login
+      if (!token) {
+        const loginUrl = new URL('/login', request.url);
+        
+        // Add the original URL as a callback parameter
+        loginUrl.searchParams.set('callbackUrl', request.url);
+        
+        return NextResponse.redirect(loginUrl);
+      }
+    } catch (error) {
+      console.error('[Auth Middleware] Error verifying token:', error);
+      
+      // On error, redirect to login as a fallback
+      const loginUrl = new URL('/login', request.url);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // Apply rate limiting based on route
   let rateLimitResponse = null;
 
   if (path.startsWith('/api/health')) {
@@ -84,7 +118,11 @@ export async function middleware(request: NextRequest) {
 // Configure which routes should be handled by middleware
 export const config = {
   matcher: [
+    /*
+     * Match all API routes and the subscription route specifically
+     */
     '/api/:path*',
-    '/auth/:path*'
+    '/subscriptions/:path*',
+    '/subscriptions'
   ],
 };
