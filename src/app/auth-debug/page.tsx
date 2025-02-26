@@ -6,10 +6,13 @@ import { diagnoseAuth, diagnoseMongo } from '../auth-diagnostic'
 export default function AuthDebugPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
   const [results, setResults] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [mongoLoading, setMongoLoading] = useState(false)
   const [mongoResults, setMongoResults] = useState<any>(null)
+  const [createUserLoading, setCreateUserLoading] = useState(false)
+  const [createUserResults, setCreateUserResults] = useState<any>(null)
 
   const handleTestAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,6 +50,40 @@ export default function AuthDebugPage() {
     }
   }
 
+  const handleCreateTestUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setCreateUserLoading(true)
+
+    try {
+      const response = await fetch('/auth-debug/create-test-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          name: name || undefined
+        })
+      })
+
+      const data = await response.json()
+      setCreateUserResults(data)
+
+      if (response.ok && data.success) {
+        // If user was created successfully, update the form message
+        console.log('Test user created successfully:', data.user)
+      }
+    } catch (error) {
+      console.error('Error creating test user:', error)
+      setCreateUserResults({
+        error: error instanceof Error ? error.message : String(error)
+      })
+    } finally {
+      setCreateUserLoading(false)
+    }
+  }
+
   return (
     <div className="container mx-auto p-4 max-w-3xl">
       <h1 className="text-2xl font-bold mb-6">Authentication Debugging Tool</h1>
@@ -78,6 +115,91 @@ export default function AuthDebugPage() {
             <p className="mt-2 text-gray-600 text-sm">
               See server console for detailed diagnostic logs.
             </p>
+          </div>
+        )}
+      </div>
+
+      <div className="mb-8 p-4 border border-gray-200 rounded-md">
+        <h2 className="text-xl font-semibold mb-4">Create Test User</h2>
+        <p className="mb-4">Create a test user in the database for authentication testing.</p>
+        
+        <form onSubmit={handleCreateTestUser} className="space-y-4">
+          <div>
+            <label htmlFor="create-email" className="block text-sm font-medium text-gray-700 mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              id="create-email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              required
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="create-name" className="block text-sm font-medium text-gray-700 mb-1">
+              Name (optional)
+            </label>
+            <input
+              type="text"
+              id="create-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="create-password" className="block text-sm font-medium text-gray-700 mb-1">
+              Password
+            </label>
+            <input
+              type="password"
+              id="create-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              required
+            />
+          </div>
+          
+          <button
+            type="submit"
+            disabled={createUserLoading}
+            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-purple-300"
+          >
+            {createUserLoading ? 'Creating...' : 'Create Test User'}
+          </button>
+        </form>
+        
+        {createUserResults && (
+          <div className="mt-4 p-3 bg-gray-50 rounded-md">
+            <h3 className="font-medium mb-2">Results:</h3>
+            <div className={`px-3 py-2 rounded-md mb-4 ${createUserResults.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              Status: {createUserResults.success ? 'Success' : 'Failed'}
+              {createUserResults.error && (
+                <div className="mt-1">
+                  <strong>Error:</strong> {createUserResults.error}
+                </div>
+              )}
+            </div>
+            
+            {createUserResults.user && (
+              <div className="mb-4">
+                <p><strong>User created:</strong></p>
+                <ul className="list-disc list-inside text-sm">
+                  <li>ID: {createUserResults.user.id}</li>
+                  <li>Email: {createUserResults.user.email}</li>
+                  <li>Name: {createUserResults.user.name}</li>
+                </ul>
+              </div>
+            )}
+            
+            <pre className="whitespace-pre-wrap text-sm bg-gray-100 p-2 rounded">
+              {JSON.stringify(createUserResults, null, 2)}
+            </pre>
           </div>
         )}
       </div>
