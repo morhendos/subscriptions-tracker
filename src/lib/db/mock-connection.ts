@@ -126,8 +126,8 @@ class MockConnection extends EventEmitter implements Connection {
     return MockModel;
   }
 
-  // Session-related methods
-  startSession(options?: any): Promise<ClientSession> {
+  // Session-related methods - using jest mock function
+  startSession = jest.fn().mockImplementation((options?: any): Promise<ClientSession> => {
     const mockSession: Partial<ClientSession> = {
       endSession: async () => {},
       withTransaction: async (fn) => fn(mockSession as ClientSession),
@@ -136,7 +136,7 @@ class MockConnection extends EventEmitter implements Connection {
       startTransaction: async () => {},
     };
     return Promise.resolve(mockSession as ClientSession);
-  }
+  });
 
   // Connection lifecycle methods - fixed return type and casting
   openUri(uri: string, options?: ConnectOptions): Promise<Connection> {
@@ -165,14 +165,7 @@ class MockConnection extends EventEmitter implements Connection {
     return this as unknown as Connection;
   }
 
-  // Add stub methods for any other required methods
-  startSession = jest.fn().mockResolvedValue({
-    endSession: jest.fn(),
-    abortTransaction: jest.fn(),
-    commitTransaction: jest.fn(),
-    startTransaction: jest.fn(),
-  });
-
+  // Other mock methods
   transaction = jest.fn().mockImplementation((fn) => Promise.resolve(fn({} as any)));
   
   watch = jest.fn().mockReturnValue({
