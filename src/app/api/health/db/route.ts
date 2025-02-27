@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabaseHealth } from '@/lib/db';
+import { getDatabaseHealth, shouldSkipDatabaseConnection } from '@/lib/db';
 import { createRateLimit } from '@/middleware/rate-limit';
 
 // Add rate limiting to prevent abuse
@@ -15,13 +15,31 @@ export async function GET(request: NextRequest) {
     return rateLimitResponse;
   }
 
+  // Header constants for response
+  const headers = {
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+  };
+
+  // Provide mock health response during build
+  if (shouldSkipDatabaseConnection()) {
+    const mockHealth = {
+      status: 'healthy',
+      latency: 0,
+      timestamp: new Date().toISOString(),
+      message: 'Mock database health check - running in build environment',
+      buildEnvironment: true
+    };
+    
+    return NextResponse.json(mockHealth, { 
+      status: 200, 
+      headers 
+    });
+  }
+
   try {
     const health = await getDatabaseHealth();
-    const headers = {
-      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-    };
     
     if (health.status === 'healthy') {
       return NextResponse.json(health, { 
