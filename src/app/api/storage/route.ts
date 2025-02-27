@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { SubscriptionModel } from '@/models/subscription';
 import { Subscription } from '@/types/subscriptions';
 import mongoose from 'mongoose';
-import { withConnection, handleMongoError, logMongoError } from '@/lib/db';
+import { withConnection, safeSerialize } from '@/lib/db/simplified-connection';
 
 const STORAGE_KEY_PREFIX = 'subscriptions';
 
@@ -28,31 +28,16 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Add longer timeout for this specific operation since it can be demanding
     const subscriptions = await withConnection(async () => {
       return SubscriptionModel.find({ userId })
         .sort({ nextBillingDate: 1 })
         .lean()
-        .exec(); // Add explicit exec to ensure promise completion
-    }, {
-      serverSelectionTimeoutMS: 15000,  // 15 seconds (increased from default)
-      timeoutMS: 30000, // 30 seconds (increased from default)
+        .exec();
     });
 
-    // Handle case where subscriptions is undefined or null
     if (!subscriptions) {
-      console.error('Storage API GET: No subscriptions returned from database');
       return NextResponse.json(
         { error: 'Failed to retrieve subscriptions data' }, 
-        { status: 500 }
-      );
-    }
-
-    // Make sure we handle non-array responses as an error
-    if (!Array.isArray(subscriptions)) {
-      console.error('Storage API GET: Unexpected response type from database', typeof subscriptions);
-      return NextResponse.json(
-        { error: 'Unexpected data format from database' }, 
         { status: 500 }
       );
     }
@@ -73,13 +58,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    logMongoError(error, 'Storage API GET');
+    console.error('Storage API GET error:', error);
     
-    const mongoError = handleMongoError(error, 'Failed to read data');
-    
-    // Ensure we always return valid JSON even for timeout errors
     return NextResponse.json(
-      { error: mongoError.message },
+      { error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -137,9 +119,6 @@ export async function POST(request: NextRequest) {
       }
       
       return [];
-    }, {
-      serverSelectionTimeoutMS: 15000,  // 15 seconds
-      timeoutMS: 30000, // 30 seconds
     });
 
     return NextResponse.json({ 
@@ -147,11 +126,10 @@ export async function POST(request: NextRequest) {
       subscriptions: result 
     });
   } catch (error) {
-    logMongoError(error, 'Storage API POST');
+    console.error('Storage API POST error:', error);
     
-    const mongoError = handleMongoError(error, 'Failed to write data');
     return NextResponse.json(
-      { error: mongoError.message },
+      { error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -177,11 +155,10 @@ export async function DELETE(request: NextRequest) {
     
     return NextResponse.json({ success: true });
   } catch (error) {
-    logMongoError(error, 'Storage API DELETE');
+    console.error('Storage API DELETE error:', error);
     
-    const mongoError = handleMongoError(error, 'Failed to delete data');
     return NextResponse.json(
-      { error: mongoError.message },
+      { error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
