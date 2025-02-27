@@ -2,7 +2,7 @@ import { AuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { AUTH_CONFIG } from './config'
 import { AuthError, validateEmail, validatePassword } from './validation'
-import { authenticateUser } from '@/app/auth-actions' // Using our fixed version
+import { authenticateUser } from '@/app/auth-actions'
 import { CustomUser } from '@/types/auth'
 import { loadEnvVars, ensureEnvVars } from '@/lib/db/env-debug'
 
@@ -32,24 +32,17 @@ export const authOptions: AuthOptions = {
       },
       async authorize(credentials, req) {
         try {
-          console.log('[NEXTAUTH] Starting authentication process');
-          
           if (!credentials?.email || !credentials?.password) {
-            console.log('[NEXTAUTH] Missing email or password');
             throw new AuthError('Email and password are required', 'invalid_credentials')
           }
 
           if (!validateEmail(credentials.email)) {
-            console.log('[NEXTAUTH] Invalid email format');
             throw new AuthError('Invalid email format', 'invalid_credentials')
           }
 
           if (!validatePassword(credentials.password)) {
-            console.log('[NEXTAUTH] Password too short');
             throw new AuthError('Password must be at least 6 characters', 'invalid_credentials')
           }
-
-          console.log(`[NEXTAUTH] Validations passed, authenticating user: ${credentials.email}`);
           
           const result = await authenticateUser(
             credentials.email,
@@ -57,13 +50,10 @@ export const authOptions: AuthOptions = {
           );
 
           if (!result.success || !result.data) {
-            console.log(`[NEXTAUTH] Authentication failed: ${result.error?.message || 'Unknown error'}`);
             return null;
           }
 
-          console.log(`[NEXTAUTH] User authenticated successfully: ${credentials.email}`);
-          
-          // Ensure we return a proper User object
+          // Return user object
           return {
             id: result.data.id,
             email: result.data.email,
@@ -71,18 +61,7 @@ export const authOptions: AuthOptions = {
             roles: result.data.roles ?? [],
           };
         } catch (error) {
-          console.error('[NEXTAUTH] Authentication error:', error);
-          
-          // Log more details about the error
-          if (error instanceof Error) {
-            console.error('[NEXTAUTH] Error details:', {
-              name: error.name,
-              message: error.message,
-              stack: error.stack?.split('\n').slice(0, 3).join('\n')
-            });
-          }
-          
-          // Return null to display the default error UI
+          console.error('Authentication error:', error);
           return null;
         }
       },
