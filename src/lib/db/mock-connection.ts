@@ -5,20 +5,27 @@
  * to prevent unnecessary connection attempts during build time.
  */
 import { EventEmitter } from 'events';
-import mongoose, { Connection } from 'mongoose';
+import mongoose, { Connection, ClientSession, ConnectOptions, ConnectionStates } from 'mongoose';
 import { Logger } from './connection-manager';
 
 // Mock connection class to simulate a Mongoose connection
-class MockConnection extends EventEmitter implements Partial<Connection> {
-  // Implement minimal required properties to satisfy the Connection interface
-  readyState = 1; // Always connected
+class MockConnection extends EventEmitter implements Connection {
+  // Implement required properties from Connection interface
+  readyState: ConnectionStates = 1; // Always connected (1 = connected)
   models = {};
   collections = {};
-  config = {};
+  config: any = {};
   id = 'mock-connection';
   name = 'mock';
   host = 'localhost';
   port = 27017;
+  user = undefined;
+  pass = undefined;
+  activeConnection = null;
+  states = mongoose.ConnectionStates;
+  client: any = null;
+
+  // Mock database object
   db: any = {
     // Mock basic database methods
     admin: () => ({
@@ -60,16 +67,105 @@ class MockConnection extends EventEmitter implements Partial<Connection> {
     databaseName: 'mock_subscriptions'
   };
 
-  // Add basic required methods
+  // Add required methods from Connection interface
   constructor() {
     super();
     this.setMaxListeners(0);
   }
 
-  // Mock close method
+  // Core connection methods
   async close(): Promise<void> {
     this.emit('close');
+    return Promise.resolve();
   }
+
+  async asPromise(): Promise<this> {
+    return Promise.resolve(this);
+  }
+
+  // Collection-related methods
+  collection(name: string, options?: any): any {
+    return {
+      name,
+      insertOne: async () => ({ insertedId: 'mock-id' }),
+      findOne: async () => null,
+      find: async () => ({ toArray: async () => [] }),
+      updateOne: async () => ({ modifiedCount: 1 }),
+      deleteOne: async () => ({ deletedCount: 1 })
+    };
+  }
+
+  model<T = any>(name: string, schema?: any, collection?: string | undefined, skipInit?: boolean | undefined): mongoose.Model<T> {
+    const MockModel: any = function() {};
+    
+    // Add static methods to the mock model
+    MockModel.find = jest.fn().mockResolvedValue([]);
+    MockModel.findOne = jest.fn().mockResolvedValue(null);
+    MockModel.findById = jest.fn().mockResolvedValue(null);
+    MockModel.create = jest.fn().mockResolvedValue({ _id: 'mock-id' });
+    MockModel.updateOne = jest.fn().mockResolvedValue({ modifiedCount: 1 });
+    MockModel.deleteOne = jest.fn().mockResolvedValue({ deletedCount: 1 });
+    MockModel.countDocuments = jest.fn().mockResolvedValue(0);
+    
+    return MockModel as any;
+  }
+
+  // Session-related methods
+  startSession(options?: any): Promise<ClientSession> {
+    const mockSession: Partial<ClientSession> = {
+      endSession: async () => {},
+      withTransaction: async (fn) => fn(mockSession as ClientSession),
+      abortTransaction: async () => {},
+      commitTransaction: async () => {},
+      startTransaction: async () => {},
+    };
+    return Promise.resolve(mockSession as ClientSession);
+  }
+
+  // Connection lifecycle methods
+  openUri(uri: string, options?: ConnectOptions): Promise<this> {
+    return Promise.resolve(this);
+  }
+
+  createConnection(uri: string, options?: ConnectOptions): Connection {
+    return this;
+  }
+
+  deleteModel(name: string): this {
+    return this;
+  }
+
+  destroy(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  // Mongoose feature methods
+  get modelNames(): string[] {
+    return [];
+  }
+
+  // Implement remaining methods to match interface
+  useDb(name: string, options?: any): Connection {
+    return this;
+  }
+
+  // Add stub methods for any other required methods
+  startSession = jest.fn().mockResolvedValue({
+    endSession: jest.fn(),
+    abortTransaction: jest.fn(),
+    commitTransaction: jest.fn(),
+    startTransaction: jest.fn(),
+  });
+
+  transaction = jest.fn().mockImplementation((fn) => Promise.resolve(fn({} as any)));
+  
+  watch = jest.fn().mockReturnValue({
+    on: jest.fn().mockReturnThis(),
+    close: jest.fn(),
+  });
+
+  // Database operation methods
+  aggregate = jest.fn().mockResolvedValue([]);
 }
 
 // Create a mock mongoose instance
@@ -110,7 +206,7 @@ class MockMongoose {
  * @param logger - Optional logger to use
  * @returns A mock connection object
  */
-export function getMockConnection(logger?: Logger): MockConnection {
+export function getMockConnection(logger?: Logger): Connection {
   if (logger) {
     logger.info('[MongoDB] Using mock connection for build environment');
   } else {
@@ -128,3 +224,36 @@ export function getMockConnection(logger?: Logger): MockConnection {
 export function getMockMongoose(): Partial<typeof mongoose> {
   return new MockMongoose() as any;
 }
+
+// Polyfill for jest functions in non-test environments
+const jest = {
+  fn: () => {
+    const fn = (...args: any[]) => {
+      fn.mock.calls.push(args);
+      return fn.mock.results[fn.mock.calls.length - 1]?.value;
+    };
+    fn.mock = {
+      calls: [],
+      results: [],
+      instances: [],
+    };
+    fn.mockReturnValue = (val: any) => {
+      fn.mock.results.push({ type: 'return', value: val });
+      return fn;
+    };
+    fn.mockResolvedValue = (val: any) => {
+      fn.mock.results.push({ type: 'return', value: Promise.resolve(val) });
+      return fn;
+    };
+    fn.mockImplementation = (implementation: (...args: any[]) => any) => {
+      const mockImplementationFn = (...args: any[]) => {
+        fn.mock.calls.push(args);
+        const result = implementation(...args);
+        fn.mock.results.push({ type: 'return', value: result });
+        return result;
+      };
+      return mockImplementationFn;
+    };
+    return fn;
+  }
+};
