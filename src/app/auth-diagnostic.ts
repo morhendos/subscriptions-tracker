@@ -4,7 +4,7 @@ import { CustomUser } from '@/types/auth';
 import bcrypt from 'bcryptjs';
 import { UserModel } from '@/models/user';
 import mongoose from 'mongoose';
-import { withConnection } from '@/lib/db';
+import { withConnection } from '@/lib/db/connection-fix'; // Using the fixed connection
 import { loadEnvVars, ensureEnvVars } from '@/lib/db/env-debug';
 
 // Load env vars at the module level to ensure they're available
