@@ -87,16 +87,35 @@ export async function diagnoseMongo() {
       await mongoose.connect(process.env.MONGODB_URI || '');
       console.log('[DIAGNOSTIC] Direct connection successful!');
       
+      // Check if connection and db are available
+      if (!mongoose.connection || !mongoose.connection.db) {
+        console.error('[DIAGNOSTIC] Connection established but db object is not available');
+        return {
+          success: false,
+          error: 'Connection established but database is not accessible'
+        };
+      }
+      
       // Check all collections
       const collections = await mongoose.connection.db.collections();
       console.log('[DIAGNOSTIC] Available collections:', collections.map(c => c.collectionName));
       
+      // Safely get the users collection
+      const usersCollection = mongoose.connection.db.collection('users');
+      if (!usersCollection) {
+        console.error('[DIAGNOSTIC] Users collection not found');
+        return {
+          success: false,
+          error: 'Users collection not found in database'
+        };
+      }
+      
       // Count users
-      const userCount = await mongoose.connection.db.collection('users').countDocuments();
+      const userCount = await usersCollection.countDocuments();
       console.log('[DIAGNOSTIC] User count in database:', userCount);
       
       // Get a sample user (without showing sensitive data)
-      const sampleUser = await mongoose.connection.db.collection('users').findOne({});
+      const sampleUser = await usersCollection.findOne({});
       if (sampleUser) {
         console.log('[DIAGNOSTIC] Sample user structure:');
         console.log('- ID:', sampleUser._id);
