@@ -1,6 +1,10 @@
 subscription-tracker/
+├── AUTH_DEBUGGING.md
 ├── AUTH_MIGRATION.md
+├── CONNECTION_MIGRATION.md
 ├── ENV_FIX.md
+├── LOGIN_FIX.md
+├── LOGIN_PROBLEM_SOLVED.md
 ├── MONGODB_MIGRATION.md
 ├── PRODUCTION_READINESS.md
 ├── README.md
@@ -31,6 +35,8 @@ subscription-tracker/
 │   │   │   ├── auth
 │   │   │   │   └── [...nextauth]
 │   │   │   │       └── route.ts
+│   │   │   ├── check-environment
+│   │   │   │   └── route.ts
 │   │   │   ├── health
 │   │   │   │   └── db
 │   │   │   │       ├── __tests__
@@ -58,6 +64,13 @@ subscription-tracker/
 │   │   │   │   └── page.tsx
 │   │   │   └── signout
 │   │   │       └── page.tsx
+│   │   ├── auth-actions.ts
+│   │   ├── auth-debug
+│   │   │   ├── README.md
+│   │   │   ├── create-test-user
+│   │   │   │   └── route.ts
+│   │   │   └── page.tsx
+│   │   ├── auth-diagnostic.ts
 │   │   ├── globals.css
 │   │   ├── layout.tsx
 │   │   ├── login
@@ -77,7 +90,9 @@ subscription-tracker/
 │   │   ├── auth
 │   │   │   ├── AuthLogo.tsx
 │   │   │   ├── AuthProvider.tsx
-│   │   │   └── LogoutButton.tsx
+│   │   │   ├── AuthenticatingSpinner.tsx
+│   │   │   ├── LogoutButton.tsx
+│   │   │   └── withAuth.tsx
 │   │   ├── common
 │   │   │   └── Section.tsx
 │   │   ├── error
@@ -127,15 +142,19 @@ subscription-tracker/
 │   │   │   ├── __tests__
 │   │   │   │   ├── atlas-config.test.ts
 │   │   │   │   ├── atlas-integration.test.ts
+│   │   │   │   ├── connection-manager.test.ts
 │   │   │   │   └── mongodb.test.ts
 │   │   │   ├── atlas-config.ts
 │   │   │   ├── check-env.ts
 │   │   │   ├── config.ts
+│   │   │   ├── connection-fix.ts
 │   │   │   ├── connection-manager.ts
 │   │   │   ├── env-debug.ts
 │   │   │   ├── error-handler.ts
 │   │   │   ├── index.ts
+│   │   │   ├── mock-connection.ts
 │   │   │   ├── mongodb.ts
+│   │   │   ├── simplified-connection.ts
 │   │   │   ├── test-connection.ts
 │   │   │   └── test.ts
 │   │   ├── monitoring
