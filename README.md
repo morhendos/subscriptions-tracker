@@ -62,12 +62,38 @@ The application has robust MongoDB connection handling that:
 
 For detailed MongoDB setup instructions, see [MongoDB Setup Guide](./docs/MONGODB_SETUP.md).
 
+### Authentication
+
+The application uses Next Auth with a Credentials provider connected to MongoDB. Key features include:
+
+- Secure password hashing with bcrypt
+- JWT-based session management
+- User profile management
+- Protected routes
+
+#### Troubleshooting Authentication
+
+If you encounter authentication issues:
+
+1. Check that MongoDB is running properly
+2. Verify environment variables are set correctly
+3. Make sure the database has user records
+
+In development, you can use the authentication debug endpoint:
+```bash
+curl http://localhost:3000/api/auth-debug
+```
+
+For production issues, see [Authentication Fix Documentation](./docs/AUTH_FIX.md).
+
 ### Production Setup
 
 The application uses MongoDB Atlas in production. Required environment variables in Vercel:
 
 ```env
 MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/subscriptions?retryWrites=true&w=majority
+NEXTAUTH_URL=https://your-production-url.com
+NEXTAUTH_SECRET=<your-secret-key>
 ```
 
 Additional MongoDB Atlas configuration:
@@ -75,6 +101,34 @@ Additional MongoDB Atlas configuration:
 - Performance monitoring and alerts
 - Connection pool monitoring
 - Slow query detection
+
+## Development Workflow
+
+### Branch Strategy
+
+We follow a feature branch workflow:
+
+1. Create a feature branch from main: `git checkout -b feature/new-feature`
+2. Make your changes and commit them
+3. Push your branch: `git push origin feature/new-feature`
+4. Create a pull request to merge into main
+
+Important: Never push directly to main as it's connected to production auto-deployment.
+
+### Testing
+
+Run tests to ensure your changes don't break existing functionality:
+
+```bash
+# Test database connection
+npm run test:connection
+
+# Test storage implementation
+npm run test:storage
+
+# Test subscription model
+npm run test:model
+```
 
 ## Health Monitoring
 
@@ -101,12 +155,13 @@ API endpoints are protected with rate limiting:
 
 ## Troubleshooting
 
-For common issues and their solutions, refer to the [MongoDB Setup Guide](./docs/MONGODB_SETUP.md#common-issues-and-solutions). This includes:
+For common issues and their solutions, refer to the [MongoDB Setup Guide](./docs/MONGODB_SETUP.md#common-issues-and-solutions) and [Authentication Fix Documentation](./docs/AUTH_FIX.md). These guides cover:
 
 - Connection string format problems
 - Authentication issues
 - Connection timeouts
 - Database name validation errors
+- Login failures in production
 
 ## Recent Improvements
 
@@ -114,3 +169,4 @@ For common issues and their solutions, refer to the [MongoDB Setup Guide](./docs
 - Robust URI parsing and normalization
 - Improved error handling throughout the application
 - Comprehensive documentation for setup and troubleshooting
+- Fixed authentication issues in production environments
