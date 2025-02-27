@@ -18,6 +18,42 @@ import mongoose, {
 } from 'mongoose';
 import { Logger } from './connection-manager';
 
+// Polyfill for jest functions in non-test environments
+const jest = {
+  fn: () => {
+    const fn = (...args: any[]) => {
+      fn.mock.calls.push(args);
+      return fn.mock.results[fn.mock.calls.length - 1]?.value;
+    };
+    fn.mock = {
+      calls: [],
+      results: [],
+      instances: [],
+    };
+    fn.mockReturnValue = (val: any) => {
+      fn.mock.results.push({ type: 'return', value: val });
+      return fn;
+    };
+    fn.mockResolvedValue = (val: any) => {
+      fn.mock.results.push({ type: 'return', value: Promise.resolve(val) });
+      return fn;
+    };
+    fn.mockImplementation = (implementation: (...args: any[]) => any) => {
+      const mockImplementationFn = (...args: any[]) => {
+        fn.mock.calls.push(args);
+        const result = implementation(...args);
+        fn.mock.results.push({ type: 'return', value: result });
+        return result;
+      };
+      return mockImplementationFn;
+    };
+    fn.mockReturnThis = () => {
+      return fn;
+    };
+    return fn;
+  }
+};
+
 // Mock connection class to simulate a Mongoose connection
 class MockConnection extends EventEmitter implements Connection {
   // Implement required properties from Connection interface
@@ -168,8 +204,9 @@ class MockConnection extends EventEmitter implements Connection {
   // Other mock methods
   transaction = jest.fn().mockImplementation((fn) => Promise.resolve(fn({} as any)));
   
+  // Watch method with updated implementation
   watch = jest.fn().mockReturnValue({
-    on: jest.fn().mockReturnThis(),
+    on: jest.fn().mockReturnValue({}),
     close: jest.fn(),
   });
 
@@ -327,36 +364,3 @@ export function getMockConnection(logger?: Logger): Connection {
 export function getMockMongoose(): Partial<typeof mongoose> {
   return new MockMongoose() as any;
 }
-
-// Polyfill for jest functions in non-test environments
-const jest = {
-  fn: () => {
-    const fn = (...args: any[]) => {
-      fn.mock.calls.push(args);
-      return fn.mock.results[fn.mock.calls.length - 1]?.value;
-    };
-    fn.mock = {
-      calls: [],
-      results: [],
-      instances: [],
-    };
-    fn.mockReturnValue = (val: any) => {
-      fn.mock.results.push({ type: 'return', value: val });
-      return fn;
-    };
-    fn.mockResolvedValue = (val: any) => {
-      fn.mock.results.push({ type: 'return', value: Promise.resolve(val) });
-      return fn;
-    };
-    fn.mockImplementation = (implementation: (...args: any[]) => any) => {
-      const mockImplementationFn = (...args: any[]) => {
-        fn.mock.calls.push(args);
-        const result = implementation(...args);
-        fn.mock.results.push({ type: 'return', value: result });
-        return result;
-      };
-      return mockImplementationFn;
-    };
-    return fn;
-  }
-};
