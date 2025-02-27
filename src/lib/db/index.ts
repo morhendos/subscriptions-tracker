@@ -10,6 +10,8 @@ import MongoConnectionManager, { ConnectionOptions, Logger } from './connection-
 import { handleMongoError, logMongoError, MongoDBError, MongoDBErrorCode } from './error-handler';
 import { dbConfig } from '@/config/database';
 import { normalizeMongoURI, getSanitizedURI } from '@/utils/mongodb-utils';
+import { shouldSkipDatabaseConnection, isDatabaseTestRoute } from './build-detection';
+import { getMockConnection } from './mock-connection';
 
 /**
  * Get a MongoDB connection
@@ -18,6 +20,20 @@ import { normalizeMongoURI, getSanitizedURI } from '@/utils/mongodb-utils';
  * @returns A promise resolving to a mongoose connection
  */
 export async function getConnection(options?: ConnectionOptions): Promise<mongoose.Connection> {
+  // Skip real DB connection during build/static generation
+  if (shouldSkipDatabaseConnection() && !isDatabaseTestRoute()) {
+    const logger = options?.logger || { 
+      info: console.info, 
+      debug: console.debug, 
+      warn: console.warn, 
+      error: console.error 
+    };
+
+    logger.info('[MongoDB] Using mock connection - database connections are skipped during static build');
+    return getMockConnection(logger as Logger);
+  }
+
+  // Otherwise use real connection manager
   const manager = MongoConnectionManager.getInstance(options);
   return manager.getConnection(options);
 }
@@ -32,6 +48,23 @@ export async function getDirectConnection(options?: ConnectionOptions): Promise<
   connection: mongoose.Connection;
   cleanup: () => Promise<void>;
 }> {
+  // Skip real DB connection during build/static generation
+  if (shouldSkipDatabaseConnection() && !isDatabaseTestRoute()) {
+    const logger = options?.logger || { 
+      info: console.info, 
+      debug: console.debug, 
+      warn: console.warn, 
+      error: console.error 
+    };
+
+    logger.info('[MongoDB] Using mock direct connection - database connections are skipped during static build');
+    
+    return {
+      connection: getMockConnection(logger as Logger),
+      cleanup: async () => { /* No-op */ },
+    };
+  }
+
   const manager = MongoConnectionManager.getInstance();
   
   try {
@@ -78,6 +111,11 @@ export async function withConnection<T>(
  * Useful for application shutdown or tests
  */
 export async function disconnectAll(): Promise<void> {
+  // Skip during build
+  if (shouldSkipDatabaseConnection()) {
+    return;
+  }
+  
   await MongoConnectionManager.disconnectAll();
 }
 
@@ -92,7 +130,19 @@ export async function getDatabaseHealth(): Promise<{
   metrics?: Record<string, any>;
   message?: string;
   timestamp: string;
+  buildEnvironment?: boolean;
 }> {
+  // Return mock health data during build
+  if (shouldSkipDatabaseConnection()) {
+    return {
+      status: 'healthy',
+      latency: 0,
+      timestamp: new Date().toISOString(),
+      message: 'Mock database connection for build environment',
+      buildEnvironment: true
+    };
+  }
+
   const manager = MongoConnectionManager.getInstance();
   const startTime = Date.now();
   
@@ -138,6 +188,9 @@ export function createLogger(prefix: string): Logger {
     error: (message: string, ...args: any[]) => console.error(`[${prefix}] ${message}`, ...args),
   };
 }
+
+// Export build detection utils
+export * from './build-detection';
 
 // Export classes and functions
 export {
