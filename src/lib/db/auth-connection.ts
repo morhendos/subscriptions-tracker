@@ -84,7 +84,8 @@ export async function getAuthConnection(): Promise<mongoose.Connection> {
     .then(() => {
       authConnection = mongoose.connection;
       console.log('[AUTH DB] MongoDB connection established successfully.');
-      console.log(`[AUTH DB] Connected to database: ${authConnection.db.databaseName}`);
+      // Use optional chaining to prevent TypeScript error
+      console.log(`[AUTH DB] Connected to database: ${authConnection?.db?.databaseName || 'unknown'}`);
       
       // Listen for disconnect events
       authConnection.on('disconnected', () => {
