@@ -2,7 +2,7 @@ import { AuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { AUTH_CONFIG } from './config'
 import { AuthError, validateEmail, validatePassword } from './validation'
-import { authenticateUser } from '@/app/actions'
+import { authenticateUser } from '@/app/auth-actions' // Using our fixed version
 import { CustomUser } from '@/types/auth'
 import { loadEnvVars, ensureEnvVars } from '@/lib/db/env-debug'
 
