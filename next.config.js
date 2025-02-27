@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverActions: true,
-  },
+  // Note: serverActions are enabled by default in Next.js 14+
   env: {
     // Set flag during build to detect static build environment
     // This is used by the build-detection utility
