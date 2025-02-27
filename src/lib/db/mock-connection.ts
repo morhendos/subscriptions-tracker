@@ -14,11 +14,7 @@ import mongoose, {
   Model,
   CompileModelOptions,
   Document,
-  Collection,
-  CollectionOptions,
-  IndexDefinition,
-  IndexOptions,
-  InferSchemaType
+  Collection
 } from 'mongoose';
 import { Logger } from './connection-manager';
 
@@ -188,7 +184,7 @@ class MockConnection extends EventEmitter implements Connection {
   aggregate = jest.fn().mockResolvedValue([]);
 
   // Adding the missing methods from Connection interface
-  createCollection(name: string, options?: CollectionOptions): Promise<any> {
+  createCollection(name: string, options?: Record<string, any>): Promise<any> {
     return Promise.resolve({
       name,
       insertOne: async () => ({ insertedId: 'mock-id' }),
