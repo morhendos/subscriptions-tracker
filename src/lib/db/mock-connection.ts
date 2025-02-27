@@ -15,7 +15,7 @@ class MockConnection extends EventEmitter implements Connection {
   models = {};
   collections = {};
   config: any = {};
-  id = 'mock-connection';
+  id = 999; // Mock connection ID as a number
   name = 'mock';
   host = 'localhost';
   port = 27017;
