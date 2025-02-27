@@ -8,7 +8,7 @@ export interface IStorageProvider {
 export class StorageError extends Error {
   constructor(
     message: string,
-    public code: 'storage_unavailable' | 'parse_error' | 'write_error' | 'read_error'
+    public code: 'storage_unavailable' | 'parse_error' | 'write_error' | 'read_error' | 'delete_error' | 'clear_error'
   ) {
     super(message);
     this.name = 'StorageError';
