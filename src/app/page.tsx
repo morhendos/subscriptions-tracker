@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AUTH_CONFIG } from '@/lib/auth/config';
+import { AuthenticatingSpinner } from '@/components/auth/AuthenticatingSpinner';
 
 export default function HomePage() {
   const { status } = useSession();
@@ -25,6 +26,6 @@ export default function HomePage() {
     }
   }, [status, isClient]);
 
-  // Show nothing while determining redirect
-  return null;
+  // Show loading spinner while checking authentication
+  return <AuthenticatingSpinner />;
 }
