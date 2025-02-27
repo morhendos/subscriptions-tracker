@@ -90,14 +90,18 @@ export const isDevelopment = process.env.NODE_ENV === 'development';
 export const isProduction = process.env.NODE_ENV === 'production';
 export const isTest = process.env.NODE_ENV === 'test';
 
-// Build time detection
-// Next.js sets this environment variable during build
-export const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || 
-                         process.env.NEXT_PHASE === 'phase-export';
+// Build time detection - multiple ways to detect
+export const isBuildTime = 
+  // Check Next.js phase env var
+  process.env.NEXT_PHASE?.includes('build') || 
+  process.env.NEXT_PHASE === 'phase-export' || 
+  // Check custom flag from next.config.js
+  process.env.IS_BUILD_TIME === 'true';
 
 // Static generation detection (important for preventing DB connections during build)
-export const isStaticGeneration = typeof process !== 'undefined' && 
-                               process.env.NEXT_PHASE !== undefined;
+export const isStaticGeneration = 
+  isBuildTime || 
+  typeof process !== 'undefined' && process.env.NEXT_PHASE !== undefined;
 
 /**
  * Default MongoDB configuration values for production environment
