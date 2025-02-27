@@ -33,13 +33,39 @@ function ErrorAlert({ message }: { message: string }) {
   );
 }
 
+// Map technical error codes to user-friendly messages
+const getErrorMessage = (errorCode: string | null | undefined): string => {
+  if (!errorCode) return "An unexpected error occurred. Please try again.";
+  
+  const errorMessages: Record<string, string> = {
+    CredentialsSignin: "Invalid email or password. Please check your credentials and try again.",
+    Default: "An error occurred during authentication. Please try again.",
+    OAuthSignin: "Error starting the sign-in process. Please try again.",
+    OAuthCallback: "Error during the sign-in process. Please try again.",
+    OAuthCreateAccount: "Error creating an account. Please try again.",
+    EmailCreateAccount: "Error creating an account. Please try again.",
+    Callback: "Error during the sign-in process. Please try again.",
+    OAuthAccountNotLinked: "This email is already associated with another account.",
+    EmailSignin: "Error sending the sign-in email. Please try again.",
+    SessionRequired: "Please sign in to access this page.",
+    AccessDenied: "Access denied. You do not have permission to access this resource."
+  };
+
+  return errorMessages[errorCode] || errorMessages.Default;
+};
+
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
+  // Check for error in URL (e.g., redirected from protected page)
+  const urlError = searchParams.get("error");
 
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<FormErrors>({});
+  const [errors, setErrors] = useState<FormErrors>(() => {
+    // Initialize with URL error if present
+    return urlError ? { general: getErrorMessage(urlError) } : {};
+  });
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   const validateForm = useCallback(
@@ -88,7 +114,7 @@ function LoginPageContent() {
 
       if (!result?.ok) {
         setErrors({
-          general: result?.error || "Authentication failed",
+          general: getErrorMessage(result?.error),
         });
         return;
       }
