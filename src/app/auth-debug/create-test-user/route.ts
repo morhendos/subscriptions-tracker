@@ -3,18 +3,40 @@ import { UserModel } from '@/models/user';
 import { withConnection } from '@/lib/db/connection-fix'; // Using the fixed connection
 import bcrypt from 'bcryptjs';
 
+// Function to check if auth debug is allowed
+function isAuthDebugAllowed(): boolean {
+  // Allow in development mode always
+  if (process.env.NODE_ENV === 'development') {
+    return true;
+  }
+  
+  // Check for explicit environment variable to enable in production/testing
+  if (process.env.ALLOW_AUTH_DEBUG === 'true') {
+    console.warn('[WARNING] Auth debug endpoints are enabled in production. This should only be used temporarily.');
+    return true;
+  }
+  
+  return false;
+}
+
 // This is a debug-only route that should NOT be used in production
 export async function POST(request: NextRequest) {
-  // Only allow in development mode
-  if (process.env.NODE_ENV !== 'development') {
-    return NextResponse.json({ error: 'This endpoint is only available in development mode' }, { status: 403 });
+  // Check if auth debug is allowed
+  if (!isAuthDebugAllowed()) {
+    return NextResponse.json({ 
+      success: false,
+      error: 'This endpoint is only available in development mode or when explicitly enabled with ALLOW_AUTH_DEBUG=true' 
+    }, { status: 403 });
   }
   
   try {
     const { email, password, name } = await request.json();
     
     if (!email || !password) {
-      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+      return NextResponse.json({ 
+        success: false,
+        error: 'Email and password are required' 
+      }, { status: 400 });
     }
     
     // Check if a user with this email already exists
@@ -24,6 +46,7 @@ export async function POST(request: NextRequest) {
     
     if (existingUser) {
       return NextResponse.json({ 
+        success: false,
         error: 'User already exists', 
         user: {
           id: existingUser._id.toString(),
@@ -62,6 +85,7 @@ export async function POST(request: NextRequest) {
     console.error('Error creating test user:', error);
     
     return NextResponse.json({
+      success: false,
       error: 'Failed to create test user',
       details: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
