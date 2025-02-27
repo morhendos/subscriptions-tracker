@@ -8,8 +8,9 @@
 import mongoose from 'mongoose';
 import MongoConnectionManager, { ConnectionOptions, Logger } from './connection-manager';
 import { handleMongoError, logMongoError, MongoDBError, MongoDBErrorCode } from './error-handler';
-import { dbConfig } from '@/config/database';
+import { dbConfig, shouldUseMockDb } from '@/config/database';
 import { normalizeMongoURI, getSanitizedURI } from '@/utils/mongodb-utils';
+import { getMockConnection } from './mock-connection';
 
 /**
  * Get a MongoDB connection
@@ -18,6 +19,13 @@ import { normalizeMongoURI, getSanitizedURI } from '@/utils/mongodb-utils';
  * @returns A promise resolving to a mongoose connection
  */
 export async function getConnection(options?: ConnectionOptions): Promise<mongoose.Connection> {
+  // Check if we should use a mock connection (during build or static generation)
+  if (shouldUseMockDb()) {
+    console.info('[MongoDB] Using mock connection for build/static generation');
+    return getMockConnection(options?.logger);
+  }
+
+  // Use a real connection for runtime
   const manager = MongoConnectionManager.getInstance(options);
   return manager.getConnection(options);
 }
@@ -32,6 +40,15 @@ export async function getDirectConnection(options?: ConnectionOptions): Promise<
   connection: mongoose.Connection;
   cleanup: () => Promise<void>;
 }> {
+  // Check if we should use a mock connection (during build or static generation)
+  if (shouldUseMockDb()) {
+    console.info('[MongoDB] Using mock direct connection for build/static generation');
+    return {
+      connection: getMockConnection(options?.logger), 
+      cleanup: async () => Promise.resolve()
+    };
+  }
+
   const manager = MongoConnectionManager.getInstance();
   
   try {
@@ -78,6 +95,11 @@ export async function withConnection<T>(
  * Useful for application shutdown or tests
  */
 export async function disconnectAll(): Promise<void> {
+  if (shouldUseMockDb()) {
+    // No real connections to disconnect in mock mode
+    return Promise.resolve();
+  }
+  
   await MongoConnectionManager.disconnectAll();
 }
 
@@ -93,6 +115,21 @@ export async function getDatabaseHealth(): Promise<{
   message?: string;
   timestamp: string;
 }> {
+  // In build/static generation, return mock health info
+  if (shouldUseMockDb()) {
+    return {
+      status: 'healthy',
+      latency: 0,
+      timestamp: new Date().toISOString(),
+      message: 'Using mock database connection',
+      metrics: {
+        mock: true,
+        environment: process.env.NODE_ENV,
+        buildPhase: process.env.NEXT_PHASE || 'unknown'
+      }
+    };
+  }
+
   const manager = MongoConnectionManager.getInstance();
   const startTime = Date.now();
   
