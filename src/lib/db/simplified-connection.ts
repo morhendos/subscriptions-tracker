@@ -37,8 +37,8 @@ export async function getConnection(): Promise<mongoose.Connection> {
     .then(() => {
       connection = mongoose.connection;
       
-      // Log database name for debugging
-      console.log(`[DB] Connected to database: ${connection.db.databaseName}`);
+      // Log database name for debugging - use optional chaining to avoid TypeScript errors
+      console.log(`[DB] Connected to database: ${connection?.db?.databaseName || 'unknown'}`);
       
       // Listen for disconnect events
       connection.on('disconnected', () => {
