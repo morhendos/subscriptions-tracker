@@ -138,13 +138,13 @@ class MockConnection extends EventEmitter implements Connection {
     return Promise.resolve(mockSession as ClientSession);
   }
 
-  // Connection lifecycle methods - fixed return type
+  // Connection lifecycle methods - fixed return type and casting
   openUri(uri: string, options?: ConnectOptions): Promise<Connection> {
-    return Promise.resolve(this);
+    return Promise.resolve(this as unknown as Connection);
   }
 
   createConnection(uri: string, options?: ConnectOptions): Connection {
-    return this;
+    return this as unknown as Connection;
   }
 
   deleteModel(name: string): this {
@@ -162,7 +162,7 @@ class MockConnection extends EventEmitter implements Connection {
 
   // Implement remaining methods to match interface
   useDb(name: string, options?: any): Connection {
-    return this;
+    return this as unknown as Connection;
   }
 
   // Add stub methods for any other required methods
@@ -183,7 +183,8 @@ class MockConnection extends EventEmitter implements Connection {
   // Database operation methods
   aggregate = jest.fn().mockResolvedValue([]);
 
-  // Adding the missing methods from Connection interface
+  // Adding more missing methods from Connection interface
+  // Collection methods
   createCollection(name: string, options?: Record<string, any>): Promise<any> {
     return Promise.resolve({
       name,
@@ -212,6 +213,37 @@ class MockConnection extends EventEmitter implements Connection {
     return Promise.resolve([]);
   }
 
+  // More missing methods
+  get(key: string): any {
+    return null;
+  }
+
+  set(key: string, value: any): any {
+    return value;
+  }
+
+  getClient(): any {
+    return {};
+  }
+
+  listDatabases(options?: Record<string, any>): Promise<any> {
+    return Promise.resolve([
+      { name: 'admin', sizeOnDisk: 0 },
+      { name: 'local', sizeOnDisk: 0 },
+      { name: 'mock_subscriptions', sizeOnDisk: 0 }
+    ]);
+  }
+
+  plugin(fn: Function, options?: Record<string, any>): this {
+    return this;
+  }
+
+  // Index methods
+  createIndex(name: string, fields: any, options?: Record<string, any>): Promise<any> {
+    return Promise.resolve("mock-index-name");
+  }
+
+  // Event handling methods (extend from EventEmitter)
   on(event: string | symbol, listener: (...args: any[]) => void): this {
     super.on(event, listener);
     return this;
@@ -232,7 +264,7 @@ class MockConnection extends EventEmitter implements Connection {
     return this;
   }
 
-  // Additional required methods
+  // Promise-like methods
   get then(): undefined {
     return undefined;
   }
