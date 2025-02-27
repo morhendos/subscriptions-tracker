@@ -29,6 +29,11 @@ export function createRateLimit(config: Partial<RateLimitConfig> = {}) {
   const { maxRequests, windowMs } = { ...defaultConfig, ...config };
 
   return async function rateLimit(request: NextRequest) {
+    // Skip rate limiting for non-production environments unless forced
+    if (process.env.NODE_ENV !== 'production' && !process.env.FORCE_RATE_LIMIT) {
+      return null;
+    }
+    
     const headersList = getHeaders();
     
     // Get client identifier (IP address or API key)
@@ -36,6 +41,12 @@ export function createRateLimit(config: Partial<RateLimitConfig> = {}) {
                     headersList.get('x-forwarded-for') || 
                     headersList.get('x-real-ip') ||
                     'unknown';
+
+    // Skip rate limiting for development hosts
+    const host = request.headers.get('host') || '';
+    if (host.includes('localhost') || host.includes('127.0.0.1')) {
+      return null;
+    }
 
     const now = Date.now();
     const rateLimitInfo = rateLimitStore.get(clientId) || { requests: 0, startTime: now };
