@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { withConnection } from "@/lib/db/simplified-connection";
-import { UserModel } from "@/models/user";
+import { UserModel, UserDocument } from "@/models/user";
 import { loadEnvVars } from "@/lib/db/env-debug";
 
 // Load environment variables
@@ -46,7 +46,8 @@ export async function GET(request: NextRequest) {
     
     try {
       const users = await withConnection(async () => {
-        return UserModel.find().lean();
+        // Using regular find() instead of lean() to ensure we get proper document types
+        return UserModel.find({});
       });
       
       userCount = users.length;
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
       
       // Sanitize user data for security (remove sensitive fields)
       const sanitizedUsers = users.map(user => ({
-        id: user._id.toString(),
+        id: user._id.toString(), // This is now properly typed
         email: user.email,
         name: user.name,
         createdAt: user.createdAt
