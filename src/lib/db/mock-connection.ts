@@ -19,8 +19,8 @@ class MockConnection extends EventEmitter implements Connection {
   name = 'mock';
   host = 'localhost';
   port = 27017;
-  user = undefined;
-  pass = undefined;
+  user = ''; // Changed from undefined to empty string to match Connection interface
+  pass = ''; // Changed from undefined to empty string to match Connection interface
   activeConnection = null;
   states = mongoose.ConnectionStates;
   client: any = null;
