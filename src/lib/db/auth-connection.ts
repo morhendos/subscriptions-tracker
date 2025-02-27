@@ -16,6 +16,34 @@ let authConnection: mongoose.Connection | null = null;
 let connectionPromise: Promise<mongoose.Connection> | null = null;
 
 /**
+ * Normalize a MongoDB URI
+ * 
+ * This function ensures the URI has the correct database name.
+ * It specifically addresses the issue where connections might be using
+ * the 'test' database instead of 'subscriptions' in production.
+ */
+export function normalizeMongoUri(uri: string): string {
+  // If the URI already includes 'subscriptions', don't modify it
+  if (uri.includes('/subscriptions')) {
+    return uri;
+  }
+  
+  // Check if URI has a database segment
+  const uriParts = uri.split('/');
+  
+  // If the URI has a database name specified (after the last slash)
+  if (uriParts.length > 3) {
+    // Get the base URI without the database name
+    const baseUri = uriParts.slice(0, -1).join('/');
+    // Ensure we use the 'subscriptions' database
+    return `${baseUri}/subscriptions`;
+  }
+  
+  // If no database is specified, append 'subscriptions'
+  return `${uri}/subscriptions`;
+}
+
+/**
  * Get a MongoDB connection specifically for authentication operations
  */
 export async function getAuthConnection(): Promise<mongoose.Connection> {
@@ -29,21 +57,12 @@ export async function getAuthConnection(): Promise<mongoose.Connection> {
     return connectionPromise;
   }
   
-  // Normalize MongoDB URI
-  let mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/subscriptions';
+  // Get and normalize MongoDB URI
+  const originalUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/subscriptions';
+  const normalizedUri = normalizeMongoUri(originalUri);
   
-  // Add database name if missing
-  if (!mongoUri.includes('/subscriptions')) {
-    // Check if URI already has a database
-    if (mongoUri.lastIndexOf('/') > 10) { // 10 is a heuristic to avoid confusing protocol slashes
-      // Replace existing database with 'subscriptions'
-      const baseUri = mongoUri.substring(0, mongoUri.lastIndexOf('/'));
-      mongoUri = `${baseUri}/subscriptions`;
-    } else {
-      // Append 'subscriptions' database
-      mongoUri = `${mongoUri}/subscriptions`;
-    }
-  }
+  // Log the database being used (without exposing full URI for security)
+  console.log(`[AUTH DB] Using database: ${normalizedUri.split('/').pop()?.split('?')[0] || 'unknown'}`);
   
   // Configure connection options with improved settings for authentication
   const options: mongoose.ConnectOptions = {
@@ -61,10 +80,11 @@ export async function getAuthConnection(): Promise<mongoose.Connection> {
   // Start a new connection with detailed logging
   console.log('[AUTH DB] Establishing MongoDB connection for authentication...');
   
-  connectionPromise = mongoose.connect(mongoUri, options)
+  connectionPromise = mongoose.connect(normalizedUri, options)
     .then(() => {
       authConnection = mongoose.connection;
       console.log('[AUTH DB] MongoDB connection established successfully.');
+      console.log(`[AUTH DB] Connected to database: ${authConnection.db.databaseName}`);
       
       // Listen for disconnect events
       authConnection.on('disconnected', () => {
