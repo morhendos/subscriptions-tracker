@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { SubscriptionModel } from '@/models/subscription';
 import { Subscription } from '@/types/subscriptions';
 import mongoose from 'mongoose';
-import { withConnection, handleMongoError, logMongoError } from '@/lib/db';
+import { withConnection, safeSerialize } from '@/lib/db/simplified-connection';
 
 const STORAGE_KEY_PREFIX = 'subscriptions';
 
@@ -31,8 +31,16 @@ export async function GET(request: NextRequest) {
     const subscriptions = await withConnection(async () => {
       return SubscriptionModel.find({ userId })
         .sort({ nextBillingDate: 1 })
-        .lean();
+        .lean()
+        .exec();
     });
+
+    if (!subscriptions) {
+      return NextResponse.json(
+        { error: 'Failed to retrieve subscriptions data' }, 
+        { status: 500 }
+      );
+    }
 
     const result = subscriptions.map((sub): Subscription => ({
       id: (sub._id as mongoose.Types.ObjectId).toString(),
@@ -50,11 +58,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    logMongoError(error, 'Storage API GET');
+    console.error('Storage API GET error:', error);
     
-    const mongoError = handleMongoError(error, 'Failed to read data');
     return NextResponse.json(
-      { error: mongoError.message },
+      { error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -119,11 +126,10 @@ export async function POST(request: NextRequest) {
       subscriptions: result 
     });
   } catch (error) {
-    logMongoError(error, 'Storage API POST');
+    console.error('Storage API POST error:', error);
     
-    const mongoError = handleMongoError(error, 'Failed to write data');
     return NextResponse.json(
-      { error: mongoError.message },
+      { error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -149,11 +155,10 @@ export async function DELETE(request: NextRequest) {
     
     return NextResponse.json({ success: true });
   } catch (error) {
-    logMongoError(error, 'Storage API DELETE');
+    console.error('Storage API DELETE error:', error);
     
-    const mongoError = handleMongoError(error, 'Failed to delete data');
     return NextResponse.json(
-      { error: mongoError.message },
+      { error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

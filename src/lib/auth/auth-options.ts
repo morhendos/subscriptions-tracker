@@ -2,7 +2,7 @@ import { AuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { AUTH_CONFIG } from './config'
 import { AuthError, validateEmail, validatePassword } from './validation'
-import { authenticateUser } from '@/app/actions'
+import { authenticateUser } from '@/app/auth-actions'
 import { CustomUser } from '@/types/auth'
 import { loadEnvVars, ensureEnvVars } from '@/lib/db/env-debug'
 
@@ -43,7 +43,7 @@ export const authOptions: AuthOptions = {
           if (!validatePassword(credentials.password)) {
             throw new AuthError('Password must be at least 6 characters', 'invalid_credentials')
           }
-
+          
           const result = await authenticateUser(
             credentials.email,
             credentials.password
@@ -53,7 +53,7 @@ export const authOptions: AuthOptions = {
             return null;
           }
 
-          // Ensure we return a proper User object
+          // Return user object
           return {
             id: result.data.id,
             email: result.data.email,
@@ -61,7 +61,7 @@ export const authOptions: AuthOptions = {
             roles: result.data.roles ?? [],
           };
         } catch (error) {
-          console.error('[NEXTAUTH] Authentication error:', error);
+          console.error('Authentication error:', error);
           return null;
         }
       },

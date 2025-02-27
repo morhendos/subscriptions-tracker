@@ -205,9 +205,16 @@ export class MongoConnectionManager extends EventEmitter {
     const connection = cached.conn || (this.connections[0] ?? null);
     if (connection && connection.db) {
       try {
-        // Advanced metrics collection when admin access is available
+        // Set a timeout for metrics collection to avoid blocking
         const adminDb = connection.db.admin();
-        const serverStats = await adminDb.serverStatus();
+        
+        // Use Promise.race to apply a timeout to the stats collection
+        const statsPromise = adminDb.serverStatus();
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Metrics collection timed out')), 5000);
+        });
+        
+        const serverStats = await Promise.race([statsPromise, timeoutPromise]) as any;
         
         metrics.poolStats = {
           active: serverStats.connections.active,
@@ -249,8 +256,13 @@ export class MongoConnectionManager extends EventEmitter {
       
       const adminDb = connection.db.admin();
       
-      // Try to get current operations
-      const currentOp = await adminDb.command({ currentOp: 1, secs_running: { $gt: 1 } });
+      // Set a timeout for the slow operations check
+      const opPromise = adminDb.command({ currentOp: 1, secs_running: { $gt: 1 } });
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Slow operations check timed out')), 5000);
+      });
+      
+      const currentOp = await Promise.race([opPromise, timeoutPromise]) as any;
       
       if (currentOp && currentOp.inprog) {
         return currentOp.inprog
@@ -264,7 +276,7 @@ export class MongoConnectionManager extends EventEmitter {
           }));
       }
     } catch (error) {
-      // Don't log this - it's fine if we don't have permission to check
+      // Don't log this - it's fine if we don't have permission to check or it times out
     }
     
     return [];
@@ -327,10 +339,23 @@ export class MongoConnectionManager extends EventEmitter {
     }
 
     try {
-      // Wait for connection and store it in the cache
-      cached.conn = await cached.promise;
+      // Wait for connection with a timeout
+      const timeoutMs = options.timeoutMS || dbConfig.connectionTimeoutMS;
+      
+      const timeoutPromise = new Promise<Connection>((_, reject) => {
+        setTimeout(() => {
+          reject(new MongoDBError(
+            'Timeout waiting for pooled connection',
+            MongoDBErrorCode.CONNECTION_TIMEOUT
+          ));
+        }, timeoutMs);
+      });
+      
+      // Race the cached promise against the timeout
+      cached.conn = await Promise.race([cached.promise, timeoutPromise]);
       return cached.conn;
     } catch (error) {
+      // Clear the promise on error so we can retry
       cached.promise = null;
       throw error;
     }
@@ -436,18 +461,39 @@ export class MongoConnectionManager extends EventEmitter {
       let mongooseInstance: mongoose.Mongoose | null = null;
       let connection: Connection;
       
-      if (options.direct) {
-        // For direct connections, create a new Mongoose instance
-        mongooseInstance = new mongoose.Mongoose();
-        mongooseInstance.set('debug', mongoose.get('debug'));
-        
-        await mongooseInstance.connect(normalizedUri, connectionOptions);
-        connection = mongooseInstance.connection;
-      } else {
-        // For pooled connections, use the global mongoose instance
-        await mongoose.connect(normalizedUri, connectionOptions);
-        connection = mongoose.connection;
-      }
+      // Set timeout for connection attempt
+      const timeoutMs = options.timeoutMS || dbConfig.connectionTimeoutMS;
+      const connectionPromise = new Promise<Connection>(async (resolve, reject) => {
+        try {
+          if (options.direct) {
+            // For direct connections, create a new Mongoose instance
+            mongooseInstance = new mongoose.Mongoose();
+            mongooseInstance.set('debug', mongoose.get('debug'));
+            
+            await mongooseInstance.connect(normalizedUri, connectionOptions);
+            resolve(mongooseInstance.connection);
+          } else {
+            // For pooled connections, use the global mongoose instance
+            await mongoose.connect(normalizedUri, connectionOptions);
+            resolve(mongoose.connection);
+          }
+        } catch (error) {
+          reject(error);
+        }
+      });
+      
+      // Create a timeout promise
+      const timeoutPromise = new Promise<Connection>((_resolve, reject) => {
+        setTimeout(() => {
+          reject(new MongoDBError(
+            `Connection attempt timed out after ${timeoutMs}ms`,
+            MongoDBErrorCode.CONNECTION_TIMEOUT
+          ));
+        }, timeoutMs);
+      });
+      
+      // Race the connection promise against the timeout
+      connection = await Promise.race([connectionPromise, timeoutPromise]);
       
       this.logger.debug(`[MongoDB] Connected successfully to ${dbName}`);
       
@@ -459,10 +505,21 @@ export class MongoConnectionManager extends EventEmitter {
 
       return connection;
     } catch (error: any) {
+      // Check if this is a timeout error
+      const isTimeoutError = error.code === MongoDBErrorCode.CONNECTION_TIMEOUT || 
+                          error.message?.includes('timed out') ||
+                          error.message?.includes('timeout');
+      
+      // For timeout errors, increment timeout counter and retry differently
+      if (isTimeoutError) {
+        this.logger.warn(`[MongoDB] Connection attempt ${retryCount + 1} timed out`);
+      }
+      
       // Handle retry logic
       const maxRetries = options.maxReconnectAttempts ?? dbConfig.maxRetries;
       
       if (retryCount < maxRetries) {
+        // Calculate delay with exponential backoff
         const delay = dbConfig.retryDelayMS * Math.pow(2, retryCount);
         this.logger.warn(`[MongoDB] Connection attempt ${retryCount + 1} failed. Retrying in ${delay}ms...`);
         
@@ -513,8 +570,6 @@ export class MongoConnectionManager extends EventEmitter {
       retryReads: dbConfig.retryReads,
       ssl: dbConfig.ssl,
       authSource: dbConfig.authSource,
-      
-      // Compression - removed as it's not in dbConfig
     };
   }
 
@@ -738,8 +793,14 @@ export class MongoConnectionManager extends EventEmitter {
         throw new Error('Database connection not established');
       }
       
-      // Simple ping operation
-      await conn.db.admin().ping();
+      // Add timeout to ping operation
+      const pingPromise = conn.db.admin().ping();
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Health check timed out')), 5000);
+      });
+      
+      // Race the ping operation against the timeout
+      await Promise.race([pingPromise, timeoutPromise]);
       
       const latency = Date.now() - startTime;
       

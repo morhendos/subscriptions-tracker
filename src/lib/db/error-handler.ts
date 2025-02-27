@@ -94,6 +94,11 @@ export function getMongoErrorMessage(error: any): string {
     return `Mongoose Error: ${error.message}`;
   }
   
+  // Handle timeout errors - more thorough detection
+  if (isTimeoutError(error)) {
+    return `Database operation timed out. Please try again later.`;
+  }
+  
   // Handle our custom error
   if (error instanceof MongoDBError) {
     return error.message;
@@ -106,6 +111,42 @@ export function getMongoErrorMessage(error: any): string {
   
   // Handle unknown errors
   return String(error);
+}
+
+/**
+ * Check if an error is a timeout-related error
+ */
+function isTimeoutError(error: any): boolean {
+  if (!error) return false;
+  
+  // Check error message for timeout indicators
+  const errorMessage = error.message || String(error);
+  const timeoutIndicators = [
+    'timed out',
+    'timeout',
+    'ETIMEDOUT',
+    'ESOCKETTIMEDOUT',
+    'socket timeout',
+    'Server selection timed out',
+    'deadline expired',
+    'operation exceeded time limit',
+    'exceeded maximum execution time'
+  ];
+  
+  for (const indicator of timeoutIndicators) {
+    if (errorMessage.toLowerCase().includes(indicator.toLowerCase())) {
+      return true;
+    }
+  }
+  
+  // Check for timeout status codes
+  if (error.code === 50 || // MongoDB timeout
+     error.code === 'ECONNABORTED' || 
+     error.code === 'ETIMEDOUT') {
+    return true;
+  }
+  
+  return false;
 }
 
 /**
@@ -139,16 +180,16 @@ export function getMongoErrorCode(error: any): MongoDBErrorCode {
     return MongoDBErrorCode.VALIDATION_FAILED;
   }
   
+  // Handle timeout errors
+  if (isTimeoutError(error)) {
+    return MongoDBErrorCode.CONNECTION_TIMEOUT;
+  }
+  
   // Handle connection errors
   if (error.name === 'MongoNetworkError' || 
       error.message.includes('connect') || 
       error.message.includes('connection')) {
     return MongoDBErrorCode.CONNECTION_FAILED;
-  }
-  
-  // Handle timeout errors
-  if (error.message.includes('timed out')) {
-    return MongoDBErrorCode.CONNECTION_TIMEOUT;
   }
   
   // Handle invalid URI errors
@@ -179,6 +220,13 @@ export function handleMongoError(error: any, context?: string): MongoDBError {
   // Add context if provided
   if (context) {
     message = `${context}: ${message}`;
+  }
+  
+  // For timeout errors, always provide a clear user-friendly message
+  if (code === MongoDBErrorCode.CONNECTION_TIMEOUT) {
+    message = context 
+      ? `${context}: Database operation timed out. Please try again later.`
+      : 'Database operation timed out. Please try again later.';
   }
   
   return new MongoDBError(message, code, error);
