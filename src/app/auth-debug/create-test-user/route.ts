@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UserModel } from '@/models/user';
-import { withConnection } from '@/lib/db';
+import { withConnection } from '@/lib/db/connection-fix'; // Using the fixed connection
 import bcrypt from 'bcryptjs';
 
 // This is a debug-only route that should NOT be used in production
