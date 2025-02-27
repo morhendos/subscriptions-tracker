@@ -1,8 +1,23 @@
 import { NextResponse } from 'next/server';
-import { getConnection, disconnectAll, createLogger } from '@/lib/db';
+import { getConnection, disconnectAll, createLogger, shouldSkipDatabaseConnection } from '@/lib/db';
 
 export async function GET() {
   const logger = createLogger('TestDB-Alt');
+  
+  // Return mock response during build
+  if (shouldSkipDatabaseConnection()) {
+    logger.info('[Build] Providing mock response for database test during build');
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Mock direct MongoDB connection (build environment)',
+      serverInfo: {
+        version: '0.0.0-mock',
+        gitVersion: 'mock-build'
+      },
+      databases: ['admin', 'config', 'local', 'mock_subscriptions']
+    });
+  }
   
   try {
     logger.info('Testing direct MongoDB connection...');
