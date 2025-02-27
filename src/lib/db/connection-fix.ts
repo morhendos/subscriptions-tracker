@@ -1,12 +1,42 @@
 /**
  * MongoDB Connection Fix
  * 
- * This is a simplified version of the database connection utilities
- * that fixes the premature disconnection issues in the "Phase 2" code.
+ * This module fixes the critical issue in the Phase 2 connection manager where connections
+ * are being closed prematurely, causing "MongoNotConnectedError: Client must be connected 
+ * before running operations" errors.
+ * 
+ * WHAT WENT WRONG:
+ * 
+ * The Phase 2 connection manager implementation had these fundamental issues:
+ * 
+ * 1. The withConnection() function was creating and then immediately cleaning up connections,
+ *    not giving operations enough time to complete
+ * 
+ * 2. The cleanup() function was being called in the promise chain before database operations
+ *    were fully completed
+ * 
+ * 3. The direct connection mode created a new mongoose instance but then didn't wait for
+ *    operations to complete before disconnecting
+ * 
+ * 4. There was no proper connection pooling - each request created and destroyed
+ *    a new connection
+ * 
+ * THE SOLUTION:
+ * 
+ * This simplified implementation:
+ * 
+ * 1. Creates a SINGLETON connection that's reused across requests
+ * 
+ * 2. Only disconnects when explicitly told to (not automatically)
+ * 
+ * 3. Maintains an active connection throughout the application lifecycle
+ * 
+ * 4. Handles reconnection automatically and transparently
  */
 
 import mongoose from 'mongoose';
 
+// Global connection state
 let connection: mongoose.Connection | null = null;
 let connectionPromise: Promise<mongoose.Connection> | null = null;
 
@@ -56,6 +86,11 @@ export async function getConnection(): Promise<mongoose.Connection> {
 
 /**
  * Run an operation with a MongoDB connection
+ * 
+ * THE KEY DIFFERENCE:
+ * Unlike the original Phase 2 implementation that would immediately
+ * close connections after use, this implementation keeps the connection
+ * open for future operations, dramatically improving reliability.
  */
 export async function withConnection<T>(
   operation: () => Promise<T>
@@ -70,10 +105,13 @@ export async function withConnection<T>(
     console.error('[DB FIX] Operation failed:', error);
     throw error;
   }
+  
+  // IMPORTANT: We do NOT close the connection here!
+  // This is intentional and fixes the premature disconnection issue.
 }
 
 /**
- * Close all connections
+ * Close all connections - call this only when shutting down the application
  */
 export async function closeConnections(): Promise<void> {
   if (connection) {
@@ -87,3 +125,19 @@ export async function closeConnections(): Promise<void> {
     }
   }
 }
+
+/**
+ * Migration Guide:
+ * 
+ * To fix database connection issues, replace any instance of:
+ * 
+ * import { withConnection } from '@/lib/db';
+ * 
+ * With:
+ * 
+ * import { withConnection } from '@/lib/db/connection-fix';
+ * 
+ * This will ensure database operations have time to complete before the
+ * connection is terminated. The fixed version maintains a persistent
+ * connection rather than creating and destroying connections for each operation.
+ */
