@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { useEffect, useState } from 'react';
+import { AuthenticatingSpinner } from './AuthenticatingSpinner';
 
 /**
  * Higher-order component that protects routes by requiring authentication
@@ -21,9 +22,9 @@ export default function withAuth<P extends object>(
       setIsClient(true);
     }, []);
 
-    // Show nothing while loading to prevent flash of content
+    // Show loading spinner while checking authentication
     if (status === 'loading' || !isClient) {
-      return null; 
+      return <AuthenticatingSpinner />;
     }
 
     // Redirect to login if not authenticated
