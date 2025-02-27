@@ -12,7 +12,13 @@ import mongoose, {
   ConnectionStates, 
   Schema,
   Model,
-  CompileModelOptions 
+  CompileModelOptions,
+  Document,
+  Collection,
+  CollectionOptions,
+  IndexDefinition,
+  IndexOptions,
+  InferSchemaType
 } from 'mongoose';
 import { Logger } from './connection-manager';
 
@@ -136,8 +142,8 @@ class MockConnection extends EventEmitter implements Connection {
     return Promise.resolve(mockSession as ClientSession);
   }
 
-  // Connection lifecycle methods
-  openUri(uri: string, options?: ConnectOptions): Promise<this> {
+  // Connection lifecycle methods - fixed return type
+  openUri(uri: string, options?: ConnectOptions): Promise<Connection> {
     return Promise.resolve(this);
   }
 
@@ -180,6 +186,68 @@ class MockConnection extends EventEmitter implements Connection {
 
   // Database operation methods
   aggregate = jest.fn().mockResolvedValue([]);
+
+  // Adding the missing methods from Connection interface
+  createCollection(name: string, options?: CollectionOptions): Promise<any> {
+    return Promise.resolve({
+      name,
+      insertOne: async () => ({ insertedId: 'mock-id' }),
+      findOne: async () => null
+    });
+  }
+
+  createCollections(): Promise<Collection[]> {
+    return Promise.resolve([]);
+  }
+
+  dropCollection(name: string): Promise<boolean> {
+    return Promise.resolve(true);
+  }
+
+  dropDatabase(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  syncIndexes(options?: Record<string, any>): Promise<any> {
+    return Promise.resolve({ results: {}, dropped: [] });
+  }
+
+  listCollections(options?: Record<string, any>): Promise<any> {
+    return Promise.resolve([]);
+  }
+
+  on(event: string | symbol, listener: (...args: any[]) => void): this {
+    super.on(event, listener);
+    return this;
+  }
+
+  once(event: string | symbol, listener: (...args: any[]) => void): this {
+    super.once(event, listener);
+    return this;
+  }
+
+  addListener(event: string | symbol, listener: (...args: any[]) => void): this {
+    super.addListener(event, listener);
+    return this;
+  }
+
+  removeListener(event: string | symbol, listener: (...args: any[]) => void): this {
+    super.removeListener(event, listener);
+    return this;
+  }
+
+  // Additional required methods
+  get then(): undefined {
+    return undefined;
+  }
+
+  get catch(): undefined {
+    return undefined;
+  }
+
+  get finally(): undefined {
+    return undefined;
+  }
 }
 
 // Create a mock mongoose instance
