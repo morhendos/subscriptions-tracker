@@ -10,6 +10,9 @@ import { loadEnvVars, ensureEnvVars } from '@/lib/db/env-debug'
 loadEnvVars();
 ensureEnvVars();
 
+// Log environment status for debugging
+console.log(`[AUTH] Initializing auth options in ${process.env.NODE_ENV || 'unknown'} environment`);
+
 // Essential environment variables for NextAuth
 if (!process.env.NEXTAUTH_SECRET) {
   console.error('[NEXTAUTH] Missing NEXTAUTH_SECRET environment variable');
@@ -32,24 +35,35 @@ export const authOptions: AuthOptions = {
       },
       async authorize(credentials, req) {
         try {
+          console.log('[AUTH] Authorizing user with credentials');
+          
           if (!credentials?.email || !credentials?.password) {
+            console.log('[AUTH] Missing email or password');
             throw new AuthError('Email and password are required', 'invalid_credentials')
           }
 
           if (!validateEmail(credentials.email)) {
+            console.log('[AUTH] Invalid email format');
             throw new AuthError('Invalid email format', 'invalid_credentials')
           }
 
           if (!validatePassword(credentials.password)) {
+            console.log('[AUTH] Invalid password format');
             throw new AuthError('Password must be at least 6 characters', 'invalid_credentials')
           }
+          
+          // Log that we're calling authenticateUser
+          console.log('[AUTH] Calling authenticateUser server action');
           
           const result = await authenticateUser(
             credentials.email,
             credentials.password
           );
 
+          console.log(`[AUTH] Authentication result: ${result.success ? 'success' : 'failed'}`);
+
           if (!result.success || !result.data) {
+            console.log('[AUTH] Authentication failed:', result.error);
             return null;
           }
 
@@ -58,10 +72,10 @@ export const authOptions: AuthOptions = {
             id: result.data.id,
             email: result.data.email,
             name: result.data.name,
-            roles: result.data.roles ?? [],
+            roles: result.data.roles || [],
           };
         } catch (error) {
-          console.error('Authentication error:', error);
+          console.error('[AUTH] Authentication error:', error);
           return null;
         }
       },
