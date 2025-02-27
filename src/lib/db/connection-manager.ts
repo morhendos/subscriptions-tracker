@@ -20,6 +20,8 @@ import { EventEmitter } from 'events';
 import { normalizeMongoURI, getSanitizedURI } from '@/utils/mongodb-utils';
 import { dbConfig, monitoringConfig, isDevelopment } from '@/config/database';
 import { MongoDBError, MongoDBErrorCode, handleMongoError } from './error-handler';
+import { getMockConnection } from './mock-connection';
+import { shouldUseMocks } from '@/utils/is-build-time';
 
 // Define interfaces for logger to enable dependency injection
 export interface Logger {
@@ -73,6 +75,9 @@ export interface ConnectionOptions {
   
   // Maximum number of reconnect attempts
   maxReconnectAttempts?: number;
+  
+  // Force use of mock connection (for testing/building)
+  forceMock?: boolean;
 }
 
 // Type for connection events
@@ -290,6 +295,13 @@ export class MongoConnectionManager extends EventEmitter {
    */
   async getConnection(options?: ConnectionOptions): Promise<Connection> {
     const opts = { ...this.options, ...options };
+    
+    // Check if we should use mock connection
+    // This happens during static builds or when explicitly requested
+    if (shouldUseMocks() || opts.forceMock) {
+      this.logger.info('[MongoDB] Using mock connection for build/test environment');
+      return getMockConnection(this.logger);
+    }
     
     // Use direct connection if requested
     if (opts.direct) {
