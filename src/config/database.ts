@@ -8,12 +8,14 @@
 import mongodbConfig, { 
   isDevelopment, 
   isProduction, 
-  isTest, 
+  isTest,
+  isBuildTime,
+  isStaticGeneration,
   MongoDBConfig 
 } from './database-config';
 
 // Re-export environment detection helpers
-export { isDevelopment, isProduction, isTest };
+export { isDevelopment, isProduction, isTest, isBuildTime, isStaticGeneration };
 
 // Export the core database configuration
 export const dbConfig = {
@@ -92,6 +94,21 @@ export const monitoringConfig = {
   },
 };
 
+// Helper to check if we're in a build or static generation context
+export const shouldUseMockDb = () => {
+  // Always use mock DB during build or static generation
+  if (isBuildTime || isStaticGeneration) {
+    return true;
+  }
+  
+  // Also use mock DB if explicitly set via environment variable
+  if (process.env.USE_MOCK_DB === 'true') {
+    return true;
+  }
+  
+  return false;
+};
+
 // Export mongoose connection options generator for backward compatibility
 export const getMongooseOptions = () => {
   return {
@@ -127,6 +144,9 @@ export default {
   isDevelopment,
   isProduction,
   isTest,
+  isBuildTime,
+  isStaticGeneration,
+  shouldUseMockDb,
 };
 
 // Export type definition

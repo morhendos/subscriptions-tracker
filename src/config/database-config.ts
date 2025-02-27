@@ -90,6 +90,19 @@ export const isDevelopment = process.env.NODE_ENV === 'development';
 export const isProduction = process.env.NODE_ENV === 'production';
 export const isTest = process.env.NODE_ENV === 'test';
 
+// Build time detection - multiple ways to detect
+export const isBuildTime = 
+  // Check Next.js phase env var
+  process.env.NEXT_PHASE?.includes('build') || 
+  process.env.NEXT_PHASE === 'phase-export' || 
+  // Check custom flag from next.config.js
+  process.env.IS_BUILD_TIME === 'true';
+
+// Static generation detection (important for preventing DB connections during build)
+export const isStaticGeneration = 
+  isBuildTime || 
+  typeof process !== 'undefined' && process.env.NEXT_PHASE !== undefined;
+
 /**
  * Default MongoDB configuration values for production environment
  * Optimized for cloud deployments like MongoDB Atlas
@@ -241,6 +254,11 @@ export function loadMongoDBConfig(): MongoDBConfig {
     ...baseConfig as MongoDBConfig,
   };
 
+  // Disable SSL for local development connections to MongoDB
+  if (isDevelopment && !isProduction) {
+    config.ssl = false;
+  }
+
   // Override with environment variables if provided
   if (process.env.MONGODB_MAX_POOL_SIZE) {
     config.maxPoolSize = parseInt(process.env.MONGODB_MAX_POOL_SIZE);
@@ -264,6 +282,11 @@ export function loadMongoDBConfig(): MongoDBConfig {
   
   if (process.env.MONGODB_MAX_IDLE_TIME) {
     config.maxIdleTimeMS = parseInt(process.env.MONGODB_MAX_IDLE_TIME);
+  }
+
+  // SSL override
+  if (process.env.MONGODB_SSL !== undefined) {
+    config.ssl = process.env.MONGODB_SSL === 'true';
   }
   
   // Monitoring environment variables
