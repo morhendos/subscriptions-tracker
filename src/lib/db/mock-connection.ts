@@ -53,10 +53,13 @@ export function getMockConnection(logger?: Logger): Connection {
   // Using type assertion to avoid having to implement all methods
   const mockConnection: Partial<Connection> = new EventEmitter() as Partial<Connection>;
   
+  // Initialize models object to prevent "possibly undefined" errors
+  const models: Record<string, any> = {};
+  
   // Set basic properties
   Object.assign(mockConnection, {
     readyState: 1, // Connected
-    models: {},
+    models, // Use the pre-initialized models object
     collections: {},
     id: 999,
     name: 'mock',
@@ -73,10 +76,10 @@ export function getMockConnection(logger?: Logger): Connection {
     // Collection and model methods
     model: (name: string) => {
       // Cache model instances like real Mongoose
-      if (!(name in mockConnection.models)) {
-        mockConnection.models[name] = createMockModel(name);
+      if (!(name in models)) {
+        models[name] = createMockModel(name);
       }
-      return mockConnection.models[name];
+      return models[name];
     },
     collection: () => ({
       insertOne: async () => ({ insertedId: 'mock-id' }),
