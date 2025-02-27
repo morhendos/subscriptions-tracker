@@ -6,6 +6,7 @@
 import { CustomUser } from '@/types/auth';
 import bcrypt from 'bcryptjs';
 import { UserModel } from '@/models/user';
+import mongoose from 'mongoose';
 import { withConnection } from '@/lib/db/connection-fix';
 import { loadEnvVars, ensureEnvVars } from '@/lib/db/env-debug';
 
@@ -22,15 +23,62 @@ interface AuthResult {
   };
 }
 
+/**
+ * Safe serialize function to prevent circular references
+ */
+function safeSerialize(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  
+  // Handle Mongoose document - convert to POJO
+  if (obj.toObject && typeof obj.toObject === 'function') {
+    return safeSerialize(obj.toObject());
+  }
+  
+  // Handle MongoDB ObjectId
+  if (obj instanceof mongoose.Types.ObjectId) {
+    return obj.toString();
+  }
+  
+  // Handle Date objects
+  if (obj instanceof Date) {
+    return obj.toISOString();
+  }
+  
+  // Handle arrays
+  if (Array.isArray(obj)) {
+    return obj.map(item => safeSerialize(item));
+  }
+  
+  // Handle objects
+  if (typeof obj === 'object') {
+    const result: any = {};
+    for (const key in obj) {
+      // Skip Mongoose document methods and private fields
+      if (key.startsWith('$') || key.startsWith('_') && key !== '_id') {
+        continue;
+      }
+      try {
+        result[key] = safeSerialize(obj[key]);
+      } catch (e) {
+        // If serialization fails, use a placeholder
+        result[key] = '[Circular or Unserializable]';
+      }
+    }
+    return result;
+  }
+  
+  // Return primitives as is
+  return obj;
+}
+
 function serializeUser(user: any): CustomUser {
   return {
     id: user._id.toString(),
     email: user.email,
     name: user.name,
-    roles: user.roles.map((role: any) => ({
-      id: role.id,
-      name: role.name
-    }))
+    roles: safeSerialize(user.roles)
   };
 }
 
