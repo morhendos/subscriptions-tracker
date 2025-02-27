@@ -1,13 +1,9 @@
 'use server'
 
-// This is a fixed version of the authentication actions
-// It uses the simplified connection manager to avoid premature disconnections
-
 import { CustomUser } from '@/types/auth';
 import bcrypt from 'bcryptjs';
 import { UserModel } from '@/models/user';
-import mongoose from 'mongoose';
-import { withConnection } from '@/lib/db/connection-fix';
+import { withConnection, safeSerialize } from '@/lib/db/simplified-connection';
 import { loadEnvVars, ensureEnvVars } from '@/lib/db/env-debug';
 
 // Load env vars at the module level to ensure they're available
@@ -21,56 +17,6 @@ interface AuthResult {
     code: string;
     message: string;
   };
-}
-
-/**
- * Safe serialize function to prevent circular references
- */
-function safeSerialize(obj: any): any {
-  if (obj === null || obj === undefined) {
-    return obj;
-  }
-  
-  // Handle Mongoose document - convert to POJO
-  if (obj.toObject && typeof obj.toObject === 'function') {
-    return safeSerialize(obj.toObject());
-  }
-  
-  // Handle MongoDB ObjectId
-  if (obj instanceof mongoose.Types.ObjectId) {
-    return obj.toString();
-  }
-  
-  // Handle Date objects
-  if (obj instanceof Date) {
-    return obj.toISOString();
-  }
-  
-  // Handle arrays
-  if (Array.isArray(obj)) {
-    return obj.map(item => safeSerialize(item));
-  }
-  
-  // Handle objects
-  if (typeof obj === 'object') {
-    const result: any = {};
-    for (const key in obj) {
-      // Skip Mongoose document methods and private fields
-      if (key.startsWith('$') || key.startsWith('_') && key !== '_id') {
-        continue;
-      }
-      try {
-        result[key] = safeSerialize(obj[key]);
-      } catch (e) {
-        // If serialization fails, use a placeholder
-        result[key] = '[Circular or Unserializable]';
-      }
-    }
-    return result;
-  }
-  
-  // Return primitives as is
-  return obj;
 }
 
 function serializeUser(user: any): CustomUser {
@@ -87,15 +33,12 @@ export async function authenticateUser(
   password: string
 ): Promise<AuthResult> {
   try {
-    console.log(`[AUTH FIX] Authenticating user: ${email}`);
-    
     // Find the user
     const user = await withConnection(async () => {
       return UserModel.findOne({ email: email.toLowerCase() });
     });
     
     if (!user) {
-      console.log(`[AUTH FIX] No user found with email: ${email}`);
       return {
         success: false,
         error: {
@@ -105,12 +48,9 @@ export async function authenticateUser(
       };
     }
 
-    console.log(`[AUTH FIX] User found, verifying password for: ${email}`);
-    
     // Verify password
     const isValid = await bcrypt.compare(password, user.hashedPassword);
     if (!isValid) {
-      console.log(`[AUTH FIX] Invalid password for: ${email}`);
       return {
         success: false,
         error: {
@@ -119,15 +59,13 @@ export async function authenticateUser(
         }
       };
     }
-
-    console.log(`[AUTH FIX] Authentication successful for: ${email}`);
     
     return {
       success: true,
       data: serializeUser(user)
     };
   } catch (error) {
-    console.error('[AUTH FIX] Authentication error:', error);
+    console.error('Authentication error:', error);
     
     return {
       success: false,
@@ -145,15 +83,12 @@ export async function registerUser(
   name?: string
 ): Promise<AuthResult> {
   try {
-    console.log('[AUTH FIX] Starting user registration for:', email);
-    
     // Check if user exists
     const existingUser = await withConnection(async () => {
       return UserModel.findOne({ email: email.toLowerCase() });
     });
     
     if (existingUser) {
-      console.log('[AUTH FIX] User already exists with email:', email);
       return {
         success: false,
         error: {
@@ -164,11 +99,9 @@ export async function registerUser(
     }
 
     // Hash password
-    console.log('[AUTH FIX] Hashing password');
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
-    console.log('[AUTH FIX] Creating new user');
     const user = await withConnection(async () => {
       return UserModel.create({
         email: email.toLowerCase(),
@@ -180,14 +113,12 @@ export async function registerUser(
       });
     });
     
-    console.log('[AUTH FIX] User created successfully with ID:', user._id);
-    
     return {
       success: true,
       data: serializeUser(user)
     };
   } catch (error) {
-    console.error('[AUTH FIX] Registration error:', error);
+    console.error('Registration error:', error);
     
     return {
       success: false,
