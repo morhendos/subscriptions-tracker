@@ -1,116 +1,50 @@
 # Subscription Tracker
 
-A Next.js web application to help users track and manage their recurring subscriptions.
+Track and manage your recurring subscriptions with ease.
 
-## Features
+## Bug Fixes
 
-- Track subscriptions with different billing periods (monthly and yearly)
-- Support for multiple currencies (EUR, USD, GBP, PLN) with automatic conversion
-- Calculate total monthly spending across all subscriptions
-- Automatic next billing date updates
-- Dark mode support
-- MongoDB Atlas integration with production-ready setup
-- Database health monitoring and metrics
-- API rate limiting and security headers
-- Import/export functionality
-- Enable/disable individual or all subscriptions
-- Modern UI with slide-out drawers for adding and editing subscriptions
+### Fix for MongoDB Connection Errors During Build
 
-## Tech Stack
+This branch addresses the issue where the application attempts to connect to a MongoDB database during the Next.js build/static generation process, causing errors and build failures.
 
-- Next.js 14 with App Router
-- TypeScript
-- MongoDB Atlas for production database
-- MongoDB local for development
-- Tailwind CSS for styling
-- Lucide React for icons
-- Next-Auth for authentication
-- Radix UI components (via shadcn/ui)
+#### Changes Made:
 
-## Local Development
+1. **Added Build-Time Detection Utility**
+   - Created a new utility module `src/utils/is-build-time.ts` with functions to detect when code is running during the Next.js build process.
+   - Added `shouldUseMocks()` function to centralize mock connection decision logic.
 
-### Prerequisites
+2. **Fixed SSL Configuration for Localhost**
+   - Added `isLocalConnection()` function to detect localhost URLs.
+   - Modified database configuration to automatically disable SSL for localhost connections, avoiding TLS connection errors.
+   - Added explicit environment variable override with `MONGODB_SSL`.
 
-- MongoDB installed locally
-- Node.js 18+ installed
+3. **Updated Connection Manager**
+   - Modified `getConnection()` method to check for build-time environment.
+   - Updated to return mock connections during build/test environments.
+   - Added `forceMock` option to `ConnectionOptions` interface for explicit mock usage.
 
-### Setup
+4. **Simplified Mock Connection Implementation**
+   - Reduced complexity of mock implementation while maintaining compatibility.
+   - Ensured proper TypeScript interface compliance.
+   - Used JavaScript Proxy pattern to simplify mock implementation.
+
+These changes ensure the application can be built successfully without requiring a running MongoDB instance, which is particularly important for CI/CD pipelines and local development.
+
+## Development
+
+To start the development server:
 
 ```bash
-# Install dependencies
-npm install
-
-# Set up environment variables
-cp .env.example .env.local
-# Edit .env.local with your MongoDB connection string
-
-# Run development server
 npm run dev
-
-# Test database connection
-npm run test:connection
+# or
+yarn dev
 ```
 
-### MongoDB Configuration
+## Database Configuration
 
-The application has robust MongoDB connection handling that:
+The application supports various database configuration options through environment variables:
 
-- Automatically normalizes connection URIs
-- Handles various formats of connection strings
-- Provides automatic retries with exponential backoff
-- Implements environment-specific optimization
-
-For detailed MongoDB setup instructions, see [MongoDB Setup Guide](./docs/MONGODB_SETUP.md).
-
-### Production Setup
-
-The application uses MongoDB Atlas in production. Required environment variables in Vercel:
-
-```env
-MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/subscriptions?retryWrites=true&w=majority
-```
-
-Additional MongoDB Atlas configuration:
-- Backup enabled with retention policies
-- Performance monitoring and alerts
-- Connection pool monitoring
-- Slow query detection
-
-## Health Monitoring
-
-The application includes a health check endpoint at `/api/healthz` that provides:
-- Database connection status
-- Connection latency metrics
-- Schema validation status
-- Available collections
-
-## API Rate Limiting
-
-API endpoints are protected with rate limiting:
-- Default: 100 requests per minute
-- Configurable per-route limits
-- IP-based rate limiting
-- Automatic retry mechanism for temporary failures
-
-## Security Features
-
-- Secure headers configuration
-- MongoDB connection retry with exponential backoff
-- Environment-specific database configurations
-- Production-ready security settings
-
-## Troubleshooting
-
-For common issues and their solutions, refer to the [MongoDB Setup Guide](./docs/MONGODB_SETUP.md#common-issues-and-solutions). This includes:
-
-- Connection string format problems
-- Authentication issues
-- Connection timeouts
-- Database name validation errors
-
-## Recent Improvements
-
-- Enhanced MongoDB connection reliability
-- Robust URI parsing and normalization
-- Improved error handling throughout the application
-- Comprehensive documentation for setup and troubleshooting
+- `MONGODB_URI` - Connection URI for MongoDB
+- `MONGODB_DATABASE` - Database name to use
+- `MONGODB_SSL` - Set to 'true' or 'false' to explicitly enable/disable SSL
