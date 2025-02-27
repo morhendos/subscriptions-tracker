@@ -1,9 +1,29 @@
 import { NextResponse } from 'next/server';
-import { getConnection, disconnectAll, MongoConnectionManager } from '@/lib/db';
-import { createLogger } from '@/lib/db';
+import { getConnection, disconnectAll, MongoConnectionManager, createLogger, shouldSkipDatabaseConnection } from '@/lib/db';
 
 export async function GET() {
   const logger = createLogger('TestDB');
+  
+  // Return mock response during build
+  if (shouldSkipDatabaseConnection()) {
+    logger.info('[Build] Providing mock response for database test during build');
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Mock database connection (build environment)',
+      database: 'mock_subscriptions',
+      collections: ['users', 'subscriptions'],
+      serverInfo: {
+        version: '0.0.0-mock',
+        gitVersion: 'mock-build'
+      },
+      health: {
+        status: 'healthy',
+        latency: 0,
+        buildEnvironment: true
+      }
+    });
+  }
   
   try {
     logger.info('Testing MongoDB connection...');
