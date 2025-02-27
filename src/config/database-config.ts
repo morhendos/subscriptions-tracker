@@ -213,6 +213,15 @@ const DEVELOPMENT_CONFIG: Partial<MongoDBConfig> = {
 };
 
 /**
+ * Check if a URI is for localhost/local development
+ */
+export function isLocalConnection(uri: string): boolean {
+  return uri.includes('localhost') || 
+         uri.includes('127.0.0.1') || 
+         uri.includes('host.docker.internal');
+}
+
+/**
  * Load MongoDB configuration with environment-specific values and
  * environment variable overrides.
  */
@@ -264,6 +273,16 @@ export function loadMongoDBConfig(): MongoDBConfig {
   
   if (process.env.MONGODB_MAX_IDLE_TIME) {
     config.maxIdleTimeMS = parseInt(process.env.MONGODB_MAX_IDLE_TIME);
+  }
+  
+  // Always disable SSL for localhost connections
+  if (config.uri && isLocalConnection(config.uri)) {
+    config.ssl = false;
+  }
+  
+  // Explicit SSL override if provided
+  if (process.env.MONGODB_SSL) {
+    config.ssl = process.env.MONGODB_SSL === 'true';
   }
   
   // Monitoring environment variables
