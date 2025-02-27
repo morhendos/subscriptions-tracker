@@ -155,8 +155,8 @@ class MockConnection extends EventEmitter implements Connection {
     return Promise.resolve();
   }
 
-  // Mongoose feature methods
-  get modelNames(): string[] {
+  // Mongoose feature methods - Changed from getter to method
+  modelNames(): string[] {
     return [];
   }
 
