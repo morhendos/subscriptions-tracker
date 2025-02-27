@@ -6,6 +6,7 @@
  */
 
 import mongoose from 'mongoose';
+import { normalizeMongoUri } from './check-env';
 
 // Global connection state
 let connection: mongoose.Connection | null = null;
@@ -25,23 +26,35 @@ export async function getConnection(): Promise<mongoose.Connection> {
     return connectionPromise;
   }
   
+  // Get MongoDB URI from environment
+  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/subscriptions';
+  
+  // Normalize the URI to ensure correct database name
+  const normalizedUri = normalizeMongoUri(uri);
+  
   // Start a new connection
-  connectionPromise = mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/subscriptions')
+  connectionPromise = mongoose.connect(normalizedUri)
     .then(() => {
       connection = mongoose.connection;
       
+      // Log database name for debugging
+      console.log(`[DB] Connected to database: ${connection.db.databaseName}`);
+      
       // Listen for disconnect events
       connection.on('disconnected', () => {
+        console.log('[DB] MongoDB disconnected');
         connection = null;
       });
       
-      connection.on('error', () => {
+      connection.on('error', (err) => {
+        console.error('[DB] MongoDB connection error:', err);
         connection = null;
       });
       
       return connection;
     })
     .catch((err) => {
+      console.error('[DB] MongoDB connection error:', err);
       connectionPromise = null;
       throw err;
     });
