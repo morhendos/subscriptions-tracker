@@ -5,7 +5,15 @@
  * to prevent unnecessary connection attempts during build time.
  */
 import { EventEmitter } from 'events';
-import mongoose, { Connection, ClientSession, ConnectOptions, ConnectionStates } from 'mongoose';
+import mongoose, { 
+  Connection, 
+  ClientSession, 
+  ConnectOptions, 
+  ConnectionStates, 
+  Schema,
+  Model,
+  CompileModelOptions 
+} from 'mongoose';
 import { Logger } from './connection-manager';
 
 // Mock connection class to simulate a Mongoose connection
@@ -95,7 +103,13 @@ class MockConnection extends EventEmitter implements Connection {
     };
   }
 
-  model<T = any>(name: string, schema?: any, collection?: string | undefined, skipInit?: boolean | undefined): mongoose.Model<T> {
+  // Updated model method signature to match Connection interface
+  model<TSchema extends Schema = any>(
+    name: string, 
+    schema?: TSchema, 
+    collection?: string, 
+    options?: CompileModelOptions
+  ): any {
     const MockModel: any = function() {};
     
     // Add static methods to the mock model
@@ -107,7 +121,7 @@ class MockConnection extends EventEmitter implements Connection {
     MockModel.deleteOne = jest.fn().mockResolvedValue({ deletedCount: 1 });
     MockModel.countDocuments = jest.fn().mockResolvedValue(0);
     
-    return MockModel as any;
+    return MockModel;
   }
 
   // Session-related methods
