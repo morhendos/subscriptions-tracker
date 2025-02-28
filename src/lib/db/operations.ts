@@ -10,30 +10,49 @@ import { MongoConnectionManager } from './connection-manager';
 import { withErrorHandling } from './unified-error-handler';
 
 /**
+ * Connection options for database operations
+ */
+export interface DbOperationOptions {
+  timeoutMS?: number;
+  serverSelectionTimeoutMS?: number;
+  context?: string;
+  [key: string]: any; // Allow additional options
+}
+
+/**
  * Execute a database operation with a managed connection
  * 
  * @param operation Function that takes a connection and returns a promise
- * @param context Context description for error logging
+ * @param context Context description for error logging or options object
  * @returns Promise that resolves to the operation result
  */
 export async function withConnection<T>(
   operation: (connection: Connection) => Promise<T>,
-  context: string
+  context?: string | DbOperationOptions
 ): Promise<T> {
-  // Get connection manager
-  const connectionManager = MongoConnectionManager.getInstance();
+  // Convert context to options if it's a string
+  const options: DbOperationOptions = typeof context === 'string' 
+    ? { context } 
+    : context || {};
   
-  // Get a connection
-  const connection = await withErrorHandling(
-    () => connectionManager.getConnection(),
-    `${context}/getConnection`
-  );
+  const contextStr = options.context || 'db-operation';
   
-  // Execute the operation with error handling
-  return withErrorHandling(
-    () => operation(connection),
-    context
-  );
+  try {
+    // Get connection manager
+    const connectionManager = MongoConnectionManager.getInstance();
+    
+    // Get a connection
+    const connection = await connectionManager.getConnection({
+      timeoutMS: options.timeoutMS,
+      serverSelectionTimeoutMS: options.serverSelectionTimeoutMS,
+    });
+    
+    // Execute the operation with error handling
+    return await operation(connection);
+  } catch (error) {
+    console.error(`[DB] Error in ${contextStr}:`, error);
+    throw error;
+  }
 }
 
 /**
