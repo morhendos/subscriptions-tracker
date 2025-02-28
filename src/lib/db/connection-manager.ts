@@ -17,7 +17,7 @@
 import mongoose, { Connection } from 'mongoose';
 import { ReadPreference } from 'mongodb';
 import { EventEmitter } from 'events';
-import { normalizeMongoURI, getSanitizedURI } from '@/utils/mongodb-utils';
+import { normalizeMongoURI, getSanitizedURI } from '@/utils/mongodb-uri';
 import { dbConfig, monitoringConfig, isDevelopment } from '@/config/database';
 import { MongoDBError, MongoDBErrorCode, handleMongoError } from './error-handler';
 
