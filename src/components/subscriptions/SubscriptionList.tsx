@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState } from 'react';
 import { Subscription, SubscriptionFormData } from '@/types/subscriptions';
 import { formatCurrency } from '@/utils/format';
 import { Pencil, Trash, CreditCard, EyeOff, Eye } from 'lucide-react';
@@ -27,9 +27,6 @@ export function SubscriptionList({
 }: SubscriptionListProps) {
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
-  // To track which subscriptions are currently being toggled
-  const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set());
-  const lastToggleRef = useRef<number>(0);
 
   if (!mounted) {
     return <div />;
@@ -54,33 +51,6 @@ export function SubscriptionList({
   const handleEditSubmit = (formData: SubscriptionFormData) => {
     if (editingSubscription) {
       onUpdate(editingSubscription.id, formData);
-    }
-  };
-
-  const handleToggleClick = async (id: string) => {
-    // Add visual feedback
-    setPendingToggles(prev => {
-      const newSet = new Set(prev);
-      newSet.add(id);
-      return newSet;
-    });
-    
-    // Store current timestamp to prevent race conditions
-    const toggleTime = Date.now();
-    lastToggleRef.current = toggleTime;
-    
-    try {
-      await onToggleSubscription(id);
-    } finally {
-      // Only remove pending state if this is still the most recent toggle
-      // This prevents issues with multiple rapid clicks
-      if (toggleTime === lastToggleRef.current) {
-        setPendingToggles(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(id);
-          return newSet;
-        });
-      }
     }
   };
 
@@ -114,84 +84,72 @@ export function SubscriptionList({
         </div>
       </div>
 
-      {sortedSubscriptions.map((subscription) => {
-        const isPending = pendingToggles.has(subscription.id);
-        
-        return (
-          <div
-            key={subscription.id}
-            className={`bg-paper p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 
-              transition-all duration-200
-              ${subscription.disabled ? 'opacity-50' : ''} 
-              ${isPending ? 'pulse-opacity' : ''}
-              cursor-pointer 
-              hover:border-yellow-600 dark:hover:border-accent`}
-            onClick={() => handleToggleClick(subscription.id)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                handleToggleClick(subscription.id);
-              }
-            }}
-            style={isPending ? { position: 'relative' } : undefined}
-          >
-            {isPending && (
-              <div className="absolute inset-0 bg-background/20 rounded-lg flex items-center justify-center">
-                <div className="h-4 w-4 rounded-full bg-primary/30 animate-ping"></div>
+      {sortedSubscriptions.map((subscription) => (
+        <div
+          key={subscription.id}
+          className={`bg-paper p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 
+            transition-all duration-200
+            ${subscription.disabled ? 'opacity-50' : ''} 
+            cursor-pointer 
+            hover:border-yellow-600 dark:hover:border-accent`}
+          onClick={() => onToggleSubscription(subscription.id)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              onToggleSubscription(subscription.id);
+            }
+          }}
+        >
+          <div className="flex justify-between items-start gap-4">
+            <div className="flex items-start gap-3">
+              <div className={`mt-1 ${subscription.disabled ? 'text-muted' : 'text-accent dark:text-accent/90'}`}>
+                <CreditCard size={20} />
               </div>
-            )}
-            
-            <div className="flex justify-between items-start gap-4">
-              <div className="flex items-start gap-3">
-                <div className={`mt-1 ${subscription.disabled ? 'text-muted' : 'text-accent dark:text-accent/90'}`}>
-                  <CreditCard size={20} />
+              <div>
+                <h3 className={`font-semibold ${subscription.disabled ? 'text-muted line-through' : 'text-foreground'}`}>
+                  {subscription.name}
+                </h3>
+                
+                <div className="mt-1 text-muted text-sm">
+                  {formatCurrency(subscription.price, subscription.currency)} per {subscription.billingPeriod}
                 </div>
-                <div>
-                  <h3 className={`font-semibold ${subscription.disabled ? 'text-muted line-through' : 'text-foreground'}`}>
-                    {subscription.name}
-                  </h3>
-                  
-                  <div className="mt-1 text-muted text-sm">
-                    {formatCurrency(subscription.price, subscription.currency)} per {subscription.billingPeriod}
-                  </div>
 
-                  {subscription.description && (
-                    <div className="mt-2 text-sm text-muted">
-                      {subscription.description}
-                    </div>
-                  )}
-
-                  <div className="mt-2 text-xs text-muted">
-                    Next billing: {new Date(subscription.nextBillingDate || subscription.startDate).toLocaleDateString()}
+                {subscription.description && (
+                  <div className="mt-2 text-sm text-muted">
+                    {subscription.description}
                   </div>
+                )}
+
+                <div className="mt-2 text-xs text-muted">
+                  Next billing: {new Date(subscription.nextBillingDate || subscription.startDate).toLocaleDateString()}
                 </div>
-              </div>
-
-              <div 
-                className="flex items-center gap-2"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <button
-                  onClick={() => handleEditClick(subscription)}
-                  className="p-2 text-muted hover:text-foreground transition-colors"
-                  title="Edit subscription"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
-
-                <button
-                  onClick={() => onDelete(subscription.id)}
-                  className="p-2 text-muted hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                  title="Delete subscription"
-                >
-                  <Trash className="w-4 h-4" />
-                </button>
               </div>
             </div>
+
+            <div 
+              className="flex items-center gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => handleEditClick(subscription)}
+                className="p-2 text-muted hover:text-foreground transition-colors"
+                title="Edit subscription"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => onDelete(subscription.id)}
+                className="p-2 text-muted hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                title="Delete subscription"
+              >
+                <Trash className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-        );
-      })}
+        </div>
+      ))}
 
       <EditSubscriptionSheet
         subscription={editingSubscription}
@@ -199,17 +157,6 @@ export function SubscriptionList({
         onOpenChange={setIsEditSheetOpen}
         onSubmit={handleEditSubmit}
       />
-      
-      <style jsx global>{`
-        @keyframes pulse-opacity {
-          0% { opacity: 1; }
-          50% { opacity: 0.7; }
-          100% { opacity: 1; }
-        }
-        .pulse-opacity {
-          animation: pulse-opacity 1.5s infinite ease-in-out;
-        }
-      `}</style>
     </div>
   );
 }
