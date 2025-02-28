@@ -75,23 +75,26 @@ export function createErrorResponse(error: any, includeDetails = false): any {
  * Wrapper for database operations with standardized error handling
  * 
  * @param operation Async function that performs the database operation
- * @param context Context description for error logging
+ * @param context Context description for error logging or options object
  * @param errorHandler Optional custom error handler
  * @returns Promise that resolves to the operation result or rejects with MongoDBError
  */
 export async function withErrorHandling<T>(
   operation: () => Promise<T>,
-  context: string,
+  context: string | object,
   errorHandler?: (error: MongoDBError) => void
 ): Promise<T> {
+  // Extract context string from options object if needed
+  const contextStr = typeof context === 'string' ? context : 'database-operation';
+  
   try {
     return await operation();
   } catch (error) {
     // Convert to standardized MongoDBError
-    const mongoError = handleMongoError(error, context);
+    const mongoError = handleMongoError(error, contextStr);
     
     // Log the error
-    logMongoError(mongoError, context);
+    logMongoError(mongoError, contextStr);
     
     // Call custom error handler if provided
     if (errorHandler) {
