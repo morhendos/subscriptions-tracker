@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { getAtlasConfig, getMonitoringConfig } from './atlas-config';
 import { validateMongoURI, getSanitizedURI } from '@/utils/mongodb-uri';
-import { monitoring } from '../monitoring';
+import { monitoring } from '@/lib/monitoring';
 import { loadEnvVars, ensureEnvVars } from './env-debug';
 
 // Load environment variables if they're not already available
