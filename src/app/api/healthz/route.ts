@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { checkDatabaseHealth } from '@/lib/db/mongodb';
 import { SubscriptionModel } from '@/models/subscription';
 import mongoose from 'mongoose';
+import { createErrorResponse } from '@/lib/db/unified-error-handler';
 
 export async function GET() {
   try {
@@ -18,8 +19,13 @@ export async function GET() {
     if (health.status === 'healthy' && 
         mongoose.connection.readyState === 1 && // 1 = connected
         mongoose.connection.db) {
-      const collections = await mongoose.connection.db.collections();
-      schemaHealth.collections = collections.map(col => col.collectionName);
+      try {
+        const collections = await mongoose.connection.db.collections();
+        schemaHealth.collections = collections.map(col => col.collectionName);
+      } catch (collectionError) {
+        console.warn('[Health Check] Error fetching collections:', collectionError);
+        // Continue without collections data rather than failing completely
+      }
     }
 
     return NextResponse.json({
@@ -28,19 +34,17 @@ export async function GET() {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    let errorMessage = 'Failed to check database health';
-    if (error instanceof mongoose.mongo.MongoError) {
-      errorMessage = `MongoDB Error: ${error.message}`;
-    } else if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-
+    // Use the unified error handler
+    const errorResponse = createErrorResponse(error, process.env.NODE_ENV === 'development');
+    
     console.error('[Health Check] Error:', error);
     return NextResponse.json(
       { 
         status: 'error', 
-        message: errorMessage,
-        timestamp: new Date().toISOString()
+        message: errorResponse.error,
+        code: errorResponse.code,
+        timestamp: new Date().toISOString(),
+        ...(process.env.NODE_ENV === 'development' ? { details: errorResponse.details } : {})
       },
       { status: 500 }
     );
