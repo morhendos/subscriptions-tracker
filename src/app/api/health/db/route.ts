@@ -1,73 +1,43 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getDatabaseHealth } from '@/lib/db';
-import { createRateLimit } from '@/middleware/rate-limit';
+/**
+ * Database Health Check API
+ * 
+ * Provides a simple API endpoint to check database connectivity and health.
+ * Uses the connection manager to verify MongoDB connection status.
+ */
 
-// Add rate limiting to prevent abuse
-const rateLimiter = createRateLimit({
-  maxRequests: 10,    // 10 requests
-  windowMs: 60 * 1000 // per minute
-});
+import { NextResponse } from 'next/server';
+import { MongoConnectionManager } from '@/lib/db/connection-manager';
+import { withErrorHandling, createErrorResponse } from '@/lib/db/unified-error-handler';
 
-export async function GET(request: NextRequest) {
-  // Check rate limit
-  const rateLimitResponse = await rateLimiter(request);
-  if (rateLimitResponse) {
-    return rateLimitResponse;
-  }
-
+export async function GET() {
   try {
-    const health = await getDatabaseHealth();
-    const headers = {
-      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-    };
+    // Get the connection manager singleton
+    const connectionManager = MongoConnectionManager.getInstance();
     
-    if (health.status === 'healthy') {
-      return NextResponse.json(health, { 
-        status: 200,
-        headers
-      });
-    } else {
-      return NextResponse.json(health, { 
-        status: 503,
-        headers: {
-          ...headers,
-          'Retry-After': '30'
-        }
-      });
-    }
-  } catch (error: any) {
-    const errorResponse = {
-      status: 'unhealthy',
-      latency: -1,
+    // Use our error handling wrapper around the health check
+    const healthCheck = await withErrorHandling(
+      () => connectionManager.checkHealth(),
+      'health/db'
+    );
+    
+    // Return a healthy response with connection details
+    return NextResponse.json({
+      status: healthCheck.status,
+      connection: {
+        latency: healthCheck.latency,
+        readyState: healthCheck.details?.readyState || 'unknown',
+      },
       timestamp: new Date().toISOString(),
-      error: {
-        type: error.name || 'UnknownError',
-        message: `Failed to check database health: ${error.message}`,
-        code: error.code || 'UNKNOWN',
-      }
-    };
-
-    return NextResponse.json(errorResponse, { 
-      status: 500,
-      headers: {
-        'Cache-Control': 'no-store',
-        'Retry-After': '60'
-      }
-    });
+    }, { status: healthCheck.status === 'healthy' ? 200 : 503 });
+  } catch (error) {
+    // Use our standardized error response
+    const errorResponse = createErrorResponse(error);
+    
+    return NextResponse.json({
+      status: 'unhealthy',
+      error: errorResponse.error,
+      code: errorResponse.code,
+      timestamp: new Date().toISOString(),
+    }, { status: 503 });
   }
-}
-
-// Add OPTIONS method for CORS preflight
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Max-Age': '86400',
-    },
-  });
 }
