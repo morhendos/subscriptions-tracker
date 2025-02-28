@@ -1,195 +1,78 @@
 /**
- * MongoDB Database Module
+ * Database Module
  * 
- * Provides simplified access to MongoDB connections and utilities.
- * This is the main entry point for database operations in the application.
+ * Serves as the entry point for database operations, exposing a clean API
+ * for the rest of the application to use.
  */
 
-import mongoose from 'mongoose';
-import MongoConnectionManager, { ConnectionOptions, Logger } from './connection-manager';
-import { handleMongoError, logMongoError, MongoDBError, MongoDBErrorCode } from './error-handler';
-import { dbConfig, shouldUseMockDb } from '@/config/database';
-import { normalizeMongoURI, getSanitizedURI } from '@/utils/mongodb-utils';
-import { getMockConnection } from './mock-connection';
+// Export connection manager
+export { default as MongoConnectionManager } from './connection-manager';
+
+// Export database operations
+export * from './operations';
+
+// Export error handling utilities
+export * from './error-handler';
+export * from './unified-error-handler';
+
+// Re-export useful types
+export { Connection } from 'mongoose';
+
+// For backward compatibility with existing code
+import { MongoConnectionManager } from './connection-manager';
+import { ConsoleLogger } from './connection-manager';
 
 /**
- * Get a MongoDB connection
+ * Get a MongoDB connection (legacy method for compatibility)
  * 
- * @param options - Connection options
- * @returns A promise resolving to a mongoose connection
+ * @param options Connection options
+ * @returns A Promise resolving to a Connection
  */
-export async function getConnection(options?: ConnectionOptions): Promise<mongoose.Connection> {
-  // Check if we should use a mock connection (during build or static generation)
-  if (shouldUseMockDb()) {
-    console.info('[MongoDB] Using mock connection for build/static generation');
-    return getMockConnection(options?.logger);
-  }
-
-  // Use a real connection for runtime
-  const manager = MongoConnectionManager.getInstance(options);
+export const getConnection = async (options: any = {}) => {
+  const manager = MongoConnectionManager.getInstance();
   return manager.getConnection(options);
-}
-
-/**
- * Get a direct (non-pooled) MongoDB connection
- * 
- * @param options - Connection options
- * @returns A connection manager with a direct connection
- */
-export async function getDirectConnection(options?: ConnectionOptions): Promise<{
-  connection: mongoose.Connection;
-  cleanup: () => Promise<void>;
-}> {
-  // Check if we should use a mock connection (during build or static generation)
-  if (shouldUseMockDb()) {
-    console.info('[MongoDB] Using mock direct connection for build/static generation');
-    return {
-      connection: getMockConnection(options?.logger), 
-      cleanup: async () => Promise.resolve()
-    };
-  }
-
-  const manager = MongoConnectionManager.getInstance();
-  
-  try {
-    const connection = await manager.getConnection({
-      ...options,
-      direct: true,
-    });
-    
-    return {
-      connection,
-      cleanup: async () => {
-        await manager.cleanup();
-      },
-    };
-  } catch (error) {
-    // Ensure proper cleanup even if connection fails
-    await manager.cleanup();
-    throw handleMongoError(error, 'Failed to create direct connection');
-  }
-}
-
-/**
- * Run a database operation with a direct connection and automatic cleanup
- * 
- * @param operation - Function that accepts a mongoose connection and returns a result
- * @param options - Connection options
- * @returns The result of the operation
- */
-export async function withConnection<T>(
-  operation: (connection: mongoose.Connection) => Promise<T>,
-  options?: ConnectionOptions
-): Promise<T> {
-  const { connection, cleanup } = await getDirectConnection(options);
-  
-  try {
-    return await operation(connection);
-  } finally {
-    await cleanup();
-  }
-}
-
-/**
- * Disconnect all database connections
- * Useful for application shutdown or tests
- */
-export async function disconnectAll(): Promise<void> {
-  if (shouldUseMockDb()) {
-    // No real connections to disconnect in mock mode
-    return Promise.resolve();
-  }
-  
-  await MongoConnectionManager.disconnectAll();
-}
-
-/**
- * Get health information about the database
- * 
- * @returns Database health information
- */
-export async function getDatabaseHealth(): Promise<{
-  status: 'healthy' | 'unhealthy';
-  latency: number;
-  metrics?: Record<string, any>;
-  message?: string;
-  timestamp: string;
-}> {
-  // In build/static generation, return mock health info
-  if (shouldUseMockDb()) {
-    return {
-      status: 'healthy',
-      latency: 0,
-      timestamp: new Date().toISOString(),
-      message: 'Using mock database connection',
-      metrics: {
-        mock: true,
-        environment: process.env.NODE_ENV,
-        buildPhase: process.env.NEXT_PHASE || 'unknown'
-      }
-    };
-  }
-
-  const manager = MongoConnectionManager.getInstance();
-  const startTime = Date.now();
-  
-  try {
-    // Get health check result from the connection manager
-    const healthCheck = await manager.checkHealth();
-    
-    if (healthCheck.status === 'healthy') {
-      return {
-        status: 'healthy',
-        latency: healthCheck.latency,
-        timestamp: new Date().toISOString(),
-        metrics: healthCheck.details,
-        message: 'Database is responding normally'
-      };
-    } else {
-      return {
-        status: 'unhealthy',
-        latency: healthCheck.latency,
-        timestamp: new Date().toISOString(),
-        message: `Database health check failed: ${healthCheck.details?.error || 'No healthy connection'}`
-      };
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logMongoError(error, 'Health check');
-    
-    return {
-      status: 'unhealthy',
-      latency: Date.now() - startTime,
-      timestamp: new Date().toISOString(),
-      message: `Database health check failed: ${errorMessage}`
-    };
-  }
-}
-
-// Create a custom logger for the connection manager
-export function createLogger(prefix: string): Logger {
-  return {
-    debug: (message: string, ...args: any[]) => console.debug(`[${prefix}] ${message}`, ...args),
-    info: (message: string, ...args: any[]) => console.info(`[${prefix}] ${message}`, ...args),
-    warn: (message: string, ...args: any[]) => console.warn(`[${prefix}] ${message}`, ...args),
-    error: (message: string, ...args: any[]) => console.error(`[${prefix}] ${message}`, ...args),
-  };
-}
-
-// Export classes and functions
-export {
-  MongoConnectionManager,
-  handleMongoError,
-  logMongoError,
-  normalizeMongoURI,
-  getSanitizedURI,
-  dbConfig,
 };
 
-// Export types (using 'export type' for isolated modules)
-export type {
-  ConnectionOptions,
-  MongoDBError,
-  MongoDBErrorCode,
-  Logger,
+/**
+ * Disconnect all MongoDB connections (legacy method for compatibility)
+ * 
+ * @returns A Promise that resolves when disconnection is complete
+ */
+export const disconnectAll = async () => {
+  return MongoConnectionManager.disconnectAll();
+};
+
+/**
+ * Create a logger instance (legacy method for compatibility)
+ * 
+ * @param prefix The prefix for log messages
+ * @returns A logger instance
+ */
+export const createLogger = (prefix: string) => {
+  class PrefixedLogger extends ConsoleLogger {
+    prefix: string;
+    
+    constructor(prefix: string) {
+      super();
+      this.prefix = prefix;
+    }
+
+    debug(message: string, ...args: any[]): void {
+      super.debug(`[${this.prefix}] ${message}`, ...args);
+    }
+    
+    info(message: string, ...args: any[]): void {
+      super.info(`[${this.prefix}] ${message}`, ...args);
+    }
+    
+    warn(message: string, ...args: any[]): void {
+      super.warn(`[${this.prefix}] ${message}`, ...args);
+    }
+    
+    error(message: string, ...args: any[]): void {
+      super.error(`[${this.prefix}] ${message}`, ...args);
+    }
+  }
+  
+  return new PrefixedLogger(prefix);
 };

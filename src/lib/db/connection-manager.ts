@@ -17,8 +17,8 @@
 import mongoose, { Connection } from 'mongoose';
 import { ReadPreference } from 'mongodb';
 import { EventEmitter } from 'events';
-import { normalizeMongoURI, getSanitizedURI } from '@/utils/mongodb-utils';
-import { dbConfig, monitoringConfig, isDevelopment } from '@/config/database';
+import { normalizeMongoURI, getSanitizedURI } from '@/utils/mongodb-uri';
+import { dbConfig, monitoringConfig, isDevelopment, isBuildTime, isStaticGeneration } from '@/config/database';
 import { MongoDBError, MongoDBErrorCode, handleMongoError } from './error-handler';
 
 // Define interfaces for logger to enable dependency injection
@@ -73,6 +73,9 @@ export interface ConnectionOptions {
   
   // Maximum number of reconnect attempts
   maxReconnectAttempts?: number;
+
+  // Force the use of a mock connection
+  forceMock?: boolean;
 }
 
 // Type for connection events
@@ -100,6 +103,50 @@ declare global {
 const cached: GlobalMongoose = global.mongoose ?? { conn: null, promise: null };
 if (!global.mongoose) {
   global.mongoose = cached;
+}
+
+/**
+ * Create a mock MongoDB connection
+ * Used during build/static generation to prevent real DB connections
+ */
+function createMockConnection(): Connection {
+  const mockConnection = {
+    // Base Connection properties
+    readyState: 1, // Connected
+    db: {
+      admin: () => ({
+        ping: async () => ({ ok: 1 }),
+        serverStatus: async () => ({
+          connections: { current: 1, available: 100, active: 1 },
+          opcounters: { query: 0, insert: 0, update: 0, delete: 0, getmore: 0, command: 0 },
+          mem: { bits: 64, resident: 0, virtual: 0 }
+        }),
+        command: async () => ({ ok: 1 }),
+        listDatabases: async () => ({ databases: [{ name: 'mock_db' }] })
+      }),
+      collection: () => ({
+        find: () => ({
+          toArray: async () => []
+        }),
+        findOne: async () => null,
+        insertOne: async () => ({ insertedId: 'mock_id' }),
+        updateOne: async () => ({ modifiedCount: 1 }),
+        deleteOne: async () => ({ deletedCount: 1 })
+      }),
+      collections: async () => [],
+      databaseName: 'mock_db'
+    },
+    id: 'mock-connection-id',
+    name: 'mock-connection',
+    host: 'localhost',
+    close: async () => {},
+    on: (event: string, callback: any) => mockConnection, // Return self for chaining
+    once: (event: string, callback: any) => mockConnection,
+    removeAllListeners: () => mockConnection,
+    emit: () => true
+  } as unknown as Connection;
+
+  return mockConnection;
 }
 
 /**
@@ -152,6 +199,34 @@ export class MongoConnectionManager extends EventEmitter {
     if (monitoringConfig.enabled) {
       this.setupMetricsCollection();
     }
+  }
+
+  /**
+   * Determine if we should use a mock connection
+   * 
+   * @param options - Connection options
+   * @returns True if we should use a mock connection
+   */
+  private shouldUseMockConnection(options: ConnectionOptions = {}): boolean {
+    // Always use mock if explicitly requested
+    if (options.forceMock) {
+      this.logger.debug('[MongoDB] Using mock connection (force mock)');
+      return true;
+    }
+
+    // Use mock during build/static generation
+    if (isBuildTime || isStaticGeneration) {
+      this.logger.debug('[MongoDB] Using mock connection (build time detection)');
+      return true;
+    }
+
+    // Use mock if enabled via environment variable
+    if (process.env.USE_MOCK_DB === 'true') {
+      this.logger.debug('[MongoDB] Using mock connection (USE_MOCK_DB=true)');
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -291,6 +366,12 @@ export class MongoConnectionManager extends EventEmitter {
   async getConnection(options?: ConnectionOptions): Promise<Connection> {
     const opts = { ...this.options, ...options };
     
+    // Check if we should use a mock connection
+    if (this.shouldUseMockConnection(opts)) {
+      this.logger.info('[MongoDB] Using mock connection for build/static generation');
+      return createMockConnection();
+    }
+    
     // Use direct connection if requested
     if (opts.direct) {
       return this.createDirectConnection(opts);
@@ -408,6 +489,12 @@ export class MongoConnectionManager extends EventEmitter {
     dbName: string,
     options: ConnectionOptions
   ): Promise<Connection> {
+    // Check if we should use a mock connection
+    if (this.shouldUseMockConnection(options)) {
+      this.logger.info('[MongoDB] Using mock connection for build/static generation');
+      return createMockConnection();
+    }
+
     // Generate a unique connection ID for tracking
     const connectionId = `${dbName}-${Date.now()}`;
     this.connectionStatus.set(connectionId, 'connecting');
@@ -772,6 +859,18 @@ export class MongoConnectionManager extends EventEmitter {
     latency: number;
     details?: any;
   }> {
+    // During build/static generation, return a mock healthy response
+    if (isBuildTime || isStaticGeneration) {
+      return {
+        status: 'healthy',
+        latency: 0,
+        details: {
+          readyState: 'connected',
+          message: 'Mock connection for build/static generation'
+        }
+      };
+    }
+
     const conn = connection || cached.conn || (this.connections[0] ?? null);
     
     if (!conn || conn.readyState !== 1) {
@@ -833,6 +932,14 @@ export class MongoConnectionManager extends EventEmitter {
    */
   static async disconnectAll(): Promise<void> {
     try {
+      // During build, just clear the cache without trying to disconnect
+      if (isBuildTime || isStaticGeneration) {
+        cached.conn = null;
+        cached.promise = null;
+        console.debug('[MongoDB] Mock connection cleared (build mode)');
+        return;
+      }
+
       // Close the instance if it exists
       if (MongoConnectionManager.instance) {
         await MongoConnectionManager.instance.cleanup();

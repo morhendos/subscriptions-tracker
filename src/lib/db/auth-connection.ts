@@ -7,6 +7,14 @@
 
 import mongoose from 'mongoose';
 import { loadEnvVars } from './env-debug';
+import { withErrorHandling } from './unified-error-handler';
+
+// Define connection options type
+export interface AuthConnectionOptions {
+  timeoutMS?: number;
+  serverSelectionTimeoutMS?: number;
+  context?: string;
+}
 
 // Ensure environment variables are loaded
 loadEnvVars();
@@ -46,7 +54,7 @@ export function normalizeMongoUri(uri: string): string {
 /**
  * Get a MongoDB connection specifically for authentication operations
  */
-export async function getAuthConnection(): Promise<mongoose.Connection> {
+export async function getAuthConnection(options?: AuthConnectionOptions): Promise<mongoose.Connection> {
   // If we already have a valid connection, return it
   if (authConnection && authConnection.readyState === 1) {
     return authConnection;
@@ -65,9 +73,9 @@ export async function getAuthConnection(): Promise<mongoose.Connection> {
   console.log(`[AUTH DB] Using database: ${normalizedUri.split('/').pop()?.split('?')[0] || 'unknown'}`);
   
   // Configure connection options with improved settings for authentication
-  const options: mongoose.ConnectOptions = {
-    serverSelectionTimeoutMS: 15000, // Wait 15 seconds for server selection
-    connectTimeoutMS: 30000, // Wait 30 seconds for initial connection
+  const connectOptions: mongoose.ConnectOptions = {
+    serverSelectionTimeoutMS: options?.serverSelectionTimeoutMS || 15000, // Wait 15 seconds for server selection
+    connectTimeoutMS: options?.timeoutMS || 30000, // Wait 30 seconds for initial connection
     socketTimeoutMS: 45000, // Wait 45 seconds for socket operations
     maxPoolSize: 10, // Reduce pool size for auth operations
     minPoolSize: 1, // Always keep at least one connection open
@@ -80,7 +88,7 @@ export async function getAuthConnection(): Promise<mongoose.Connection> {
   // Start a new connection with detailed logging
   console.log('[AUTH DB] Establishing MongoDB connection for authentication...');
   
-  connectionPromise = mongoose.connect(normalizedUri, options)
+  connectionPromise = mongoose.connect(normalizedUri, connectOptions)
     .then(() => {
       authConnection = mongoose.connection;
       console.log('[AUTH DB] MongoDB connection established successfully.');
@@ -113,19 +121,32 @@ export async function getAuthConnection(): Promise<mongoose.Connection> {
  * Run an authentication operation with a dedicated MongoDB connection
  * 
  * @param operation Function that performs database operations
+ * @param options Connection options or context string
  * @returns Result of the operation
  */
 export async function withAuthConnection<T>(
-  operation: () => Promise<T>
+  operation: () => Promise<T>,
+  options?: AuthConnectionOptions | string
 ): Promise<T> {
-  // Get an auth-specific connection first
-  await getAuthConnection();
+  // Convert string context to options object if needed
+  let connectionOptions: AuthConnectionOptions = {};
   
-  // Now run the operation
+  if (typeof options === 'string') {
+    connectionOptions = { context: options };
+  } else if (options) {
+    connectionOptions = options;
+  }
+  
+  const context = connectionOptions.context || 'auth-operation';
+  
   try {
+    // Get an auth-specific connection
+    await getAuthConnection(connectionOptions);
+    
+    // Run the operation
     return await operation();
   } catch (error) {
-    console.error('[AUTH DB] Error during authentication operation:', error);
+    console.error(`[AUTH DB] Error in ${context}:`, error);
     throw error;
   }
 }
