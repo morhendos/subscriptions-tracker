@@ -8,6 +8,7 @@
 import { Connection } from 'mongoose';
 import { MongoConnectionManager } from './connection-manager';
 import { withErrorHandling } from './unified-error-handler';
+import { handleMongoError } from './error-handler';
 
 /**
  * Connection options for database operations
@@ -51,7 +52,7 @@ export async function withConnection<T>(
     return await operation(connection);
   } catch (error) {
     console.error(`[DB] Error in ${contextStr}:`, error);
-    throw error;
+    throw handleMongoError(error, contextStr);
   }
 }
 
