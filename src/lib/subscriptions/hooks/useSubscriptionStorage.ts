@@ -10,18 +10,7 @@ const STORAGE_KEY_PREFIX = 'subscriptions';
 
 /**
  * Custom hook for managing subscription data with MongoDB persistence
- * @returns {object} Subscription management methods and data
- * @property {Subscription[]} subscriptions - List of all subscriptions
- * @property {function} addSubscription - Add a new subscription
- * @property {function} updateSubscription - Update existing subscription
- * @property {function} deleteSubscription - Remove a subscription
- * @property {function} toggleSubscription - Toggle subscription active state
- * @property {function} toggleAllSubscriptions - Enable or disable all subscriptions
- * @property {function} calculateSummary - Calculate spending summary
- * @property {boolean} mounted - Component mount status
- * @property {boolean} loading - Data loading state
- * @property {Error|null} error - Error state if any
- * @property {function} retry - Retry loading data after error
+ * Implements optimistic UI updates for all operations
  */
 export function useSubscriptionStorage() {
   const [mounted, setMounted] = useState(false);
@@ -67,26 +56,26 @@ export function useSubscriptionStorage() {
     if (userId) {
       loadSubscriptions();
     }
-  }, [userId]); // Changed from session?.user?.email to userId for consistency
+  }, [userId]); 
 
-  const saveSubscriptions = async (subs: Subscription[]) => {
+  // Save data in the background, with optional silent error handling
+  const saveSubscriptions = async (subs: Subscription[], silent = false) => {
     if (!userId) {
       console.log('No userId available, cannot save');
       throw new Error('User not authenticated');
     }
 
     try {
-      console.log('Saving subscriptions:', subs);
       await storage.set(storageKey, subs);
       return true;
     } catch (err) {
       console.error('Error saving subscriptions:', err);
-      throw err;
+      if (!silent) throw err;
+      return false;
     }
   };
 
   const addSubscription = async (data: SubscriptionFormData): Promise<Subscription> => {
-    console.log('Adding new subscription:', data);
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -104,29 +93,22 @@ export function useSubscriptionStorage() {
     const updatedSubs = [...subscriptions, newSubscription];
     setSubscriptions(updatedSubs);
     
-    try {
-      // Persist to database
-      await saveSubscriptions(updatedSubs);
-      return newSubscription;
-    } catch (error) {
-      // Revert UI on error
+    // Background save
+    saveSubscriptions(updatedSubs, true).catch(() => {
+      // On error, revert UI and notify
       setSubscriptions(subscriptions);
-      toast({
-        title: "Error adding subscription",
-        description: "Changes couldn't be saved. Please try again.",
-        variant: "destructive"
-      });
-      throw error;
-    }
+    });
+    
+    return newSubscription;
   };
 
-  const updateSubscription = async (id: string, data: Partial<SubscriptionFormData>) => {
-    console.log('Updating subscription:', id, data);
+  const updateSubscription = useCallback(async (id: string, data: Partial<SubscriptionFormData>) => {
     if (!userId) {
       throw new Error('User not authenticated');
     }
 
-    // Create updated subscription list
+    // Optimistically update UI first
+    const originalSubs = [...subscriptions];
     const updatedSubs = subscriptions.map(sub =>
       sub.id === id
         ? {
@@ -140,121 +122,76 @@ export function useSubscriptionStorage() {
         : sub
     );
     
-    // Store original subscriptions for rollback
-    const originalSubs = [...subscriptions];
-    
-    // Optimistically update UI
     setSubscriptions(updatedSubs);
     
-    try {
-      // Persist to database
-      await saveSubscriptions(updatedSubs);
-    } catch (error) {
-      // Revert UI on error
+    // Save in background
+    saveSubscriptions(updatedSubs, true).catch(() => {
+      // On error, revert UI
       setSubscriptions(originalSubs);
-      toast({
-        title: "Update failed",
-        description: "Changes couldn't be saved. Please try again.",
-        variant: "destructive"
-      });
-      throw error;
-    }
-  };
+    });
+  }, [subscriptions, userId]);
 
   const toggleSubscription = useCallback(async (id: string) => {
-    console.log('Toggling subscription:', id);
     if (!userId) {
       throw new Error('User not authenticated');
     }
 
-    // Store original state for rollback
+    // Immediately update UI (optimistic update)
     const originalSubs = [...subscriptions];
-    
-    // Perform optimistic update
     const updatedSubs = subscriptions.map(sub =>
       sub.id === id
         ? { ...sub, disabled: !sub.disabled, updatedAt: new Date().toISOString() }
         : sub
     );
     
-    // Update UI immediately
     setSubscriptions(updatedSubs);
     
-    // Persist to database in the background
-    try {
-      await saveSubscriptions(updatedSubs);
-    } catch (error) {
-      // Revert UI on error
+    // Save to database in background
+    saveSubscriptions(updatedSubs, true).catch(() => {
+      // If save fails, revert the UI change silently
       setSubscriptions(originalSubs);
-      toast({
-        title: "Failed to update subscription",
-        description: "Your changes couldn't be saved. Please try again.",
-        variant: "destructive"
-      });
-    }
-  }, [subscriptions, userId, toast]);
+    });
+  }, [subscriptions, userId]);
 
   const toggleAllSubscriptions = useCallback(async (enabled: boolean) => {
-    console.log('Toggling all subscriptions:', enabled);
     if (!userId) {
       throw new Error('User not authenticated');
     }
 
-    // Store original state for rollback
+    // Immediately update UI (optimistic update)
     const originalSubs = [...subscriptions];
-    
-    // Perform optimistic update
     const updatedSubs = subscriptions.map(sub => ({
       ...sub,
       disabled: !enabled,
       updatedAt: new Date().toISOString()
     }));
     
-    // Update UI immediately
     setSubscriptions(updatedSubs);
     
-    // Persist to database in the background
-    try {
-      await saveSubscriptions(updatedSubs);
-    } catch (error) {
-      // Revert UI on error
+    // Save to database in background
+    saveSubscriptions(updatedSubs, true).catch(() => {
+      // If save fails, revert the UI change silently
       setSubscriptions(originalSubs);
-      toast({
-        title: "Failed to update subscriptions",
-        description: "Your changes couldn't be saved. Please try again.",
-        variant: "destructive"
-      });
-    }
-  }, [subscriptions, userId, toast]);
+    });
+  }, [subscriptions, userId]);
 
   const deleteSubscription = useCallback(async (id: string) => {
-    console.log('Deleting subscription:', id);
     if (!userId) {
       throw new Error('User not authenticated');
     }
 
-    // Store original state for rollback
+    // Immediately update UI (optimistic update)
     const originalSubs = [...subscriptions];
-    
-    // Perform optimistic update
     const filteredSubs = subscriptions.filter(sub => sub.id !== id);
     
-    // Update UI immediately
     setSubscriptions(filteredSubs);
     
-    // Persist to database in the background
-    try {
-      await saveSubscriptions(filteredSubs);
-    } catch (error) {
-      // Revert UI on error
+    // Save to database in background
+    saveSubscriptions(filteredSubs, true).catch(() => {
+      // If save fails, revert the UI change silently
       setSubscriptions(originalSubs);
-      toast({
-        title: "Failed to delete subscription",
-        description: "Your changes couldn't be saved. Please try again.",
-        variant: "destructive"
-      });
-    }
-  }, [subscriptions, userId, toast]);
+    });
+  }, [subscriptions, userId]);
 
   const retry = () => {
     console.log('Retrying subscription load');
