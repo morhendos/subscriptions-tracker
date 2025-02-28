@@ -139,15 +139,14 @@ export async function withAuthConnection<T>(
   
   const context = connectionOptions.context || 'auth-operation';
   
-  // Get an auth-specific connection with error handling
-  await withErrorHandling(
-    () => getAuthConnection(connectionOptions),
-    context
-  );
-  
-  // Now run the operation with error handling
-  return withErrorHandling(
-    operation,
-    context
-  );
+  try {
+    // Get an auth-specific connection
+    await getAuthConnection(connectionOptions);
+    
+    // Run the operation
+    return await operation();
+  } catch (error) {
+    console.error(`[AUTH DB] Error in ${context}:`, error);
+    throw error;
+  }
 }
