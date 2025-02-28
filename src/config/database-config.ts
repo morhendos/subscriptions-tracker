@@ -104,6 +104,29 @@ export const isStaticGeneration =
   typeof process !== 'undefined' && process.env.NEXT_PHASE !== undefined;
 
 /**
+ * Check if a URI is for a local MongoDB connection
+ * 
+ * @param uri MongoDB connection URI
+ * @returns True if the URI is for a local connection
+ */
+export function isLocalConnection(uri: string): boolean {
+  try {
+    const url = new URL(uri);
+    return url.hostname === 'localhost' || 
+           url.hostname === '127.0.0.1' || 
+           url.hostname === '0.0.0.0' ||
+           url.hostname.startsWith('192.168.') ||
+           url.hostname.startsWith('10.') ||
+           url.hostname === 'host.docker.internal';
+  } catch (error) {
+    // If URL parsing fails, do a simple string check
+    return uri.includes('localhost') || 
+           uri.includes('127.0.0.1') || 
+           uri.includes('0.0.0.0');
+  }
+}
+
+/**
  * Default MongoDB configuration values for production environment
  * Optimized for cloud deployments like MongoDB Atlas
  */
@@ -186,7 +209,7 @@ const DEVELOPMENT_CONFIG: Partial<MongoDBConfig> = {
   // Other settings
   autoIndex: true,
   autoCreate: true,
-  ssl: false,
+  ssl: false, // No SSL for local development by default
   compressors: ['zlib'],
   
   // Monitoring
@@ -226,12 +249,72 @@ const DEVELOPMENT_CONFIG: Partial<MongoDBConfig> = {
 };
 
 /**
+ * Build-time configuration that mocks or disables certain features
+ */
+const BUILD_TIME_CONFIG: Partial<MongoDBConfig> = {
+  // Reduced connection pool to minimize potential issues
+  maxPoolSize: 2,
+  minPoolSize: 1,
+  
+  // Very short timeouts to fail fast during builds
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 10000,
+  connectionTimeoutMS: 5000,
+  
+  // Always disable SSL during build time to prevent TLS handshake issues
+  ssl: false,
+  
+  // Disable monitoring during builds
+  monitoring: {
+    enabled: false,
+    metricsIntervalSeconds: 0,
+    alerts: {
+      queryPerformance: {
+        enabled: false,
+        slowQueryThresholdMs: 0,
+        aggregationThresholdMs: 0,
+      },
+      connectionPoolUtilization: {
+        enabled: false,
+        threshold: 0,
+        criticalThreshold: 0,
+      },
+      replication: {
+        enabled: false,
+        maxLagSeconds: 0,
+      },
+    },
+    logging: {
+      slowQueryThresholdMs: 0,
+      rotationDays: 1,
+      level: 'error',
+      mongoDBProfileLevel: 0,
+    }
+  },
+  
+  // Disable debug logging during build
+  development: {
+    logOperations: false,
+  }
+};
+
+/**
  * Load MongoDB configuration with environment-specific values and
  * environment variable overrides.
  */
 export function loadMongoDBConfig(): MongoDBConfig {
   // Start with environment-specific base config
-  const baseConfig = isProduction ? PRODUCTION_CONFIG : DEVELOPMENT_CONFIG;
+  let baseConfig: Partial<MongoDBConfig>;
+  
+  if (isBuildTime || isStaticGeneration) {
+    console.log('[MongoDB Config] Using build-time configuration');
+    baseConfig = {
+      ...DEVELOPMENT_CONFIG,
+      ...BUILD_TIME_CONFIG
+    };
+  } else {
+    baseConfig = isProduction ? PRODUCTION_CONFIG : DEVELOPMENT_CONFIG;
+  }
   
   // Create a config object first with the required properties that won't be in the base config
   const requiredConfig = {
@@ -254,8 +337,16 @@ export function loadMongoDBConfig(): MongoDBConfig {
     ...baseConfig as MongoDBConfig,
   };
 
-  // Disable SSL for local development connections to MongoDB
-  if (isDevelopment && !isProduction) {
+  // Disable SSL for local connections
+  if (config.uri && isLocalConnection(config.uri)) {
+    // Force disable SSL for localhost connections to prevent handshake issues
+    console.log('[MongoDB Config] Localhost connection detected, disabling SSL');
+    config.ssl = false;
+  }
+
+  // Disable SSL during build time regardless of other settings
+  if (isBuildTime || isStaticGeneration) {
+    console.log('[MongoDB Config] Build-time operation detected, disabling SSL');
     config.ssl = false;
   }
 
@@ -284,8 +375,8 @@ export function loadMongoDBConfig(): MongoDBConfig {
     config.maxIdleTimeMS = parseInt(process.env.MONGODB_MAX_IDLE_TIME);
   }
 
-  // SSL override
-  if (process.env.MONGODB_SSL !== undefined) {
+  // SSL override - but respect the automatic disabling for localhost
+  if (process.env.MONGODB_SSL !== undefined && !isLocalConnection(config.uri)) {
     config.ssl = process.env.MONGODB_SSL === 'true';
   }
   
