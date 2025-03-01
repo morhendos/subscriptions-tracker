@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { serverStorage } from '@/lib/storage/server';
 import { subscriptionSchema } from '@/lib/validations/subscription';
-import { withErrorHandling, createErrorResponse } from '@/lib/db/unified-error-handler';
-import { MongoDBErrorCode, MongoDBError } from '@/lib/db/error-handler';
+import { createErrorResponse } from '@/lib/db/unified-error-handler';
+import { MongoDBErrorCode } from '@/lib/db/error-handler';
+import { 
+  getUserSubscriptions,
+  createSubscription 
+} from '@/lib/services/subscription-service';
 
 /**
  * GET /api/subscriptions
@@ -12,27 +15,26 @@ import { MongoDBErrorCode, MongoDBError } from '@/lib/db/error-handler';
  */
 export async function GET() {
   try {
-    // Wrap the entire operation in our error handling wrapper
-    return await withErrorHandling(async () => {
-      const session = await getServerSession();
+    // Auth check
+    const session = await getServerSession();
 
-      if (!session?.user?.id) {
-        return new NextResponse(
-          JSON.stringify({ 
-            error: 'Authentication required',
-            code: 'auth.unauthorized'
-          }),
-          { status: 401, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
+    if (!session?.user?.id) {
+      return new NextResponse(
+        JSON.stringify({ 
+          error: 'Authentication required',
+          code: 'auth.unauthorized'
+        }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
-      const subscriptions = await serverStorage.getSubscriptions(session.user.id);
-      return NextResponse.json(subscriptions);
-    }, 'api/subscriptions/GET');
+    // Use service function to get subscriptions
+    const subscriptions = await getUserSubscriptions(session.user.id);
+    return NextResponse.json(subscriptions);
   } catch (error: unknown) {
     console.error('GET /api/subscriptions error:', error);
     
-    // Use our standardized error response
+    // Use standardized error response
     const errorResponse = createErrorResponse(error);
     
     return NextResponse.json(
@@ -52,43 +54,43 @@ export async function GET() {
  */
 export async function POST(req: Request) {
   try {
-    // Wrap the entire operation in our error handling wrapper
-    return await withErrorHandling(async () => {
-      const session = await getServerSession();
+    // Auth check
+    const session = await getServerSession();
 
-      if (!session?.user?.id) {
-        return new NextResponse(
-          JSON.stringify({ 
-            error: 'Authentication required',
-            code: 'auth.unauthorized'
-          }),
-          { status: 401, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
+    if (!session?.user?.id) {
+      return new NextResponse(
+        JSON.stringify({ 
+          error: 'Authentication required',
+          code: 'auth.unauthorized'
+        }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
-      const json = await req.json();
+    const json = await req.json();
+    
+    // Validate input data
+    try {
+      const validatedData = subscriptionSchema.parse(json);
       
-      // Use try/catch for validation specifically to return 400 status
-      try {
-        const body = subscriptionSchema.parse(json);
-        const subscription = await serverStorage.createSubscription(session.user.id, body);
-        return NextResponse.json(subscription);
-      } catch (validationError) {
-        // Handle validation errors specifically
-        return NextResponse.json(
-          { 
-            error: 'Invalid subscription data', 
-            code: 'validation.failed',
-            details: validationError
-          },
-          { status: 400 }
-        );
-      }
-    }, 'api/subscriptions/POST');
+      // Use service function to create subscription
+      const subscription = await createSubscription(session.user.id, validatedData);
+      return NextResponse.json(subscription);
+    } catch (validationError) {
+      // Handle validation errors specifically
+      return NextResponse.json(
+        { 
+          error: 'Invalid subscription data', 
+          code: 'validation.failed',
+          details: validationError
+        },
+        { status: 400 }
+      );
+    }
   } catch (error: unknown) {
     console.error('POST /api/subscriptions error:', error);
     
-    // Use our standardized error response
+    // Use standardized error response
     const errorResponse = createErrorResponse(error);
     
     return NextResponse.json(
