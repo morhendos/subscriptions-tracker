@@ -36,20 +36,20 @@ This document outlines the step-by-step plan for refactoring the MongoDB integra
 - [x] Enhance health check endpoint with better diagnostics
 - [x] Complete integration of error handling across all endpoints
 
-### Phase 4: Repository Pattern Implementation
+### Phase 4: Enhance Service Functions (Simplified Approach) 🔄
 
-- [ ] Implement repository pattern for data access
-- [ ] Abstract MongoDB-specific code from business logic
-- [ ] Create interfaces for data access layers
-- [ ] Implement unit tests for repositories
-- [ ] Add transaction support
+- [ ] Extend the existing service patterns with consistent error handling
+- [ ] Create service functions to centralize common operations
+- [ ] Refactor API endpoints to use service functions
+- [ ] Improve test coverage for service functions
+- [ ] Document the service layer design
 
 ### Phase 5: API Integration and Cleanup
 
-- [ ] Update all API routes to use the new repository pattern
-- [ ] Implement consistent error handling across APIs
-- [ ] Add request validation
-- [ ] Improve response formatting
+- [ ] Ensure consistent patterns across all API routes
+- [ ] Improve request validation
+- [ ] Standardize response formatting
+- [ ] Optimize database queries
 - [ ] Complete end-to-end testing
 
 ## Implementation Notes
@@ -79,23 +79,34 @@ Phase 3 focused on establishing a robust error handling system:
 - Created a unified error handling module in `unified-error-handler.ts`
 - Implemented user-friendly error messages that are safe to display
 - Added standardized API error response formatting
-- Created operation wrappers with built-in error handling in `operations.ts`
+- Created operation wrappers with built-in error handling
 - Enhanced health check endpoint to use standardized error handling
 - Integrated error handling across all database-related endpoints
 - Improved error formatting for consistent client-side handling
-- Focused on essential error handling rather than extensive monitoring
+- Added type safety with proper TypeScript error handling
+
+### Phase 4 Notes: Simplified Service Functions
+
+Rather than implementing a full repository pattern, Phase 4 will focus on a more pragmatic approach:
+
+- Extend existing patterns by creating service functions that leverage our error handling
+- Centralize database operations into well-named, single-responsibility functions
+- Provide standard patterns for service implementation
+- Focus on practical improvements rather than architectural complexity
+- Ensure all services use the error handling mechanisms implemented in Phase 3
+- Maintain compatibility with the existing codebase
 
 ### Next Steps:
 
 For Phase 4, we'll focus on:
-1. Designing the repository interfaces
-2. Implementing concrete repository classes 
-3. Writing unit tests for the repositories
-4. Gradually migrating existing code to use the repository pattern
+1. Identifying areas where service functions can provide value
+2. Implementing service functions for common operations
+3. Updating API endpoints to use these service functions
+4. Documenting the patterns and best practices
 
 ## Resources
 
 - [MongoDB Node.js Driver Documentation](https://mongodb.github.io/node-mongodb-native/)
 - [Mongoose Documentation](https://mongoosejs.com/docs/)
-- [Repository Pattern in TypeScript](https://khalilstemmler.com/articles/typescript-domain-driven-design/repository-dto-mapper/)
-- [Event-Driven Architecture](https://martinfowler.com/articles/201701-event-driven.html)
+- [Functional Programming in TypeScript](https://www.typescriptlang.org/docs/handbook/typescript-in-5-minutes-func.html)
+- [Error Handling Best Practices](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/try...catch)
