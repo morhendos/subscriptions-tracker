@@ -105,7 +105,8 @@ export async function getSystemHealth(): Promise<SystemHealthResponse> {
       latency: health.latency,
       database: {
         status: health.status,
-        error: health.error
+        // Only include error property if status is unhealthy
+        ...(health.status === 'unhealthy' ? { error: 'Database connection issue detected' } : {})
       },
       schemas: schemaHealth,
       timestamp: new Date().toISOString()
