@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { serverStorage } from '@/lib/storage/server';
 import { subscriptionSchema } from '@/lib/validations/subscription';
-import { withErrorHandling, createErrorResponse } from '@/lib/db/unified-error-handler';
-import { MongoDBErrorCode, MongoDBError } from '@/lib/db/error-handler';
+import { createErrorResponse } from '@/lib/db/unified-error-handler';
+import { MongoDBErrorCode } from '@/lib/db/error-handler';
+import { 
+  getSubscriptionById,
+  updateSubscription,
+  deleteSubscription
+} from '@/lib/services/subscription-service';
 
 /**
  * GET /api/subscriptions/[id]
@@ -15,39 +19,37 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Wrap the entire operation in our error handling wrapper
-    return await withErrorHandling(async () => {
-      const session = await getServerSession();
+    // Auth check
+    const session = await getServerSession();
 
-      if (!session?.user?.id) {
-        return new NextResponse(
-          JSON.stringify({ 
-            error: 'Authentication required',
-            code: 'auth.unauthorized'
-          }),
-          { status: 401, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
+    if (!session?.user?.id) {
+      return new NextResponse(
+        JSON.stringify({ 
+          error: 'Authentication required',
+          code: 'auth.unauthorized'
+        }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
-      const subscriptions = await serverStorage.getSubscriptions(session.user.id);
-      const subscription = subscriptions.find(s => s.id === params.id);
+    // Use service function to get specific subscription
+    const subscription = await getSubscriptionById(session.user.id, params.id);
 
-      if (!subscription) {
-        return new NextResponse(
-          JSON.stringify({ 
-            error: 'Subscription not found',
-            code: 'resource.not_found'
-          }),
-          { status: 404, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
+    if (!subscription) {
+      return new NextResponse(
+        JSON.stringify({ 
+          error: 'Subscription not found',
+          code: 'resource.not_found'
+        }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
-      return NextResponse.json(subscription);
-    }, `api/subscriptions/${params.id}/GET`);
+    return NextResponse.json(subscription);
   } catch (error: unknown) {
     console.error(`GET /api/subscriptions/${params.id} error:`, error);
     
-    // Use our standardized error response
+    // Use standardized error response
     const errorResponse = createErrorResponse(error);
     
     return NextResponse.json(
@@ -70,58 +72,57 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Wrap the entire operation in our error handling wrapper
-    return await withErrorHandling(async () => {
-      const session = await getServerSession();
+    // Auth check
+    const session = await getServerSession();
 
-      if (!session?.user?.id) {
+    if (!session?.user?.id) {
+      return new NextResponse(
+        JSON.stringify({ 
+          error: 'Authentication required',
+          code: 'auth.unauthorized'
+        }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Handle validation separately to return 400 status
+    try {
+      const json = await req.json();
+      const validatedData = subscriptionSchema.parse(json);
+      
+      // Use service function to update subscription
+      const updatedSubscription = await updateSubscription(
+        session.user.id,
+        params.id,
+        validatedData
+      );
+
+      if (!updatedSubscription) {
         return new NextResponse(
           JSON.stringify({ 
-            error: 'Authentication required',
-            code: 'auth.unauthorized'
+            error: 'Subscription not found',
+            code: 'resource.not_found'
           }),
-          { status: 401, headers: { 'Content-Type': 'application/json' } }
+          { status: 404, headers: { 'Content-Type': 'application/json' } }
         );
       }
 
-      // Handle validation separately to return 400 status
-      try {
-        const json = await req.json();
-        const body = subscriptionSchema.parse(json);
-        
-        const updatedSubscription = await serverStorage.updateSubscription(
-          session.user.id,
-          params.id,
-          body
-        );
-
-        if (!updatedSubscription) {
-          return new NextResponse(
-            JSON.stringify({ 
-              error: 'Subscription not found',
-              code: 'resource.not_found'
-            }),
-            { status: 404, headers: { 'Content-Type': 'application/json' } }
-          );
-        }
-
-        return NextResponse.json(updatedSubscription);
-      } catch (validationError) {
-        // Handle validation errors specifically
-        return NextResponse.json(
-          { 
-            error: 'Invalid subscription data', 
-            code: 'validation.failed',
-            details: validationError
-          },
-          { status: 400 }
-        );
-      }
-    }, `api/subscriptions/${params.id}/PUT`);
+      return NextResponse.json(updatedSubscription);
+    } catch (validationError) {
+      // Handle validation errors specifically
+      return NextResponse.json(
+        { 
+          error: 'Invalid subscription data', 
+          code: 'validation.failed',
+          details: validationError
+        },
+        { status: 400 }
+      );
+    }
   } catch (error: unknown) {
     console.error(`PUT /api/subscriptions/${params.id} error:`, error);
     
-    // Use our standardized error response
+    // Use standardized error response
     const errorResponse = createErrorResponse(error);
     
     return NextResponse.json(
@@ -144,38 +145,37 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Wrap the entire operation in our error handling wrapper
-    return await withErrorHandling(async () => {
-      const session = await getServerSession();
+    // Auth check
+    const session = await getServerSession();
 
-      if (!session?.user?.id) {
-        return new NextResponse(
-          JSON.stringify({ 
-            error: 'Authentication required',
-            code: 'auth.unauthorized'
-          }),
-          { status: 401, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
+    if (!session?.user?.id) {
+      return new NextResponse(
+        JSON.stringify({ 
+          error: 'Authentication required',
+          code: 'auth.unauthorized'
+        }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
-      const success = await serverStorage.deleteSubscription(session.user.id, params.id);
+    // Use service function to delete subscription
+    const success = await deleteSubscription(session.user.id, params.id);
 
-      if (!success) {
-        return new NextResponse(
-          JSON.stringify({ 
-            error: 'Subscription not found',
-            code: 'resource.not_found'
-          }),
-          { status: 404, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
+    if (!success) {
+      return new NextResponse(
+        JSON.stringify({ 
+          error: 'Subscription not found',
+          code: 'resource.not_found'
+        }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
-      return new NextResponse(null, { status: 204 });
-    }, `api/subscriptions/${params.id}/DELETE`);
+    return new NextResponse(null, { status: 204 });
   } catch (error: unknown) {
     console.error(`DELETE /api/subscriptions/${params.id} error:`, error);
     
-    // Use our standardized error response
+    // Use standardized error response
     const errorResponse = createErrorResponse(error);
     
     return NextResponse.json(
