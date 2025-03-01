@@ -1,306 +1,70 @@
 # Simple Implementation Plan
 
-This document outlines the minimal steps needed to update the API routes to use service functions.
+## Update All API Routes to Use Service Functions
 
-## Step 1: Identify API Routes to Update
+### 1. Subscription Endpoints
 
-These are the API routes that need to be updated:
+Update these endpoints to use the subscription service:
 
-1. `/api/subscriptions` (GET, POST)
-2. `/api/subscriptions/[id]` (GET, PUT, DELETE)
-3. `/api/storage` (GET, POST, DELETE)
+| API Route | Method | Service Function |
+|-----------|--------|------------------|
+| `/api/subscriptions` | GET | `getUserSubscriptions()` |
+| `/api/subscriptions` | POST | `createSubscription()` |
+| `/api/subscriptions/[id]` | GET | `getSubscriptionById()` |
+| `/api/subscriptions/[id]` | PUT | `updateSubscription()` |
+| `/api/subscriptions/[id]` | DELETE | `deleteSubscription()` |
 
-## Step 2: Use Existing Service Functions
+### 2. Storage Endpoints
 
-The subscription service is already implemented and can be used immediately:
-- `getUserSubscriptions` for GET /api/subscriptions
-- `getSubscriptionById` for GET /api/subscriptions/[id]
-- `createSubscription` for POST /api/subscriptions
-- `updateSubscription` for PUT /api/subscriptions/[id]
-- `deleteSubscription` for DELETE /api/subscriptions/[id]
+Create a storage service with these functions and update the routes:
 
-## Step 3: Update API Routes
+| API Route | Method | Service Function to Create |
+|-----------|--------|---------------------------|
+| `/api/storage` | GET | `getStorageItem()` |
+| `/api/storage` | POST | `saveStorageItem()` |
+| `/api/storage` | DELETE | `deleteStorageItem()` |
 
-### 3.1 Update `/api/subscriptions` Route
+### 3. Health Check Endpoints
 
-```typescript
-// src/app/api/subscriptions/route.ts
+Create a health service with these functions:
 
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { createErrorResponse } from '@/lib/db/unified-error-handler';
-import { MongoDBErrorCode } from '@/lib/db/error-handler';
+| API Route | Method | Service Function to Create |
+|-----------|--------|---------------------------|
+| `/api/health/db` | GET | `getDatabaseHealth()` |
+| `/api/healthz` | GET | `getSystemHealth()` |
 
-// Import the service functions
-import { getUserSubscriptions, createSubscription } from '@/lib/services/subscription-service';
-import { subscriptionSchema } from '@/lib/validations/subscription';
+### 4. Auth Debug Endpoints (if maintaining them)
 
-export async function GET() {
-  try {
-    const session = await getServerSession();
+Create auth debug service:
 
-    if (!session?.user?.id) {
-      return new NextResponse(
-        JSON.stringify({ 
-          error: 'Authentication required',
-          code: 'auth.unauthorized'
-        }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+| API Route | Method | Service Function to Create |
+|-----------|--------|---------------------------|
+| `/api/auth-debug/create-test-user` | POST | `createTestUser()` |
+| `/api/check-environment` | GET | `checkEnvironment()` |
 
-    // Use the service function
-    const subscriptions = await getUserSubscriptions(session.user.id);
-    return NextResponse.json(subscriptions);
-  } catch (error: unknown) {
-    console.error('GET /api/subscriptions error:', error);
-    
-    const errorResponse = createErrorResponse(error);
-    
-    return NextResponse.json(
-      { error: errorResponse.error, code: errorResponse.code },
-      { 
-        status: (errorResponse.code === MongoDBErrorCode.CONNECTION_FAILED || 
-                errorResponse.code === MongoDBErrorCode.CONNECTION_TIMEOUT) ? 503 : 500 
-      }
-    );
-  }
-}
+## Implementation Steps
 
-export async function POST(req: Request) {
-  try {
-    const session = await getServerSession();
+1. **Use existing subscription service** - Already implemented
+2. **Create storage service** - Move database logic from API routes
+3. **Create health service** - Move health check logic
+4. **Create auth debug service** - If these endpoints will be maintained
+5. **Update all API routes** - Replace direct database calls with service function calls
 
-    if (!session?.user?.id) {
-      return new NextResponse(
-        JSON.stringify({ 
-          error: 'Authentication required',
-          code: 'auth.unauthorized'
-        }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+## Implementation Approach
 
-    const json = await req.json();
-    
-    try {
-      const validatedData = subscriptionSchema.parse(json);
-      
-      // Use the service function
-      const subscription = await createSubscription(session.user.id, validatedData);
-      return NextResponse.json(subscription);
-    } catch (validationError) {
-      // Handle validation errors
-      return NextResponse.json(
-        { 
-          error: 'Invalid subscription data', 
-          code: 'validation.failed',
-          details: validationError
-        },
-        { status: 400 }
-      );
-    }
-  } catch (error: unknown) {
-    console.error('POST /api/subscriptions error:', error);
-    
-    const errorResponse = createErrorResponse(error);
-    
-    return NextResponse.json(
-      { error: errorResponse.error, code: errorResponse.code },
-      { 
-        status: (errorResponse.code === MongoDBErrorCode.CONNECTION_FAILED || 
-                errorResponse.code === MongoDBErrorCode.CONNECTION_TIMEOUT) ? 503 : 500 
-      }
-    );
-  }
-}
-```
+For each API route:
 
-### 3.2 Update `/api/subscriptions/[id]` Route
+1. **Leave HTTP, auth, and error handling alone** - Keep in API routes
+2. **Move data access to service functions** - Everything that touches the database  
+3. **Replace database calls with service calls** - Simple substitution
 
-```typescript
-// src/app/api/subscriptions/[id]/route.ts
+That's it! Keep it practical and straightforward.
 
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { createErrorResponse } from '@/lib/db/unified-error-handler';
-import { MongoDBErrorCode } from '@/lib/db/error-handler';
+## Verification
 
-// Import the service functions
-import { 
-  getSubscriptionById,
-  updateSubscription,
-  deleteSubscription 
-} from '@/lib/services/subscription-service';
-import { subscriptionSchema } from '@/lib/validations/subscription';
+Start the app and check that all functionality works as before:
+1. Login/signup
+2. View subscriptions
+3. Create/edit/delete subscriptions
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const session = await getServerSession();
-
-    if (!session?.user?.id) {
-      return new NextResponse(
-        JSON.stringify({ 
-          error: 'Authentication required',
-          code: 'auth.unauthorized'
-        }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const subscription = await getSubscriptionById(session.user.id, params.id);
-
-    if (!subscription) {
-      return new NextResponse(
-        JSON.stringify({ 
-          error: 'Subscription not found',
-          code: 'resource.not_found'
-        }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    return NextResponse.json(subscription);
-  } catch (error: unknown) {
-    console.error(`GET /api/subscriptions/${params.id} error:`, error);
-    
-    const errorResponse = createErrorResponse(error);
-    
-    return NextResponse.json(
-      { error: errorResponse.error, code: errorResponse.code },
-      { 
-        status: (errorResponse.code === MongoDBErrorCode.CONNECTION_FAILED || 
-                errorResponse.code === MongoDBErrorCode.CONNECTION_TIMEOUT) ? 503 : 500 
-      }
-    );
-  }
-}
-
-export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const session = await getServerSession();
-
-    if (!session?.user?.id) {
-      return new NextResponse(
-        JSON.stringify({ 
-          error: 'Authentication required',
-          code: 'auth.unauthorized'
-        }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    try {
-      const json = await req.json();
-      const body = subscriptionSchema.parse(json);
-      
-      const updatedSubscription = await updateSubscription(
-        session.user.id,
-        params.id,
-        body
-      );
-
-      if (!updatedSubscription) {
-        return new NextResponse(
-          JSON.stringify({ 
-            error: 'Subscription not found',
-            code: 'resource.not_found'
-          }),
-          { status: 404, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-
-      return NextResponse.json(updatedSubscription);
-    } catch (validationError) {
-      return NextResponse.json(
-        { 
-          error: 'Invalid subscription data', 
-          code: 'validation.failed',
-          details: validationError
-        },
-        { status: 400 }
-      );
-    }
-  } catch (error: unknown) {
-    console.error(`PUT /api/subscriptions/${params.id} error:`, error);
-    
-    const errorResponse = createErrorResponse(error);
-    
-    return NextResponse.json(
-      { error: errorResponse.error, code: errorResponse.code },
-      { 
-        status: (errorResponse.code === MongoDBErrorCode.CONNECTION_FAILED || 
-                errorResponse.code === MongoDBErrorCode.CONNECTION_TIMEOUT) ? 503 : 500 
-      }
-    );
-  }
-}
-
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const session = await getServerSession();
-
-    if (!session?.user?.id) {
-      return new NextResponse(
-        JSON.stringify({ 
-          error: 'Authentication required',
-          code: 'auth.unauthorized'
-        }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const success = await deleteSubscription(session.user.id, params.id);
-
-    if (!success) {
-      return new NextResponse(
-        JSON.stringify({ 
-          error: 'Subscription not found',
-          code: 'resource.not_found'
-        }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    return new NextResponse(null, { status: 204 });
-  } catch (error: unknown) {
-    console.error(`DELETE /api/subscriptions/${params.id} error:`, error);
-    
-    const errorResponse = createErrorResponse(error);
-    
-    return NextResponse.json(
-      { error: errorResponse.error, code: errorResponse.code },
-      { 
-        status: (errorResponse.code === MongoDBErrorCode.CONNECTION_FAILED || 
-                errorResponse.code === MongoDBErrorCode.CONNECTION_TIMEOUT) ? 503 : 500 
-      }
-    );
-  }
-}
-```
-
-### 3.3 Storage API (Optional for now)
-
-For the storage API, you can either keep using the current implementation or update it later after confirming the subscription API routes work correctly.
-
-## Step 4: Test the Changes
-
-After updating each route:
-1. Start the application
-2. Login to the app
-3. Verify that subscriptions load correctly
-4. Try creating and editing subscriptions
-5. Try deleting subscriptions
-
-## That's It!
-
-These updates will integrate the service functions with your API routes. No unit tests or additional documentation needed at this stage.
+All existing behavior should remain the same.
