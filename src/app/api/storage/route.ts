@@ -4,7 +4,7 @@ import { Subscription } from '@/types/subscriptions';
 import mongoose from 'mongoose';
 import { withConnection } from '@/lib/db/simplified-connection';
 import { withErrorHandling, createErrorResponse } from '@/lib/db/unified-error-handler';
-import { MongoDBErrorCode } from '@/lib/db/error-handler';
+import { MongoDBErrorCode, MongoDBError } from '@/lib/db/error-handler';
 
 const STORAGE_KEY_PREFIX = 'subscriptions';
 
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json(result);
     }, 'api/storage/GET');
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Storage API GET error:', error);
     
     // Use standardized error response
@@ -80,7 +80,10 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(
       { error: errorResponse.error, code: errorResponse.code },
-      { status: error.code === MongoDBErrorCode.SERVICE_UNAVAILABLE ? 503 : 500 }
+      { 
+        status: (errorResponse.code === MongoDBErrorCode.CONNECTION_FAILED || 
+                errorResponse.code === MongoDBErrorCode.CONNECTION_TIMEOUT) ? 503 : 500 
+      }
     );
   }
 }
@@ -156,7 +159,7 @@ export async function POST(request: NextRequest) {
         subscriptions: result 
       });
     }, 'api/storage/POST');
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Storage API POST error:', error);
     
     // Use standardized error response
@@ -164,7 +167,10 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(
       { error: errorResponse.error, code: errorResponse.code },
-      { status: error.code === MongoDBErrorCode.SERVICE_UNAVAILABLE ? 503 : 500 }
+      { 
+        status: (errorResponse.code === MongoDBErrorCode.CONNECTION_FAILED || 
+                errorResponse.code === MongoDBErrorCode.CONNECTION_TIMEOUT) ? 503 : 500 
+      }
     );
   }
 }
@@ -201,7 +207,7 @@ export async function DELETE(request: NextRequest) {
       
       return NextResponse.json({ success: true });
     }, 'api/storage/DELETE');
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Storage API DELETE error:', error);
     
     // Use standardized error response
@@ -209,7 +215,10 @@ export async function DELETE(request: NextRequest) {
     
     return NextResponse.json(
       { error: errorResponse.error, code: errorResponse.code },
-      { status: error.code === MongoDBErrorCode.SERVICE_UNAVAILABLE ? 503 : 500 }
+      { 
+        status: (errorResponse.code === MongoDBErrorCode.CONNECTION_FAILED || 
+                errorResponse.code === MongoDBErrorCode.CONNECTION_TIMEOUT) ? 503 : 500 
+      }
     );
   }
 }
