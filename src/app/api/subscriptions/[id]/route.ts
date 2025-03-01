@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { serverStorage } from '@/lib/storage/server';
 import { subscriptionSchema } from '@/lib/validations/subscription';
 import { withErrorHandling, createErrorResponse } from '@/lib/db/unified-error-handler';
-import { MongoDBErrorCode } from '@/lib/db/error-handler';
+import { MongoDBErrorCode, MongoDBError } from '@/lib/db/error-handler';
 
 /**
  * GET /api/subscriptions/[id]
@@ -44,7 +44,7 @@ export async function GET(
 
       return NextResponse.json(subscription);
     }, `api/subscriptions/${params.id}/GET`);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(`GET /api/subscriptions/${params.id} error:`, error);
     
     // Use our standardized error response
@@ -52,7 +52,10 @@ export async function GET(
     
     return NextResponse.json(
       { error: errorResponse.error, code: errorResponse.code },
-      { status: error.code === MongoDBErrorCode.SERVICE_UNAVAILABLE ? 503 : 500 }
+      { 
+        status: (errorResponse.code === MongoDBErrorCode.CONNECTION_FAILED || 
+                errorResponse.code === MongoDBErrorCode.CONNECTION_TIMEOUT) ? 503 : 500 
+      }
     );
   }
 }
@@ -115,7 +118,7 @@ export async function PUT(
         );
       }
     }, `api/subscriptions/${params.id}/PUT`);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(`PUT /api/subscriptions/${params.id} error:`, error);
     
     // Use our standardized error response
@@ -123,7 +126,10 @@ export async function PUT(
     
     return NextResponse.json(
       { error: errorResponse.error, code: errorResponse.code },
-      { status: error.code === MongoDBErrorCode.SERVICE_UNAVAILABLE ? 503 : 500 }
+      { 
+        status: (errorResponse.code === MongoDBErrorCode.CONNECTION_FAILED || 
+                errorResponse.code === MongoDBErrorCode.CONNECTION_TIMEOUT) ? 503 : 500 
+      }
     );
   }
 }
@@ -166,7 +172,7 @@ export async function DELETE(
 
       return new NextResponse(null, { status: 204 });
     }, `api/subscriptions/${params.id}/DELETE`);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(`DELETE /api/subscriptions/${params.id} error:`, error);
     
     // Use our standardized error response
@@ -174,7 +180,10 @@ export async function DELETE(
     
     return NextResponse.json(
       { error: errorResponse.error, code: errorResponse.code },
-      { status: error.code === MongoDBErrorCode.SERVICE_UNAVAILABLE ? 503 : 500 }
+      { 
+        status: (errorResponse.code === MongoDBErrorCode.CONNECTION_FAILED || 
+                errorResponse.code === MongoDBErrorCode.CONNECTION_TIMEOUT) ? 503 : 500 
+      }
     );
   }
 }
