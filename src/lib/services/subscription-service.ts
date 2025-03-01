@@ -94,7 +94,7 @@ export async function createSubscription(
         ...data,
         nextBillingDate: new Date(calculateNextBillingDate(data.startDate, data.billingPeriod)),
         startDate: new Date(data.startDate),
-        disabled: data.disabled ?? false
+        disabled: false // Set default value instead of accessing from data
       });
       
       return formatSubscription(subscription);
