@@ -1,8 +1,10 @@
 subscription-tracker/
 ├── AUTH_DEBUGGING.md
 ├── AUTH_MIGRATION.md
+├── COMPLETE_API_UPDATE_PLAN.md
 ├── CONNECTION_MIGRATION.md
 ├── ENV_FIX.md
+├── IMPLEMENTATION_GUIDE.md
 ├── LOGIN_FIX.md
 ├── LOGIN_PROBLEM_SOLVED.md
 ├── MONGODB_MIGRATION.md
@@ -10,9 +12,12 @@ subscription-tracker/
 ├── README.md
 ├── REFACTORING.md
 ├── REFACTORING_PLAN.md
+├── SIMPLE_IMPLEMENTATION_PLAN.md
 ├── docs
+│   ├── AUTH_FIX.md
 │   ├── MONGODB_ATLAS_SETUP.md
-│   └── MONGODB_SETUP.md
+│   ├── MONGODB_SETUP.md
+│   └── PRODUCTION_DATABASE_CHECKS.md
 ├── install-components.sh
 ├── next-env.d.ts
 ├── next.config.js
@@ -24,6 +29,7 @@ subscription-tracker/
 │   └── logo.png
 ├── scripts
 │   ├── create-test-user.js
+│   ├── test-db-info.js
 │   ├── test-login.js
 │   └── tree.js
 ├── src
@@ -35,6 +41,8 @@ subscription-tracker/
 │   │   │   ├── auth
 │   │   │   │   └── [...nextauth]
 │   │   │   │       └── route.ts
+│   │   │   ├── auth-debug
+│   │   │   │   └── route.ts
 │   │   │   ├── check-environment
 │   │   │   │   └── route.ts
 │   │   │   ├── health
@@ -47,6 +55,7 @@ subscription-tracker/
 │   │   │   ├── storage
 │   │   │   │   └── route.ts
 │   │   │   ├── subscriptions
+│   │   │   │   ├── REFACTORED_EXAMPLE.md
 │   │   │   │   ├── [id]
 │   │   │   │   │   └── route.ts
 │   │   │   │   └── route.ts
@@ -139,12 +148,14 @@ subscription-tracker/
 │   │   │   ├── index.ts
 │   │   │   └── validation.ts
 │   │   ├── db
+│   │   │   ├── ERROR_HANDLING.md
 │   │   │   ├── __tests__
 │   │   │   │   ├── atlas-config.test.ts
 │   │   │   │   ├── atlas-integration.test.ts
 │   │   │   │   ├── connection-manager.test.ts
 │   │   │   │   └── mongodb.test.ts
 │   │   │   ├── atlas-config.ts
+│   │   │   ├── auth-connection.ts
 │   │   │   ├── check-env.ts
 │   │   │   ├── config.ts
 │   │   │   ├── connection-fix.ts
@@ -154,11 +165,18 @@ subscription-tracker/
 │   │   │   ├── index.ts
 │   │   │   ├── mock-connection.ts
 │   │   │   ├── mongodb.ts
+│   │   │   ├── operations.ts
 │   │   │   ├── simplified-connection.ts
 │   │   │   ├── test-connection.ts
-│   │   │   └── test.ts
+│   │   │   ├── test.ts
+│   │   │   └── unified-error-handler.ts
 │   │   ├── monitoring
 │   │   │   └── index.ts
+│   │   ├── services
+│   │   │   ├── SERVICE_PATTERN.md
+│   │   │   ├── __tests__
+│   │   │   │   └── subscription-service.test.ts
+│   │   │   └── subscription-service.ts
 │   │   ├── storage
 │   │   │   ├── __tests__
 │   │   │   │   └── mongodb.test.ts
