@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { serverStorage } from '@/lib/storage/server';
+import { 
+  getSubscriptionById, 
+  updateSubscription, 
+  deleteSubscription 
+} from '@/lib/services/subscription-service';
 import { subscriptionSchema } from '@/lib/validations/subscription';
 import { withErrorHandling, createErrorResponse } from '@/lib/db/unified-error-handler';
-import { MongoDBErrorCode, MongoDBError } from '@/lib/db/error-handler';
+import { MongoDBErrorCode } from '@/lib/db/error-handler';
 
 /**
  * GET /api/subscriptions/[id]
@@ -29,8 +33,8 @@ export async function GET(
         );
       }
 
-      const subscriptions = await serverStorage.getSubscriptions(session.user.id);
-      const subscription = subscriptions.find(s => s.id === params.id);
+      // Use subscription service to get subscription by ID
+      const subscription = await getSubscriptionById(session.user.id, params.id);
 
       if (!subscription) {
         return new NextResponse(
@@ -89,7 +93,8 @@ export async function PUT(
         const json = await req.json();
         const body = subscriptionSchema.parse(json);
         
-        const updatedSubscription = await serverStorage.updateSubscription(
+        // Use subscription service to update subscription
+        const updatedSubscription = await updateSubscription(
           session.user.id,
           params.id,
           body
@@ -158,7 +163,8 @@ export async function DELETE(
         );
       }
 
-      const success = await serverStorage.deleteSubscription(session.user.id, params.id);
+      // Use subscription service to delete subscription
+      const success = await deleteSubscription(session.user.id, params.id);
 
       if (!success) {
         return new NextResponse(
