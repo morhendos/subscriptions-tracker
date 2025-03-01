@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { serverStorage } from '@/lib/storage/server';
 import { subscriptionSchema } from '@/lib/validations/subscription';
 import { withErrorHandling, createErrorResponse } from '@/lib/db/unified-error-handler';
-import { MongoDBErrorCode } from '@/lib/db/error-handler';
+import { MongoDBErrorCode, MongoDBError } from '@/lib/db/error-handler';
 
 /**
  * GET /api/subscriptions
@@ -29,7 +29,7 @@ export async function GET() {
       const subscriptions = await serverStorage.getSubscriptions(session.user.id);
       return NextResponse.json(subscriptions);
     }, 'api/subscriptions/GET');
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('GET /api/subscriptions error:', error);
     
     // Use our standardized error response
@@ -37,7 +37,10 @@ export async function GET() {
     
     return NextResponse.json(
       { error: errorResponse.error, code: errorResponse.code },
-      { status: error.code === MongoDBErrorCode.SERVICE_UNAVAILABLE ? 503 : 500 }
+      { 
+        status: (errorResponse.code === MongoDBErrorCode.CONNECTION_FAILED || 
+                errorResponse.code === MongoDBErrorCode.CONNECTION_TIMEOUT) ? 503 : 500 
+      }
     );
   }
 }
@@ -82,7 +85,7 @@ export async function POST(req: Request) {
         );
       }
     }, 'api/subscriptions/POST');
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('POST /api/subscriptions error:', error);
     
     // Use our standardized error response
@@ -90,7 +93,10 @@ export async function POST(req: Request) {
     
     return NextResponse.json(
       { error: errorResponse.error, code: errorResponse.code },
-      { status: error.code === MongoDBErrorCode.SERVICE_UNAVAILABLE ? 503 : 500 }
+      { 
+        status: (errorResponse.code === MongoDBErrorCode.CONNECTION_FAILED || 
+                errorResponse.code === MongoDBErrorCode.CONNECTION_TIMEOUT) ? 503 : 500 
+      }
     );
   }
 }
