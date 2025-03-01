@@ -32,7 +32,7 @@ export default function LogoutButton() {
       aria-label="Sign out"
       className="flex items-center gap-2 text-sm text-foreground/70 hover:text-foreground
         transition-colors duration-200 dark:text-foreground/60 dark:hover:text-foreground
-        disabled:opacity-70 disabled:cursor-not-allowed"
+        disabled:opacity-70 disabled:cursor-default"
     >
       {isSigningOut ? (
         <Loader2 size={18} className="animate-spin" />
