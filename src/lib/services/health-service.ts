@@ -99,9 +99,14 @@ export async function getSystemHealth(): Promise<SystemHealthResponse> {
       }
     }
 
-    // Return complete health status
+    // Return complete health status with required database property
     return {
-      ...health,
+      status: health.status,
+      latency: health.latency,
+      database: {
+        status: health.status,
+        error: health.error
+      },
       schemas: schemaHealth,
       timestamp: new Date().toISOString()
     };
