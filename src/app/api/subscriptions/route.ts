@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { serverStorage } from '@/lib/storage/server';
+import { getUserSubscriptions, createSubscription } from '@/lib/services/subscription-service';
 import { subscriptionSchema } from '@/lib/validations/subscription';
 import { withErrorHandling, createErrorResponse } from '@/lib/db/unified-error-handler';
-import { MongoDBErrorCode, MongoDBError } from '@/lib/db/error-handler';
+import { MongoDBErrorCode } from '@/lib/db/error-handler';
 
 /**
  * GET /api/subscriptions
@@ -26,7 +26,8 @@ export async function GET() {
         );
       }
 
-      const subscriptions = await serverStorage.getSubscriptions(session.user.id);
+      // Use subscription service instead of serverStorage
+      const subscriptions = await getUserSubscriptions(session.user.id);
       return NextResponse.json(subscriptions);
     }, 'api/subscriptions/GET');
   } catch (error: unknown) {
@@ -71,7 +72,8 @@ export async function POST(req: Request) {
       // Use try/catch for validation specifically to return 400 status
       try {
         const body = subscriptionSchema.parse(json);
-        const subscription = await serverStorage.createSubscription(session.user.id, body);
+        // Use subscription service instead of serverStorage
+        const subscription = await createSubscription(session.user.id, body);
         return NextResponse.json(subscription);
       } catch (validationError) {
         // Handle validation errors specifically
