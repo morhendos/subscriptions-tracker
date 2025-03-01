@@ -12,7 +12,6 @@ subscription-tracker/
 ├── README.md
 ├── REFACTORING.md
 ├── REFACTORING_PLAN.md
-├── SIMPLE_IMPLEMENTATION_PLAN.md
 ├── docs
 │   ├── AUTH_FIX.md
 │   ├── MONGODB_ATLAS_SETUP.md
@@ -55,7 +54,6 @@ subscription-tracker/
 │   │   │   ├── storage
 │   │   │   │   └── route.ts
 │   │   │   ├── subscriptions
-│   │   │   │   ├── REFACTORED_EXAMPLE.md
 │   │   │   │   ├── [id]
 │   │   │   │   │   └── route.ts
 │   │   │   │   └── route.ts
@@ -176,6 +174,9 @@ subscription-tracker/
 │   │   │   ├── SERVICE_PATTERN.md
 │   │   │   ├── __tests__
 │   │   │   │   └── subscription-service.test.ts
+│   │   │   ├── auth-debug-service.ts
+│   │   │   ├── health-service.ts
+│   │   │   ├── storage-service.ts
 │   │   │   └── subscription-service.ts
 │   │   ├── storage
 │   │   │   ├── __tests__
