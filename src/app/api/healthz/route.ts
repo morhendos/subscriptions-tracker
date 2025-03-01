@@ -1,38 +1,17 @@
 import { NextResponse } from 'next/server';
-import { checkDatabaseHealth } from '@/lib/db/mongodb';
-import { SubscriptionModel } from '@/models/subscription';
-import mongoose from 'mongoose';
+import { getSystemHealth } from '@/lib/services/health-service';
 import { createErrorResponse } from '@/lib/db/unified-error-handler';
 
+/**
+ * Overall system health check endpoint
+ * Provides health information about system components including database and schema
+ */
 export async function GET() {
   try {
-    // Basic database health check
-    const health = await checkDatabaseHealth();
+    // Use health service to get system health information
+    const healthData = await getSystemHealth();
     
-    // Additional schema verification
-    const schemaHealth = {
-      subscriptionModel: !!SubscriptionModel,
-      collections: [] as string[]
-    };
-
-    // If database is connected, check collections
-    if (health.status === 'healthy' && 
-        mongoose.connection.readyState === 1 && // 1 = connected
-        mongoose.connection.db) {
-      try {
-        const collections = await mongoose.connection.db.collections();
-        schemaHealth.collections = collections.map(col => col.collectionName);
-      } catch (collectionError) {
-        console.warn('[Health Check] Error fetching collections:', collectionError);
-        // Continue without collections data rather than failing completely
-      }
-    }
-
-    return NextResponse.json({
-      ...health,
-      schemas: schemaHealth,
-      timestamp: new Date().toISOString()
-    });
+    return NextResponse.json(healthData);
   } catch (error) {
     // Use the unified error handler
     const errorResponse = createErrorResponse(error, process.env.NODE_ENV === 'development');
