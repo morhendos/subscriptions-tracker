@@ -1,10 +1,14 @@
 'use server'
 
-import { connectToDB } from '@/lib/db/connection';
+import { withAuthConnection } from '@/lib/db/auth-connection';
 import { WaitlistModel, WaitlistDocument } from '@/models/waitlist';
 import { getServerSession } from 'next-auth';
 import { isAdmin } from '@/utils/auth';
 import { revalidatePath } from 'next/cache';
+import { loadEnvVars } from '@/lib/db/env-debug';
+
+// Initialize environment variables
+loadEnvVars();
 
 // Interface for filter parameters for waitlist
 interface WaitlistFilter {
@@ -30,9 +34,6 @@ export async function getWaitlistEntries(filter: WaitlistFilter = {}) {
       return { success: false, error: 'Unauthorized' };
     }
 
-    // Connect to the database
-    await connectToDB();
-    
     // Default parameters
     const {
       status,
@@ -71,25 +72,25 @@ export async function getWaitlistEntries(filter: WaitlistFilter = {}) {
       if (endDate) query.createdAt.$lte = endDate;
     }
     
-    // Calculate pagination
-    const skip = (page - 1) * limit;
-    
-    // Sort configuration
-    const sort: any = {};
-    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
-    
-    // Execute query
-    const waitlistEntries = await WaitlistModel.find(query)
-      .sort(sort)
-      .skip(skip)
-      .limit(limit);
-    
-    // Get total count for pagination
-    const totalEntries = await WaitlistModel.countDocuments(query);
-    
-    return { 
-      success: true, 
-      data: {
+    // Use withAuthConnection to get a database connection
+    const result = await withAuthConnection(async () => {
+      // Calculate pagination
+      const skip = (page - 1) * limit;
+      
+      // Sort configuration
+      const sort: any = {};
+      sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+      
+      // Execute query
+      const waitlistEntries = await WaitlistModel.find(query)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit);
+      
+      // Get total count for pagination
+      const totalEntries = await WaitlistModel.countDocuments(query);
+      
+      return {
         entries: waitlistEntries,
         pagination: {
           page,
@@ -97,7 +98,12 @@ export async function getWaitlistEntries(filter: WaitlistFilter = {}) {
           total: totalEntries,
           pages: Math.ceil(totalEntries / limit)
         }
-      }
+      };
+    }, 'waitlist-entries');
+    
+    return { 
+      success: true, 
+      data: result
     };
   } catch (error: any) {
     console.error('Error fetching waitlist entries:', error);
@@ -119,15 +125,15 @@ export async function updateWaitlistEntry(id: string, data: Partial<WaitlistDocu
       return { success: false, error: 'Unauthorized' };
     }
 
-    // Connect to the database
-    await connectToDB();
-    
-    // Find and update the entry
-    const updatedEntry = await WaitlistModel.findByIdAndUpdate(
-      id,
-      { $set: data },
-      { new: true, runValidators: true }
-    );
+    // Use withAuthConnection to get a database connection
+    const updatedEntry = await withAuthConnection(async () => {
+      // Find and update the entry
+      return await WaitlistModel.findByIdAndUpdate(
+        id,
+        { $set: data },
+        { new: true, runValidators: true }
+      );
+    }, 'update-waitlist-entry');
     
     if (!updatedEntry) {
       return { success: false, error: 'Waitlist entry not found' };
@@ -157,11 +163,11 @@ export async function deleteWaitlistEntry(id: string) {
       return { success: false, error: 'Unauthorized' };
     }
 
-    // Connect to the database
-    await connectToDB();
-    
-    // Find and delete the entry
-    const deletedEntry = await WaitlistModel.findByIdAndDelete(id);
+    // Use withAuthConnection to get a database connection
+    const deletedEntry = await withAuthConnection(async () => {
+      // Find and delete the entry
+      return await WaitlistModel.findByIdAndDelete(id);
+    }, 'delete-waitlist-entry');
     
     if (!deletedEntry) {
       return { success: false, error: 'Waitlist entry not found' };
@@ -191,54 +197,56 @@ export async function getWaitlistStats() {
       return { success: false, error: 'Unauthorized' };
     }
 
-    // Connect to the database
-    await connectToDB();
-    
-    // Get counts by status
-    const statusCounts = await WaitlistModel.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } }
-    ]);
-    
-    // Get total entries
-    const totalEntries = await WaitlistModel.countDocuments();
-    
-    // Get counts by date (last 7 days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    const dailyCounts = await WaitlistModel.aggregate([
-      { 
-        $match: { 
-          createdAt: { $gte: sevenDaysAgo } 
-        } 
-      },
-      {
-        $group: {
-          _id: { 
-            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } 
-          },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
-    
-    // Format the results
-    const statusStats = statusCounts.reduce((acc: any, curr: any) => {
-      acc[curr._id] = curr.count;
-      return acc;
-    }, {});
-    
-    return { 
-      success: true, 
-      data: {
+    // Use withAuthConnection to get a database connection
+    const stats = await withAuthConnection(async () => {
+      // Get counts by status
+      const statusCounts = await WaitlistModel.aggregate([
+        { $group: { _id: '$status', count: { $sum: 1 } } }
+      ]);
+      
+      // Get total entries
+      const totalEntries = await WaitlistModel.countDocuments();
+      
+      // Get counts by date (last 7 days)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const dailyCounts = await WaitlistModel.aggregate([
+        { 
+          $match: { 
+            createdAt: { $gte: sevenDaysAgo } 
+          } 
+        },
+        {
+          $group: {
+            _id: { 
+              $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } 
+            },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { _id: 1 } }
+      ]);
+      
+      // Format the results
+      const statusStats = statusCounts.reduce((acc: any, curr: any) => {
+        acc[curr._id] = curr.count;
+        return acc;
+      }, {});
+      
+      return {
         total: totalEntries,
         byStatus: statusStats,
-        dailySignups: dailyCounts.map(day => ({
+        dailySignups: dailyCounts.map((day: any) => ({
           date: day._id,
           count: day.count
         }))
-      }
+      };
+    }, 'waitlist-stats');
+    
+    return { 
+      success: true, 
+      data: stats
     };
   } catch (error: any) {
     console.error('Error fetching waitlist stats:', error);
