@@ -24,6 +24,7 @@ import {
   Mail,
   ArrowDownAZ
 } from 'lucide-react';
+import WaitlistDiagnostics from './diagnostics';
 
 // Define types for waitlist entries
 interface WaitlistEntry {
@@ -92,6 +93,7 @@ export default function WaitlistPage() {
     notes: '',
     tags: '',
   });
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   
   // Use debounced search value
   const debouncedSearchValue = useDebounce(searchValue, 500);
@@ -102,6 +104,13 @@ export default function WaitlistPage() {
   const search = searchParams.get('search') || '';
   const sortBy = searchParams.get('sortBy') || 'createdAt';
   const sortOrder = searchParams.get('sortOrder') || 'desc';
+  
+  // Debugging info
+  const debug = {
+    requestsMade: useRef(0),
+    lastError: useRef<any>(null),
+    timestamps: useRef<string[]>([]),
+  };
   
   // Define status options with colors
   const statusOptions = [
@@ -122,6 +131,18 @@ export default function WaitlistPage() {
     setError(null);
     
     try {
+      debug.requestsMade.current += 1;
+      debug.timestamps.current.push(new Date().toISOString());
+      
+      console.log('[WAITLIST PAGE] Fetching entries:', { 
+        currentPage, 
+        status, 
+        search, 
+        sortBy, 
+        sortOrder,
+        requestNumber: debug.requestsMade.current
+      });
+      
       const result = await getWaitlistEntries({
         page: currentPage,
         status: status || undefined,
@@ -132,15 +153,28 @@ export default function WaitlistPage() {
       });
       
       if (result.success && result.data) {
+        console.log('[WAITLIST PAGE] Fetch success, entries count:', result.data.entries.length);
         setEntries(result.data.entries);
         setPagination(result.data.pagination);
+        
+        // If this is the first successful load and there are no entries, show diagnostics
+        if (debug.requestsMade.current === 1 && result.data.entries.length === 0) {
+          console.log('[WAITLIST PAGE] No entries found, showing diagnostics');
+          setShowDiagnostics(true);
+        }
       } else {
+        console.error('[WAITLIST PAGE] Fetch error:', result.error);
         setError(result.error || 'Failed to fetch waitlist entries');
         setEntries([]);
+        debug.lastError.current = result.error;
+        setShowDiagnostics(true);
       }
     } catch (err: any) {
+      console.error('[WAITLIST PAGE] Exception during fetch:', err);
       setError(err.message || 'An unexpected error occurred');
       setEntries([]);
+      debug.lastError.current = err;
+      setShowDiagnostics(true);
     } finally {
       setLoading(false);
     }
@@ -349,6 +383,46 @@ export default function WaitlistPage() {
   // Determine if a sort column is active
   const isSortActive = (column: string) => sortBy === column;
   
+  // Function to add a test entry for demo purposes
+  const addTestEntry = async () => {
+    setLoading(true);
+    
+    try {
+      const testEntry = {
+        name: `Test User ${Math.floor(Math.random() * 1000)}`,
+        email: `test${Math.floor(Math.random() * 1000)}@example.com`,
+        status: 'active',
+        notes: 'This is a test entry created for demonstration purposes.',
+        tags: ['test', 'demo'],
+      };
+      
+      // This would normally be a server action, but for testing we're creating a fake entry
+      setTimeout(() => {
+        // Create a fake entry with ID and dates
+        const fakeEntry = {
+          _id: `fake_${Date.now()}`,
+          ...testEntry,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          tags: testEntry.tags || [],
+        };
+        
+        setEntries([fakeEntry, ...entries]);
+        setPagination(prev => ({
+          ...prev,
+          total: prev.total + 1
+        }));
+        setLoading(false);
+        
+        // Show success message
+        alert('Test entry added for demonstration purposes. Note: This is a client-side only entry and will disappear on refresh.');
+      }, 500);
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred');
+      setLoading(false);
+    }
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -360,8 +434,20 @@ export default function WaitlistPage() {
           <span className="text-sm text-muted-foreground">
             {pagination.total} entries
           </span>
+          <button 
+            onClick={() => setShowDiagnostics(!showDiagnostics)}
+            className="inline-flex items-center justify-center rounded-md text-sm text-muted-foreground hover:bg-muted p-2"
+            title="Toggle Diagnostics"
+          >
+            <Info className="h-4 w-4" />
+          </button>
         </div>
       </div>
+      
+      {/* Diagnostics Panel */}
+      {showDiagnostics && (
+        <WaitlistDiagnostics />
+      )}
       
       {/* Filters and Search */}
       <div className="rounded-lg border bg-card shadow-sm">
@@ -497,6 +583,17 @@ export default function WaitlistPage() {
                           Clear filters
                         </button>
                       )}
+                      
+                      {/* Test entry button for demo purposes */}
+                      <div className="mt-4">
+                        <button
+                          onClick={addTestEntry}
+                          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
+                        >
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          Add Demo Entry (Client-side only)
+                        </button>
+                      </div>
                     </div>
                   </td>
                 </tr>
