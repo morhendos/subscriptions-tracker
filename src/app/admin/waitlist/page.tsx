@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useTransition } from 'react';
+import { useEffect, useState, useCallback, useTransition, useRef } from 'react';
 import { getWaitlistEntries, updateWaitlistEntry, deleteWaitlistEntry } from '../actions';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { 
@@ -24,7 +24,6 @@ import {
   Mail,
   ArrowDownAZ
 } from 'lucide-react';
-import { debounce } from 'lodash';
 
 // Define types for waitlist entries
 interface WaitlistEntry {
@@ -47,6 +46,23 @@ interface PaginationInfo {
   limit: number;
   total: number;
   pages: number;
+}
+
+// Simple debounce function implementation
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
 }
 
 export default function WaitlistPage() {
@@ -76,6 +92,9 @@ export default function WaitlistPage() {
     notes: '',
     tags: '',
   });
+  
+  // Use debounced search value
+  const debouncedSearchValue = useDebounce(searchValue, 500);
   
   // Get current query parameters
   const currentPage = Number(searchParams.get('page') || '1');
@@ -154,24 +173,15 @@ export default function WaitlistPage() {
     setSearchValue(e.target.value);
   };
   
-  // Debounce search to avoid too many requests
-  const debouncedSearch = useCallback(
-    debounce((value: string) => {
+  // Update search when debounced value changes
+  useEffect(() => {
+    if (debouncedSearchValue !== search) {
       updateSearchParams({
-        search: value,
+        search: debouncedSearchValue,
         page: '1', // Reset to first page on new search
       });
-    }, 500),
-    [updateSearchParams]
-  );
-  
-  // Update search when input changes
-  useEffect(() => {
-    debouncedSearch(searchValue);
-    return () => {
-      debouncedSearch.cancel();
-    };
-  }, [searchValue, debouncedSearch]);
+    }
+  }, [debouncedSearchValue, search, updateSearchParams]);
   
   // Set initial search value from URL
   useEffect(() => {
