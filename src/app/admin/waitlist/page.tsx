@@ -39,6 +39,8 @@ interface WaitlistEntry {
   status: string;
   notes?: string;
   tags: string[];
+  metadata?: any;
+  [key: string]: any; // Allow any additional properties from the database
 }
 
 interface PaginationInfo {
@@ -132,7 +134,9 @@ export default function WaitlistPage() {
       });
       
       if (result.success && result.data) {
-        setEntries(result.data.entries);
+        // Cast the entries to match our WaitlistEntry interface
+        const typedEntries = result.data.entries as unknown as WaitlistEntry[];
+        setEntries(typedEntries);
         setPagination(result.data.pagination);
       } else {
         setError(result.error || 'Failed to fetch waitlist entries');
@@ -210,18 +214,10 @@ export default function WaitlistPage() {
     });
   };
   
-  // Format date safely
-  const formatDate = (dateString: string | Date) => {
+  // Format date
+  const formatDate = (dateString: string) => {
     try {
-      // If it's already a Date object, use it directly
-      const date = dateString instanceof Date ? dateString : new Date(dateString);
-      
-      // Check if the date is valid
-      if (isNaN(date.getTime())) {
-        console.warn('Invalid date:', dateString);
-        return 'Invalid date';
-      }
-      
+      const date = new Date(dateString);
       return new Intl.DateTimeFormat('en-US', {
         year: 'numeric', 
         month: 'short', 
@@ -229,9 +225,8 @@ export default function WaitlistPage() {
         hour: '2-digit',
         minute: '2-digit'
       }).format(date);
-    } catch (error) {
-      console.error('Error formatting date:', error, dateString);
-      return 'Date format error';
+    } catch (e) {
+      return dateString;
     }
   };
   
@@ -247,9 +242,9 @@ export default function WaitlistPage() {
     setFormData({
       name: entry.name,
       email: entry.email,
-      status: entry.status,
+      status: entry.status || 'active',
       notes: entry.notes || '',
-      tags: entry.tags.join(', '),
+      tags: Array.isArray(entry.tags) ? entry.tags.join(', ') : '',
     });
     setIsEditModalOpen(true);
   };
