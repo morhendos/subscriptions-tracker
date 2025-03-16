@@ -3,7 +3,6 @@
 import { withAuthConnection } from '@/lib/db/auth-connection';
 import { WaitlistModel, WaitlistDocument } from '@/models/waitlist';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/utils/auth';
 import { revalidatePath } from 'next/cache';
 import { loadEnvVars } from '@/lib/db/env-debug';
@@ -25,27 +24,60 @@ interface WaitlistFilter {
 }
 
 /**
+ * Serialize a MongoDB document to a plain JavaScript object,
+ * converting ObjectId and Date to strings to prevent "Objects with toJSON methods are not supported" warning
+ */
+function serializeDocument(doc: any): any {
+  if (!doc) return null;
+  
+  // If it's already a plain object from lean(), we need to handle _id specially
+  const result: Record<string, any> = {};
+  
+  // Copy all properties
+  Object.keys(doc).forEach(key => {
+    const value = doc[key];
+    
+    // Handle ObjectId (convert to string)
+    if (key === '_id' && value && typeof value.toString === 'function') {
+      result[key] = value.toString();
+    }
+    // Handle Date objects (convert to ISO string)
+    else if (value instanceof Date) {
+      result[key] = value.toISOString();
+    }
+    // Handle arrays (recursively serialize each item)
+    else if (Array.isArray(value)) {
+      result[key] = value.map(item => {
+        if (typeof item === 'object' && item !== null) {
+          return serializeDocument(item);
+        }
+        return item;
+      });
+    }
+    // Handle nested objects (recursively serialize)
+    else if (typeof value === 'object' && value !== null) {
+      result[key] = serializeDocument(value);
+    }
+    // Handle primitive values
+    else {
+      result[key] = value;
+    }
+  });
+  
+  return result;
+}
+
+/**
  * Get waitlist entries with optional filtering
  */
 export async function getWaitlistEntries(filter: WaitlistFilter = {}) {
   try {
     console.log('[ADMIN ACTIONS] Getting waitlist entries with filter:', JSON.stringify(filter));
     
-    // Check if user is authorized - PASS THE AUTH OPTIONS!
-    const session = await getServerSession(authOptions);
-    console.log('[ADMIN ACTIONS] Session:', JSON.stringify({
-      authenticated: !!session,
-      user: session?.user ? {
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.name,
-        roles: session.user.roles
-      } : null
-    }));
-    
+    // Check if user is authorized
+    const session = await getServerSession();
     if (!session || !isAdmin(session.user)) {
-      console.log('[ADMIN ACTIONS] Unauthorized access attempt, session user:', 
-        session?.user ? JSON.stringify(session.user) : 'no session');
+      console.log('[ADMIN ACTIONS] Unauthorized access attempt');
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -119,8 +151,11 @@ export async function getWaitlistEntries(filter: WaitlistFilter = {}) {
         throw err;
       }
       
+      // Serialize the entries to plain objects
+      const serializedEntries = waitlistEntries.map(entry => serializeDocument(entry));
+      
       return {
-        entries: waitlistEntries,
+        entries: serializedEntries,
         pagination: {
           page,
           limit,
@@ -157,7 +192,7 @@ export async function updateWaitlistEntry(id: string, data: Partial<WaitlistDocu
     console.log('[ADMIN ACTIONS] Updating waitlist entry:', id, 'with data:', JSON.stringify(data));
     
     // Check if user is authorized
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     if (!session || !isAdmin(session.user)) {
       console.log('[ADMIN ACTIONS] Unauthorized update attempt');
       return { success: false, error: 'Unauthorized' };
@@ -166,11 +201,13 @@ export async function updateWaitlistEntry(id: string, data: Partial<WaitlistDocu
     // Use withAuthConnection to get a database connection
     const updatedEntry = await withAuthConnection(async () => {
       // Find and update the entry
-      return await WaitlistModel.findByIdAndUpdate(
+      const result = await WaitlistModel.findByIdAndUpdate(
         id,
         { $set: data },
         { new: true, runValidators: true }
-      );
+      ).lean();
+      
+      return result;
     }, 'update-waitlist-entry');
     
     if (!updatedEntry) {
@@ -182,7 +219,7 @@ export async function updateWaitlistEntry(id: string, data: Partial<WaitlistDocu
     revalidatePath('/admin/waitlist');
     
     console.log('[ADMIN ACTIONS] Successfully updated waitlist entry:', id);
-    return { success: true, data: updatedEntry };
+    return { success: true, data: serializeDocument(updatedEntry) };
   } catch (error: any) {
     console.error('[ADMIN ACTIONS] Error updating waitlist entry:', error);
     return { 
@@ -200,7 +237,7 @@ export async function deleteWaitlistEntry(id: string) {
     console.log('[ADMIN ACTIONS] Deleting waitlist entry:', id);
     
     // Check if user is authorized
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     if (!session || !isAdmin(session.user)) {
       console.log('[ADMIN ACTIONS] Unauthorized delete attempt');
       return { success: false, error: 'Unauthorized' };
@@ -239,7 +276,7 @@ export async function getWaitlistStats() {
     console.log('[ADMIN ACTIONS] Fetching waitlist statistics');
     
     // Check if user is authorized
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     if (!session || !isAdmin(session.user)) {
       console.log('[ADMIN ACTIONS] Unauthorized stats access attempt');
       return { success: false, error: 'Unauthorized' };
@@ -290,7 +327,7 @@ export async function getWaitlistStats() {
       
       // Format the results
       const statusStats = statusCounts.reduce((acc: any, curr: any) => {
-        acc[curr._id] = curr.count;
+        acc[curr._id || 'active'] = curr.count;
         return acc;
       }, {});
       
