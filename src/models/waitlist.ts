@@ -62,7 +62,8 @@ const waitlistSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  collection: 'waitlist' // Explicitly set the collection name to match the existing database
 });
 
 // Indexes for efficient queries
@@ -71,4 +72,16 @@ waitlistSchema.index({ status: 1 });
 waitlistSchema.index({ createdAt: -1 });
 waitlistSchema.index({ tags: 1 });
 
+// Add debug logging when accessing this model
+waitlistSchema.pre('find', function() {
+  console.log('[WAITLIST MODEL] Executing find query on waitlist collection');
+});
+
+waitlistSchema.pre('findOne', function() {
+  console.log('[WAITLIST MODEL] Executing findOne query on waitlist collection');
+});
+
 export const WaitlistModel = mongoose.models.Waitlist || mongoose.model<WaitlistDocument>('Waitlist', waitlistSchema);
+
+// Log model registration
+console.log('[WAITLIST MODEL] Waitlist model registered with collection:', 'waitlist');
