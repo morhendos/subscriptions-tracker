@@ -3,6 +3,7 @@
 import { withAuthConnection } from '@/lib/db/auth-connection';
 import { WaitlistModel, WaitlistDocument } from '@/models/waitlist';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/utils/auth';
 import { revalidatePath } from 'next/cache';
 import { loadEnvVars } from '@/lib/db/env-debug';
@@ -30,10 +31,21 @@ export async function getWaitlistEntries(filter: WaitlistFilter = {}) {
   try {
     console.log('[ADMIN ACTIONS] Getting waitlist entries with filter:', JSON.stringify(filter));
     
-    // Check if user is authorized
-    const session = await getServerSession();
+    // Check if user is authorized - PASS THE AUTH OPTIONS!
+    const session = await getServerSession(authOptions);
+    console.log('[ADMIN ACTIONS] Session:', JSON.stringify({
+      authenticated: !!session,
+      user: session?.user ? {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        roles: session.user.roles
+      } : null
+    }));
+    
     if (!session || !isAdmin(session.user)) {
-      console.log('[ADMIN ACTIONS] Unauthorized access attempt');
+      console.log('[ADMIN ACTIONS] Unauthorized access attempt, session user:', 
+        session?.user ? JSON.stringify(session.user) : 'no session');
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -145,7 +157,7 @@ export async function updateWaitlistEntry(id: string, data: Partial<WaitlistDocu
     console.log('[ADMIN ACTIONS] Updating waitlist entry:', id, 'with data:', JSON.stringify(data));
     
     // Check if user is authorized
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session || !isAdmin(session.user)) {
       console.log('[ADMIN ACTIONS] Unauthorized update attempt');
       return { success: false, error: 'Unauthorized' };
@@ -188,7 +200,7 @@ export async function deleteWaitlistEntry(id: string) {
     console.log('[ADMIN ACTIONS] Deleting waitlist entry:', id);
     
     // Check if user is authorized
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session || !isAdmin(session.user)) {
       console.log('[ADMIN ACTIONS] Unauthorized delete attempt');
       return { success: false, error: 'Unauthorized' };
@@ -227,7 +239,7 @@ export async function getWaitlistStats() {
     console.log('[ADMIN ACTIONS] Fetching waitlist statistics');
     
     // Check if user is authorized
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session || !isAdmin(session.user)) {
       console.log('[ADMIN ACTIONS] Unauthorized stats access attempt');
       return { success: false, error: 'Unauthorized' };
