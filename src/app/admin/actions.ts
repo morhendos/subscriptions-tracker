@@ -28,9 +28,12 @@ interface WaitlistFilter {
  */
 export async function getWaitlistEntries(filter: WaitlistFilter = {}) {
   try {
+    console.log('[ADMIN ACTIONS] Getting waitlist entries with filter:', JSON.stringify(filter));
+    
     // Check if user is authorized
     const session = await getServerSession();
     if (!session || !isAdmin(session.user)) {
+      console.log('[ADMIN ACTIONS] Unauthorized access attempt');
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -72,6 +75,8 @@ export async function getWaitlistEntries(filter: WaitlistFilter = {}) {
       if (endDate) query.createdAt.$lte = endDate;
     }
     
+    console.log('[ADMIN ACTIONS] Constructed query:', JSON.stringify(query));
+    
     // Use withAuthConnection to get a database connection
     const result = await withAuthConnection(async () => {
       // Calculate pagination
@@ -81,14 +86,26 @@ export async function getWaitlistEntries(filter: WaitlistFilter = {}) {
       const sort: any = {};
       sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
       
-      // Execute query
-      const waitlistEntries = await WaitlistModel.find(query)
-        .sort(sort)
-        .skip(skip)
-        .limit(limit);
+      console.log('[ADMIN ACTIONS] Executing find query with sort:', JSON.stringify(sort));
       
-      // Get total count for pagination
+      // Get total count for pagination first
       const totalEntries = await WaitlistModel.countDocuments(query);
+      console.log('[ADMIN ACTIONS] Total entries found:', totalEntries);
+      
+      // Execute query
+      let waitlistEntries = [];
+      try {
+        waitlistEntries = await WaitlistModel.find(query)
+          .sort(sort)
+          .skip(skip)
+          .limit(limit)
+          .lean(); // Use lean() for better performance
+          
+        console.log('[ADMIN ACTIONS] Retrieved entries:', waitlistEntries.length);
+      } catch (err) {
+        console.error('[ADMIN ACTIONS] Error in find query:', err);
+        throw err;
+      }
       
       return {
         entries: waitlistEntries,
@@ -101,12 +118,18 @@ export async function getWaitlistEntries(filter: WaitlistFilter = {}) {
       };
     }, 'waitlist-entries');
     
+    console.log('[ADMIN ACTIONS] Final result:', { 
+      success: true, 
+      entriesCount: result.entries.length,
+      pagination: result.pagination 
+    });
+    
     return { 
       success: true, 
       data: result
     };
   } catch (error: any) {
-    console.error('Error fetching waitlist entries:', error);
+    console.error('[ADMIN ACTIONS] Error fetching waitlist entries:', error);
     return { 
       success: false, 
       error: error.message || 'Failed to fetch waitlist entries' 
@@ -119,9 +142,12 @@ export async function getWaitlistEntries(filter: WaitlistFilter = {}) {
  */
 export async function updateWaitlistEntry(id: string, data: Partial<WaitlistDocument>) {
   try {
+    console.log('[ADMIN ACTIONS] Updating waitlist entry:', id, 'with data:', JSON.stringify(data));
+    
     // Check if user is authorized
     const session = await getServerSession();
     if (!session || !isAdmin(session.user)) {
+      console.log('[ADMIN ACTIONS] Unauthorized update attempt');
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -136,15 +162,17 @@ export async function updateWaitlistEntry(id: string, data: Partial<WaitlistDocu
     }, 'update-waitlist-entry');
     
     if (!updatedEntry) {
+      console.log('[ADMIN ACTIONS] Waitlist entry not found for update:', id);
       return { success: false, error: 'Waitlist entry not found' };
     }
     
     // Revalidate the admin pages
     revalidatePath('/admin/waitlist');
     
+    console.log('[ADMIN ACTIONS] Successfully updated waitlist entry:', id);
     return { success: true, data: updatedEntry };
   } catch (error: any) {
-    console.error('Error updating waitlist entry:', error);
+    console.error('[ADMIN ACTIONS] Error updating waitlist entry:', error);
     return { 
       success: false, 
       error: error.message || 'Failed to update waitlist entry' 
@@ -157,9 +185,12 @@ export async function updateWaitlistEntry(id: string, data: Partial<WaitlistDocu
  */
 export async function deleteWaitlistEntry(id: string) {
   try {
+    console.log('[ADMIN ACTIONS] Deleting waitlist entry:', id);
+    
     // Check if user is authorized
     const session = await getServerSession();
     if (!session || !isAdmin(session.user)) {
+      console.log('[ADMIN ACTIONS] Unauthorized delete attempt');
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -170,15 +201,17 @@ export async function deleteWaitlistEntry(id: string) {
     }, 'delete-waitlist-entry');
     
     if (!deletedEntry) {
+      console.log('[ADMIN ACTIONS] Waitlist entry not found for deletion:', id);
       return { success: false, error: 'Waitlist entry not found' };
     }
     
     // Revalidate the admin pages
     revalidatePath('/admin/waitlist');
     
+    console.log('[ADMIN ACTIONS] Successfully deleted waitlist entry:', id);
     return { success: true };
   } catch (error: any) {
-    console.error('Error deleting waitlist entry:', error);
+    console.error('[ADMIN ACTIONS] Error deleting waitlist entry:', error);
     return { 
       success: false, 
       error: error.message || 'Failed to delete waitlist entry' 
@@ -191,21 +224,35 @@ export async function deleteWaitlistEntry(id: string) {
  */
 export async function getWaitlistStats() {
   try {
+    console.log('[ADMIN ACTIONS] Fetching waitlist statistics');
+    
     // Check if user is authorized
     const session = await getServerSession();
     if (!session || !isAdmin(session.user)) {
+      console.log('[ADMIN ACTIONS] Unauthorized stats access attempt');
       return { success: false, error: 'Unauthorized' };
     }
 
     // Use withAuthConnection to get a database connection
     const stats = await withAuthConnection(async () => {
+      // Get total entries first as a health check
+      const totalEntries = await WaitlistModel.countDocuments();
+      console.log('[ADMIN ACTIONS] Total waitlist entries:', totalEntries);
+      
+      // If no entries, return simplified stats
+      if (totalEntries === 0) {
+        return {
+          total: 0,
+          byStatus: {},
+          dailySignups: []
+        };
+      }
+      
       // Get counts by status
       const statusCounts = await WaitlistModel.aggregate([
         { $group: { _id: '$status', count: { $sum: 1 } } }
       ]);
-      
-      // Get total entries
-      const totalEntries = await WaitlistModel.countDocuments();
+      console.log('[ADMIN ACTIONS] Status counts:', statusCounts);
       
       // Get counts by date (last 7 days)
       const sevenDaysAgo = new Date();
@@ -227,6 +274,7 @@ export async function getWaitlistStats() {
         },
         { $sort: { _id: 1 } }
       ]);
+      console.log('[ADMIN ACTIONS] Daily counts:', dailyCounts);
       
       // Format the results
       const statusStats = statusCounts.reduce((acc: any, curr: any) => {
@@ -244,12 +292,13 @@ export async function getWaitlistStats() {
       };
     }, 'waitlist-stats');
     
+    console.log('[ADMIN ACTIONS] Waitlist stats:', stats);
     return { 
       success: true, 
       data: stats
     };
   } catch (error: any) {
-    console.error('Error fetching waitlist stats:', error);
+    console.error('[ADMIN ACTIONS] Error fetching waitlist stats:', error);
     return { 
       success: false, 
       error: error.message || 'Failed to fetch waitlist statistics' 
