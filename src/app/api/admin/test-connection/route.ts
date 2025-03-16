@@ -5,6 +5,20 @@ import { getServerSession } from 'next-auth';
 import { isAdmin } from '@/utils/auth';
 import mongoose from 'mongoose';
 
+// Add types for MongoDB collection stats
+interface CollectionStats {
+  ns: string;
+  count: number;
+  size: number;
+  avgObjSize: number;
+  storageSize: number;
+  capped: boolean;
+  nindexes: number;
+  totalIndexSize: number;
+  indexSizes: Record<string, number>;
+  scaleFactor: number;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
@@ -44,9 +58,14 @@ export async function POST(request: NextRequest) {
         // Check if collection exists and count documents
         const count = await WaitlistModel.countDocuments();
         
-        // Get raw collection name and stats
+        // Get raw collection name
         const collectionName = WaitlistModel.collection.name;
-        const collectionStats = await WaitlistModel.collection.stats();
+        
+        // Use command method to get stats (type-safe approach)
+        const db = mongoose.connection.db;
+        const collectionStats = await db.command({
+          collStats: collectionName
+        }) as CollectionStats;
         
         // Try to get a sample document (but don't return sensitive data)
         let sampleDoc = null;
