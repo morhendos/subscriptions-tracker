@@ -1,6 +1,7 @@
 subscription-tracker/
 ├── AUTH_DEBUGGING.md
 ├── AUTH_MIGRATION.md
+├── CHANGELOG.md
 ├── COMPLETE_API_UPDATE_PLAN.md
 ├── CONNECTION_MIGRATION.md
 ├── ENV_FIX.md
@@ -36,7 +37,17 @@ subscription-tracker/
 │   │   └── middleware.test.ts
 │   ├── app
 │   │   ├── actions.ts
+│   │   ├── admin
+│   │   │   ├── actions.ts
+│   │   │   ├── layout.tsx
+│   │   │   ├── page.tsx
+│   │   │   └── waitlist
+│   │   │       ├── diagnostics.tsx
+│   │   │       └── page.tsx
 │   │   ├── api
+│   │   │   ├── admin
+│   │   │   │   └── test-connection
+│   │   │   │       └── route.ts
 │   │   │   ├── auth
 │   │   │   │   └── [...nextauth]
 │   │   │   │       └── route.ts
@@ -92,6 +103,8 @@ subscription-tracker/
 │   │       ├── loading.tsx
 │   │       └── page.tsx
 │   ├── components
+│   │   ├── Analytics.tsx
+│   │   ├── AnalyticsPageTracker.tsx
 │   │   ├── GradientBackground.tsx
 │   │   ├── ThemeToggle.tsx
 │   │   ├── auth
@@ -135,6 +148,8 @@ subscription-tracker/
 │   │   └── database.ts
 │   ├── contexts
 │   │   └── DateContext.tsx
+│   ├── docs
+│   │   └── ANALYTICS.md
 │   ├── hooks
 │   │   ├── useLocalStorage.ts
 │   │   └── useTheme.ts
@@ -205,6 +220,7 @@ subscription-tracker/
 │   ├── middleware
 │   │   ├── __tests__
 │   │   │   └── rate-limit.test.ts
+│   │   ├── admin-auth.ts
 │   │   └── rate-limit.ts
 │   ├── middleware.ts
 │   ├── models
@@ -212,7 +228,8 @@ subscription-tracker/
 │   │   │   ├── subscription.test.ts
 │   │   │   └── user.test.ts
 │   │   ├── subscription.ts
-│   │   └── user.ts
+│   │   ├── user.ts
+│   │   └── waitlist.ts
 │   ├── types
 │   │   ├── auth.ts
 │   │   ├── next-auth.d.ts
@@ -220,6 +237,7 @@ subscription-tracker/
 │   │   ├── subscriptions.ts
 │   │   └── user.ts
 │   └── utils
+│       ├── auth.ts
 │       ├── dates.ts
 │       ├── format.ts
 │       ├── mongodb-uri.ts
