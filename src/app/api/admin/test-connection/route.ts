@@ -19,6 +19,25 @@ interface CollectionStats {
   scaleFactor: number;
 }
 
+// Helper function to safely get id from a document
+function getIdFromDocument(doc: any): string | undefined {
+  if (!doc) return undefined;
+  
+  // Try to get _id first (MongoDB native format)
+  if (doc._id) {
+    return typeof doc._id.toString === 'function' 
+      ? doc._id.toString() 
+      : String(doc._id);
+  }
+  
+  // Then try id (sometimes Mongoose transforms _id to id)
+  if (doc.id) {
+    return typeof doc.id === 'string' ? doc.id : String(doc.id);
+  }
+  
+  return undefined;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
@@ -63,10 +82,6 @@ export async function POST(request: NextRequest) {
         
         // Use command method to get stats (type-safe approach)
         const db = mongoose.connection.db;
-        if (!db) {
-          throw new Error('Database connection not established');
-        }
-        
         const collectionStats = await db.command({
           collStats: collectionName
         }) as CollectionStats;
@@ -74,12 +89,19 @@ export async function POST(request: NextRequest) {
         // Try to get a sample document (but don't return sensitive data)
         let sampleDoc = null;
         const sampleResult = await WaitlistModel.findOne().lean();
+        
         if (sampleResult) {
+          // Safely extract information from the sample document
+          const docId = getIdFromDocument(sampleResult);
+          const createdAt = sampleResult.createdAt instanceof Date 
+            ? sampleResult.createdAt.toISOString() 
+            : String(sampleResult.createdAt);
+            
           sampleDoc = {
             exists: true,
-            id: sampleResult._id?.toString(),
+            id: docId,
             fields: Object.keys(sampleResult),
-            createdAt: sampleResult.createdAt,
+            createdAt: createdAt,
           };
         }
         
