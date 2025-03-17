@@ -64,13 +64,17 @@ export async function POST(request: NextRequest) {
     try {
       const collectionInfo = await withAuthConnection(async () => {
         // Check if collection exists and count documents
-        const count = await WaitlistModel.countDocuments();
+        const count = await WaitlistModel.countDocuments().exec();
         
         // Get raw collection name
         const collectionName = WaitlistModel.collection.name;
         
         // Use command method to get stats (type-safe approach)
         const db = mongoose.connection.db;
+        if (!db) {
+          throw new Error('Database connection not available');
+        }
+        
         const collectionStats = await db.command({
           collStats: collectionName
         }) as CollectionStats;
@@ -79,7 +83,7 @@ export async function POST(request: NextRequest) {
         let sampleDoc = null;
         
         // Find one document and convert to a plain JavaScript object
-        const sampleResult = await WaitlistModel.findOne();
+        const sampleResult = await WaitlistModel.findOne().exec();
         
         if (sampleResult) {
           // Convert to plain object to avoid Mongoose document methods
