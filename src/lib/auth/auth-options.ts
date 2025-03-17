@@ -89,7 +89,9 @@ export const authOptions: AuthOptions = {
         token.id = customUser.id
         token.email = customUser.email
         token.name = customUser.name
-        token.roles = customUser.roles || []
+        // Always ensure roles is initialized as an array
+        token.roles = Array.isArray(customUser.roles) ? customUser.roles : []
+        console.log('[AUTH] JWT callback - User roles:', token.roles);
       }
       return token
     },
@@ -99,7 +101,9 @@ export const authOptions: AuthOptions = {
         session.user.id = token.id
         session.user.email = token.email
         session.user.name = token.name
-        session.user.roles = token.roles || []
+        // Always ensure roles is initialized as an array
+        session.user.roles = Array.isArray(token.roles) ? token.roles : []
+        console.log('[AUTH] Session callback - User roles:', session.user.roles);
       }
       return session
     },
