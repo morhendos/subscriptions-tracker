@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth';
 import { isAdmin } from '@/utils/auth';
 import { revalidatePath } from 'next/cache';
 import { loadEnvVars } from '@/lib/db/env-debug';
+import mongoose from 'mongoose';
 
 // Initialize environment variables
 loadEnvVars();
@@ -30,6 +31,11 @@ interface WaitlistFilter {
 function serializeDocument(doc: any): any {
   if (!doc) return null;
   
+  // Handle ObjectId instance directly
+  if (doc instanceof mongoose.Types.ObjectId) {
+    return doc.toString();
+  }
+  
   // If it's already a plain object from lean(), we need to handle _id specially
   const result: Record<string, any> = {};
   
@@ -38,8 +44,13 @@ function serializeDocument(doc: any): any {
     const value = doc[key];
     
     // Handle ObjectId (convert to string)
-    if (key === '_id' && value && typeof value.toString === 'function') {
-      result[key] = value.toString();
+    if (key === '_id' && value) {
+      if (typeof value === 'object' && value !== null && typeof value.toString === 'function') {
+        result[key] = value.toString();
+      } else {
+        // For lean objects where _id might already be a string
+        result[key] = value;
+      }
     }
     // Handle Date objects (convert to ISO string)
     else if (value instanceof Date) {
@@ -133,7 +144,7 @@ export async function getWaitlistEntries(filter: WaitlistFilter = {}) {
       console.log('[ADMIN ACTIONS] Executing find query with sort:', JSON.stringify(sort));
       
       // Get total count for pagination first
-      const totalEntries = await WaitlistModel.countDocuments(query);
+      const totalEntries = await WaitlistModel.countDocuments(query).exec();
       console.log('[ADMIN ACTIONS] Total entries found:', totalEntries);
       
       // Execute query
@@ -143,7 +154,8 @@ export async function getWaitlistEntries(filter: WaitlistFilter = {}) {
           .sort(sort)
           .skip(skip)
           .limit(limit)
-          .lean(); // Use lean() for better performance
+          .lean()
+          .exec(); // Add explicit exec() to ensure promise resolution
           
         console.log('[ADMIN ACTIONS] Retrieved entries:', waitlistEntries.length);
       } catch (err) {
@@ -205,7 +217,7 @@ export async function updateWaitlistEntry(id: string, data: Partial<WaitlistDocu
         id,
         { $set: data },
         { new: true, runValidators: true }
-      ).lean();
+      ).lean().exec();
       
       return result;
     }, 'update-waitlist-entry');
@@ -246,7 +258,7 @@ export async function deleteWaitlistEntry(id: string) {
     // Use withAuthConnection to get a database connection
     const deletedEntry = await withAuthConnection(async () => {
       // Find and delete the entry
-      return await WaitlistModel.findByIdAndDelete(id);
+      return await WaitlistModel.findByIdAndDelete(id).exec();
     }, 'delete-waitlist-entry');
     
     if (!deletedEntry) {
@@ -285,7 +297,7 @@ export async function getWaitlistStats() {
     // Use withAuthConnection to get a database connection
     const stats = await withAuthConnection(async () => {
       // Get total entries first as a health check
-      const totalEntries = await WaitlistModel.countDocuments();
+      const totalEntries = await WaitlistModel.countDocuments().exec();
       console.log('[ADMIN ACTIONS] Total waitlist entries:', totalEntries);
       
       // If no entries, return simplified stats
