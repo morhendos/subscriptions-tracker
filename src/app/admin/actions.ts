@@ -87,9 +87,35 @@ export async function getWaitlistEntries(filter: WaitlistFilter = {}) {
     
     // Check if user is authorized
     const session = await getServerSession();
-    if (!session || !isAdmin(session.user)) {
-      console.log('[ADMIN ACTIONS] Unauthorized access attempt');
-      return { success: false, error: 'Unauthorized' };
+    
+    console.log('[ADMIN ACTIONS] Session data:', JSON.stringify({
+      authenticated: !!session,
+      user: session?.user ? {
+        id: session.user.id,
+        email: session.user.email,
+        roles: session.user.roles
+      } : null
+    }));
+    
+    if (!session) {
+      console.log('[ADMIN ACTIONS] Unauthorized access attempt - No session');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    if (!session.user) {
+      console.log('[ADMIN ACTIONS] Unauthorized access attempt - No user in session');
+      return { success: false, error: 'User information missing' };
+    }
+    
+    if (!session.user.roles || !Array.isArray(session.user.roles)) {
+      console.log('[ADMIN ACTIONS] Unauthorized access attempt - No roles array', session.user);
+      return { success: false, error: 'Roles information missing' };
+    }
+    
+    const hasAdminRole = session.user.roles.some(role => role.name === 'admin');
+    if (!hasAdminRole) {
+      console.log('[ADMIN ACTIONS] Unauthorized access attempt - Not an admin');
+      return { success: false, error: 'Admin privileges required' };
     }
 
     // Default parameters
@@ -205,9 +231,19 @@ export async function updateWaitlistEntry(id: string, data: Partial<WaitlistDocu
     
     // Check if user is authorized
     const session = await getServerSession();
-    if (!session || !isAdmin(session.user)) {
+    
+    console.log('[ADMIN ACTIONS] Session data:', JSON.stringify({
+      authenticated: !!session,
+      user: session?.user ? {
+        id: session.user.id,
+        email: session.user.email,
+        roles: session.user.roles
+      } : null
+    }));
+    
+    if (!session || !session.user || !session.user.roles || !session.user.roles.some(role => role.name === 'admin')) {
       console.log('[ADMIN ACTIONS] Unauthorized update attempt');
-      return { success: false, error: 'Unauthorized' };
+      return { success: false, error: 'Admin privileges required' };
     }
 
     // Use withAuthConnection to get a database connection
@@ -250,9 +286,19 @@ export async function deleteWaitlistEntry(id: string) {
     
     // Check if user is authorized
     const session = await getServerSession();
-    if (!session || !isAdmin(session.user)) {
+    
+    console.log('[ADMIN ACTIONS] Session data:', JSON.stringify({
+      authenticated: !!session,
+      user: session?.user ? {
+        id: session.user.id,
+        email: session.user.email,
+        roles: session.user.roles
+      } : null
+    }));
+    
+    if (!session || !session.user || !session.user.roles || !session.user.roles.some(role => role.name === 'admin')) {
       console.log('[ADMIN ACTIONS] Unauthorized delete attempt');
-      return { success: false, error: 'Unauthorized' };
+      return { success: false, error: 'Admin privileges required' };
     }
 
     // Use withAuthConnection to get a database connection
@@ -289,9 +335,19 @@ export async function getWaitlistStats() {
     
     // Check if user is authorized
     const session = await getServerSession();
-    if (!session || !isAdmin(session.user)) {
+    
+    console.log('[ADMIN ACTIONS] Session data:', JSON.stringify({
+      authenticated: !!session,
+      user: session?.user ? {
+        id: session.user.id,
+        email: session.user.email,
+        roles: session.user.roles
+      } : null
+    }));
+    
+    if (!session || !session.user || !session.user.roles || !session.user.roles.some(role => role.name === 'admin')) {
       console.log('[ADMIN ACTIONS] Unauthorized stats access attempt');
-      return { success: false, error: 'Unauthorized' };
+      return { success: false, error: 'Admin privileges required' };
     }
 
     // Use withAuthConnection to get a database connection
