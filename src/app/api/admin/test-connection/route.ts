@@ -19,13 +19,6 @@ interface CollectionStats {
   scaleFactor: number;
 }
 
-// Define a type for the MongoDB document when using lean()
-interface LeanDocument {
-  _id?: mongoose.Types.ObjectId | string;
-  id?: string;
-  [key: string]: any;
-}
-
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
@@ -68,26 +61,39 @@ export async function POST(request: NextRequest) {
         // Get raw collection name
         const collectionName = WaitlistModel.collection.name;
         
-        // Use command method to get stats (type-safe approach)
-        const db = mongoose.connection.db;
-        const collectionStats = await db.command({
-          collStats: collectionName
-        }) as CollectionStats;
+        // Get stats safely
+        let stats = {
+          size: 0,
+          count: 0,
+          avgObjSize: 0
+        };
+        
+        // Make sure db connection exists
+        if (mongoose.connection.db) {
+          try {
+            const collectionStats = await mongoose.connection.db.command({
+              collStats: collectionName
+            }) as CollectionStats;
+            
+            stats = {
+              size: collectionStats.size,
+              count: collectionStats.count,
+              avgObjSize: collectionStats.avgObjSize,
+            };
+          } catch (err) {
+            console.warn('Could not get collection stats:', err);
+          }
+        } else {
+          console.warn('Database connection not fully established');
+        }
         
         // Try to get a sample document (but don't return sensitive data)
         let sampleDoc = null;
-        // Cast the result to a more specific type
-        const sampleResult = await WaitlistModel.findOne().lean() as LeanDocument | null;
-        
+        const sampleResult = await WaitlistModel.findOne().lean();
         if (sampleResult) {
-          // Safe access to properties
-          const documentId = sampleResult._id 
-            ? (typeof sampleResult._id === 'string' ? sampleResult._id : sampleResult._id.toString()) 
-            : sampleResult.id || 'unknown';
-            
           sampleDoc = {
             exists: true,
-            id: documentId,
+            id: sampleResult._id?.toString(),
             fields: Object.keys(sampleResult),
             createdAt: sampleResult.createdAt,
           };
@@ -97,11 +103,7 @@ export async function POST(request: NextRequest) {
           exists: true,
           collectionName,
           documentCount: count,
-          stats: {
-            size: collectionStats.size,
-            count: collectionStats.count,
-            avgObjSize: collectionStats.avgObjSize,
-          },
+          stats,
           sampleDocument: sampleDoc,
         };
       });
