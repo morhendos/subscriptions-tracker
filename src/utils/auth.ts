@@ -7,9 +7,24 @@ import { Role } from '@/types/auth';
  * @returns boolean indicating if user has admin role
  */
 export function isAdmin(user: Session['user'] | null | undefined): boolean {
-  if (!user || !user.roles) return false;
+  if (!user) {
+    console.log('[AUTH UTILS] isAdmin: No user provided');
+    return false;
+  }
   
-  return user.roles.some(role => role.name === 'admin');
+  // Check if roles property exists and is an array
+  if (!user.roles || !Array.isArray(user.roles)) {
+    console.log('[AUTH UTILS] isAdmin: No roles array found', user);
+    return false;
+  }
+  
+  // Check for admin role
+  const hasAdminRole = user.roles.some(role => 
+    typeof role === 'object' && role !== null && role.name === 'admin'
+  );
+  
+  console.log('[AUTH UTILS] isAdmin result:', hasAdminRole, 'for roles:', user.roles);
+  return hasAdminRole;
 }
 
 /**
@@ -19,9 +34,17 @@ export function isAdmin(user: Session['user'] | null | undefined): boolean {
  * @returns boolean indicating if user has the specified role
  */
 export function hasRole(user: Session['user'] | null | undefined, roleName: string): boolean {
-  if (!user || !user.roles) return false;
+  if (!user || !user.roles || !Array.isArray(user.roles)) {
+    console.log('[AUTH UTILS] hasRole: No valid user or roles array found');
+    return false;
+  }
   
-  return user.roles.some(role => role.name === roleName);
+  const hasRole = user.roles.some(role => 
+    typeof role === 'object' && role !== null && role.name === roleName
+  );
+  
+  console.log('[AUTH UTILS] hasRole result:', hasRole, 'for role:', roleName);
+  return hasRole;
 }
 
 /**
@@ -30,9 +53,13 @@ export function hasRole(user: Session['user'] | null | undefined, roleName: stri
  * @returns Array of role names or empty array if no roles
  */
 export function getUserRoles(user: Session['user'] | null | undefined): string[] {
-  if (!user || !user.roles) return [];
+  if (!user || !user.roles || !Array.isArray(user.roles)) {
+    return [];
+  }
   
-  return user.roles.map(role => role.name);
+  return user.roles
+    .filter(role => typeof role === 'object' && role !== null && typeof role.name === 'string')
+    .map(role => role.name);
 }
 
 /**
