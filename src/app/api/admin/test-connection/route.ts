@@ -63,6 +63,10 @@ export async function POST(request: NextRequest) {
         
         // Use command method to get stats (type-safe approach)
         const db = mongoose.connection.db;
+        if (!db) {
+          throw new Error('Database connection not established');
+        }
+        
         const collectionStats = await db.command({
           collStats: collectionName
         }) as CollectionStats;
