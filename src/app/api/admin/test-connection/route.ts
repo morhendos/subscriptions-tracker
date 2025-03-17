@@ -19,6 +19,14 @@ interface CollectionStats {
   scaleFactor: number;
 }
 
+// Helper function to safely get a property from an object
+function getProp(obj: any, prop: string): any {
+  if (obj && typeof obj === 'object') {
+    return obj[prop];
+  }
+  return undefined;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
@@ -61,41 +69,28 @@ export async function POST(request: NextRequest) {
         // Get raw collection name
         const collectionName = WaitlistModel.collection.name;
         
-        // Get stats safely
-        let stats = {
-          size: 0,
-          count: 0,
-          avgObjSize: 0
-        };
-        
-        // Make sure db connection exists
-        if (mongoose.connection.db) {
-          try {
-            const collectionStats = await mongoose.connection.db.command({
-              collStats: collectionName
-            }) as CollectionStats;
-            
-            stats = {
-              size: collectionStats.size,
-              count: collectionStats.count,
-              avgObjSize: collectionStats.avgObjSize,
-            };
-          } catch (err) {
-            console.warn('Could not get collection stats:', err);
-          }
-        } else {
-          console.warn('Database connection not fully established');
-        }
+        // Use command method to get stats (type-safe approach)
+        const db = mongoose.connection.db;
+        const collectionStats = await db.command({
+          collStats: collectionName
+        }) as CollectionStats;
         
         // Try to get a sample document (but don't return sensitive data)
         let sampleDoc = null;
-        const sampleResult = await WaitlistModel.findOne().lean();
+        
+        // Find one document and convert to a plain JavaScript object
+        const sampleResult = await WaitlistModel.findOne();
+        
         if (sampleResult) {
+          // Convert to plain object to avoid Mongoose document methods
+          const plainObj = sampleResult.toObject();
+          
+          // Now build a safe representation with only the needed properties
           sampleDoc = {
             exists: true,
-            id: sampleResult._id?.toString(),
-            fields: Object.keys(sampleResult),
-            createdAt: sampleResult.createdAt,
+            id: plainObj._id ? plainObj._id.toString() : 'unknown',
+            fields: Object.keys(plainObj),
+            createdAt: plainObj.createdAt,
           };
         }
         
@@ -103,7 +98,11 @@ export async function POST(request: NextRequest) {
           exists: true,
           collectionName,
           documentCount: count,
-          stats,
+          stats: {
+            size: collectionStats.size,
+            count: collectionStats.count,
+            avgObjSize: collectionStats.avgObjSize,
+          },
           sampleDocument: sampleDoc,
         };
       });
