@@ -213,3 +213,146 @@ export default function WaitlistPage() {
       sortOrder: newSortOrder 
     });
   };
+  
+  // Format date
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    } catch (e) {
+      return dateString;
+    }
+  };
+  
+  // Open view modal
+  const openViewModal = (entry: WaitlistEntry) => {
+    setSelectedEntry(entry);
+    setIsViewModalOpen(true);
+  };
+  
+  // Open edit modal
+  const openEditModal = (entry: WaitlistEntry) => {
+    setSelectedEntry(entry);
+    setFormData({
+      name: entry.name,
+      email: entry.email,
+      status: entry.status || 'active',
+      notes: entry.notes || '',
+      tags: Array.isArray(entry.tags) ? entry.tags.join(', ') : '',
+    });
+    setIsEditModalOpen(true);
+  };
+  
+  // Handle edit form change
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+  
+  // Handle edit form submission
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedEntry) return;
+    
+    setLoading(true);
+    
+    const tagsArray = formData.tags
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(tag => tag);
+    
+    const updateData = {
+      name: formData.name,
+      email: formData.email,
+      status: formData.status,
+      notes: formData.notes,
+      tags: tagsArray,
+    };
+    
+    try {
+      const result = await updateWaitlistEntry(selectedEntry._id, updateData);
+      
+      if (result.success) {
+        // Update the entry in the local state
+        setEntries(entries.map(entry => 
+          entry._id === selectedEntry._id ? { ...entry, ...updateData } : entry
+        ));
+        setIsEditModalOpen(false);
+        setError(null);
+      } else {
+        setError(result.error || 'Failed to update waitlist entry');
+      }
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Open delete modal
+  const openDeleteModal = (entry: WaitlistEntry) => {
+    setSelectedEntry(entry);
+    setIsDeleteModalOpen(true);
+  };
+  
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    if (!selectedEntry) return;
+    
+    setLoading(true);
+    
+    try {
+      const result = await deleteWaitlistEntry(selectedEntry._id);
+      
+      if (result.success) {
+        // Remove the entry from the local state
+        setEntries(entries.filter(entry => entry._id !== selectedEntry._id));
+        setIsDeleteModalOpen(false);
+        setError(null);
+        
+        // Refetch if this was the last item on the page
+        if (entries.length === 1 && currentPage > 1) {
+          updateSearchParams({ page: (currentPage - 1).toString() });
+        }
+      } else {
+        setError(result.error || 'Failed to delete waitlist entry');
+      }
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Quick update status function
+  const handleQuickStatusUpdate = async (entryId: string, newStatus: string) => {
+    setLoading(true);
+    
+    try {
+      const result = await updateWaitlistEntry(entryId, { status: newStatus });
+      
+      if (result.success) {
+        // Update the entry in the local state
+        setEntries(entries.map(entry => 
+          entry._id === entryId ? { ...entry, status: newStatus } : entry
+        ));
+        setError(null);
+      } else {
+        setError(result.error || 'Failed to update status');
+      }
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Determine if a sort column is active
+  const isSortActive = (column: string) => sortBy === column;
