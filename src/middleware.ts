@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createRateLimit } from './middleware/rate-limit';
+import { adminAuthMiddleware } from './middleware/admin-auth';
 
 // Rate limit configuration for different endpoints
 const rateLimitConfigs = {
@@ -35,6 +36,13 @@ const corsHeaders = {
 };
 
 export async function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  
+  // Admin routes protection
+  if (path.startsWith('/admin')) {
+    return adminAuthMiddleware(request);
+  }
+  
   // Handle preflight requests
   if (request.method === 'OPTIONS') {
     return new NextResponse(null, { 
@@ -54,7 +62,6 @@ export async function middleware(request: NextRequest) {
   };
 
   // Apply rate limiting based on route
-  const path = request.nextUrl.pathname;
   let rateLimitResponse = null;
 
   if (path.startsWith('/api/health')) {
@@ -85,6 +92,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/api/:path*',
-    '/auth/:path*'
+    '/auth/:path*',
+    '/admin/:path*'
   ],
 };
