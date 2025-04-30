@@ -7,13 +7,13 @@
 
 import mongoose from 'mongoose';
 import { loadEnvVars } from './env-debug';
-import { withErrorHandling } from './unified-error-handler';
 
 // Define connection options type
 export interface AuthConnectionOptions {
   timeoutMS?: number;
   serverSelectionTimeoutMS?: number;
   context?: string;
+  retryAttempts?: number;
 }
 
 // Ensure environment variables are loaded
@@ -22,6 +22,11 @@ loadEnvVars();
 // Global connection state
 let authConnection: mongoose.Connection | null = null;
 let connectionPromise: Promise<mongoose.Connection> | null = null;
+let connectionError: Error | null = null;
+let lastConnectionAttempt = 0;
+
+// Constants
+const CONNECTION_RETRY_INTERVAL = 5000; // 5 seconds between retry attempts
 
 /**
  * Normalize a MongoDB URI
@@ -52,17 +57,39 @@ export function normalizeMongoUri(uri: string): string {
 }
 
 /**
+ * Check if it's safe to retry a connection
+ */
+function canRetryConnection(): boolean {
+  const now = Date.now();
+  return now - lastConnectionAttempt > CONNECTION_RETRY_INTERVAL;
+}
+
+/**
  * Get a MongoDB connection specifically for authentication operations
  */
 export async function getAuthConnection(options?: AuthConnectionOptions): Promise<mongoose.Connection> {
+  const retryAttempts = options?.retryAttempts || 1;
+  
   // If we already have a valid connection, return it
   if (authConnection && authConnection.readyState === 1) {
     return authConnection;
   }
   
+  // Reset connection state if a previous attempt failed but it's been long enough to retry
+  if (connectionError && canRetryConnection()) {
+    connectionPromise = null;
+    connectionError = null;
+  }
+  
   // If a connection attempt is in progress, wait for it
   if (connectionPromise) {
-    return connectionPromise;
+    try {
+      return await connectionPromise;
+    } catch (error) {
+      // If we get here, the pending connection failed
+      // We'll try again below if retries are available
+      connectionPromise = null;
+    }
   }
   
   // Get and normalize MongoDB URI
@@ -87,13 +114,19 @@ export async function getAuthConnection(options?: AuthConnectionOptions): Promis
   
   // Start a new connection with detailed logging
   console.log('[AUTH DB] Establishing MongoDB connection for authentication...');
+  lastConnectionAttempt = Date.now();
   
   connectionPromise = mongoose.connect(normalizedUri, connectOptions)
     .then(() => {
       authConnection = mongoose.connection;
+      connectionError = null;
+      
+      if (!authConnection || !authConnection.db) {
+        throw new Error('MongoDB connection established but database reference is missing');
+      }
+      
       console.log('[AUTH DB] MongoDB connection established successfully.');
-      // Use optional chaining to prevent TypeScript error
-      console.log(`[AUTH DB] Connected to database: ${authConnection?.db?.databaseName || 'unknown'}`);
+      console.log(`[AUTH DB] Connected to database: ${authConnection.db.databaseName || 'unknown'}`);
       
       // Listen for disconnect events
       authConnection.on('disconnected', () => {
@@ -110,7 +143,18 @@ export async function getAuthConnection(options?: AuthConnectionOptions): Promis
     })
     .catch((err) => {
       console.error('[AUTH DB] MongoDB connection error:', err);
+      connectionError = err instanceof Error ? err : new Error(String(err));
       connectionPromise = null;
+      
+      // Retry if we have attempts left and it's a retriable error
+      if (retryAttempts > 0) {
+        console.log(`[AUTH DB] Retrying connection (${retryAttempts} attempts left)`);
+        return getAuthConnection({
+          ...options,
+          retryAttempts: retryAttempts - 1
+        });
+      }
+      
       throw err;
     });
   
@@ -141,7 +185,10 @@ export async function withAuthConnection<T>(
   
   try {
     // Get an auth-specific connection
-    await getAuthConnection(connectionOptions);
+    await getAuthConnection({
+      ...connectionOptions,
+      retryAttempts: 2 // Allow up to 2 retry attempts for operations
+    });
     
     // Run the operation
     return await operation();
